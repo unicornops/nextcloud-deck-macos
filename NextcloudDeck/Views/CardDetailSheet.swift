@@ -10,6 +10,7 @@ struct CardDetailSheet: View {
     @State private var title: String
     @State private var description: String
     @State private var isSaving = false
+    @State private var showDeleteConfirmation = false
     
     init(card: Card, boardId: Int, onDismiss: @escaping () -> Void) {
         self.card = card
@@ -55,12 +56,33 @@ struct CardDetailSheet: View {
                         .frame(minHeight: 120)
                         .font(.body)
                 }
+                Section {
+                    Button("Delete card", role: .destructive) {
+                        showDeleteConfirmation = true
+                    }
+                }
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
         }
         .frame(width: 440, height: 360)
         .navigationTitle("Edit Card")
+        .confirmationDialog("Delete card?", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    await appState.deleteCard(boardId: boardId, stackId: card.stackId, cardId: card.id)
+                    await MainActor.run {
+                        dismiss()
+                        onDismiss()
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                showDeleteConfirmation = false
+            }
+        } message: {
+            Text("This card will be permanently deleted. This cannot be undone.")
+        }
     }
     
     private func save() {
