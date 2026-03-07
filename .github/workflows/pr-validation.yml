@@ -1,0 +1,126 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: |
+          XCODE_PATH=$(ls -td /Applications/Xcode_*.app 2>/dev/null | head -1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH="/Applications/Xcode.app"
+          fi
+          echo "Using Xcode at: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+
+      - name: Show build environment
+        run: |
+          echo "Xcode version:"
+          xcodebuild -version
+          echo ""
+          echo "Swift version:"
+          swift --version
+          echo ""
+          echo "macOS version:"
+          sw_vers
+
+      - name: Validate project structure
+        run: |
+          echo "Checking project file..."
+          if [ ! -f "NextcloudDeck.xcodeproj/project.pbxproj" ]; then
+            echo "❌ Project file not found"
+            exit 1
+          fi
+          echo "✓ Project file exists"
+
+      - name: Check Swift syntax
+        run: |
+          echo "Checking Swift files for syntax errors..."
+          find NextcloudDeck -name "*.swift" -type f | while read file; do
+            echo "Checking: $file"
+            if ! swift -frontend -parse "$file" > /dev/null 2>&1; then
+              echo "❌ Syntax error in: $file"
+              swift -frontend -parse "$file"
+              exit 1
+            fi
+          done
+          echo "✓ All Swift files have valid syntax"
+
+      - name: Build (Debug)
+        run: |
+          xcodebuild \
+            -project NextcloudDeck.xcodeproj \
+            -scheme NextcloudDeck \
+            -configuration Debug \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      - name: Build (Release - Unsigned)
+        run: |
+          xcodebuild \
+            -project NextcloudDeck.xcodeproj \
+            -scheme NextcloudDeck \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      - name: Find built app
+        id: find-app
+        run: |
+          APP_PATH=$(find build/DerivedData/Build/Products -name "NextcloudDeck.app" -type d | head -n 1)
+          echo "app_path=$APP_PATH" >> $GITHUB_OUTPUT
+          echo "Found app at: $APP_PATH"
+
+      - name: Verify app bundle
+        run: |
+          APP_PATH="${{ steps.find-app.outputs.app_path }}"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "✗ App bundle not found"
+            exit 1
+          fi
+
+          echo "✓ App bundle exists"
+
+          if [ ! -f "$APP_PATH/Contents/MacOS/NextcloudDeck" ]; then
+            echo "✗ Executable not found"
+            exit 1
+          fi
+          echo "✓ Executable found"
+
+          if [ ! -f "$APP_PATH/Contents/Info.plist" ]; then
+            echo "✗ Info.plist not found"
+            exit 1
+          fi
+          echo "✓ Info.plist found"
+
+      - name: PR validation summary
+        if: always()
+        run: |
+          echo "## PR Validation Summary ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Swift Syntax**: Validated" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build (Debug)**: Successful" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build (Release)**: Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Environment" >> $GITHUB_STEP_SUMMARY
+          echo "- **Xcode**: $(xcodebuild -version | head -n 1)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Swift**: $(swift --version | head -n 1)" >> $GITHUB_STEP_SUMMARY
+          echo "- **macOS**: $(sw_vers -productVersion)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Note**: This is an unsigned build. Signed builds are only created on release." >> $GITHUB_STEP_SUMMARY

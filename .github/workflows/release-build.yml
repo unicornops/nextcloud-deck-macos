@@ -1,0 +1,94 @@
+name: Build and Attach Release Assets
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Upload Release Assets
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Select Xcode version
+        run: |
+          XCODE_PATH=$(ls -td /Applications/Xcode_*.app 2>/dev/null | head -1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH="/Applications/Xcode.app"
+          fi
+          echo "Using Xcode at: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+
+      - name: Show build environment
+        run: |
+          echo "Xcode version:"
+          xcodebuild -version
+          echo ""
+          echo "Swift version:"
+          swift --version
+
+      - name: Build (Release - Unsigned)
+        run: |
+          xcodebuild \
+            -project NextcloudDeck.xcodeproj \
+            -scheme NextcloudDeck \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      - name: Find built app
+        id: find-app
+        run: |
+          APP_PATH=$(find build/DerivedData/Build/Products -name "NextcloudDeck.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: NextcloudDeck.app not found"
+            exit 1
+          fi
+          echo "app_path=$APP_PATH" >> $GITHUB_OUTPUT
+          echo "Found app at: $APP_PATH"
+
+      - name: Create ZIP archive
+        id: create-zip
+        run: |
+          APP_PATH="${{ steps.find-app.outputs.app_path }}"
+          VERSION="${{ github.event.release.tag_name }}"
+          # Strip 'v' prefix if present for filename
+          VERSION_SUFFIX="${VERSION#v}"
+          ZIP_NAME="NextcloudDeck-${VERSION_SUFFIX}.zip"
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_NAME"
+          echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
+          echo "✓ ZIP created: $ZIP_NAME"
+          ls -lh "$ZIP_NAME"
+
+      - name: Calculate checksums
+        run: |
+          ZIP_NAME="${{ steps.create-zip.outputs.zip_name }}"
+          shasum -a 256 "$ZIP_NAME" > checksums.txt
+          cat checksums.txt
+
+      - name: Upload assets to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            ${{ steps.create-zip.outputs.zip_name }}
+            checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release build summary
+        run: |
+          echo "## Release Build Summary 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **ZIP**: ${{ steps.create-zip.outputs.zip_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Assets attached to [release ${{ github.event.release.tag_name }}](${{ github.event.release.html_url }})." >> $GITHUB_STEP_SUMMARY
