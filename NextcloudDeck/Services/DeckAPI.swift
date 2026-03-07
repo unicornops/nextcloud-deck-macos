@@ -32,12 +32,21 @@ final class DeckAPI {
         return "Basic \(data.base64EncodedString())"
     }
     
+    /// Builds a full URL by appending the relative path to the base URL (avoids `URL(string:relativeTo:)` replacing the last path component and dropping `/v1.0`).
+    private func url(for path: String) -> URL? {
+        let basePath = baseURL.path
+        let pathToUse = (basePath.hasSuffix("/") ? basePath : basePath + "/") + path
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        components.path = pathToUse
+        return components.url
+    }
+
     private func request<T: Decodable>(
         _ path: String,
         method: String = "GET",
         body: (any Encodable)? = nil
     ) async throws -> T {
-        guard let url = URL(string: path, relativeTo: baseURL) else {
+        guard let url = url(for: path) else {
             throw DeckAPIError.invalidURL
         }
         var req = URLRequest(url: url)
@@ -67,7 +76,7 @@ final class DeckAPI {
     }
     
     private func requestNoContent(_ path: String, method: String = "GET", body: (any Encodable)? = nil) async throws {
-        guard let url = URL(string: path, relativeTo: baseURL) else {
+        guard let url = url(for: path) else {
             throw DeckAPIError.invalidURL
         }
         var req = URLRequest(url: url)
