@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.3.0...v0.4.0) (2026-03-07)
+
+
+### Features
+
+* add card deletion functionality ([eb46d2e](https://github.com/unicornops/nextcloud-deck-macos/commit/eb46d2ebbe71197ea345cc45ec7bb89ab18a68be))
+* add card deletion functionality ([5a77692](https://github.com/unicornops/nextcloud-deck-macos/commit/5a776927877d7b79e7f48174990efcaec0f9b2b7))
+* implement stack deletion functionality ([dcaf32f](https://github.com/unicornops/nextcloud-deck-macos/commit/dcaf32f75e9966c84247ce2b61cb70c6a45f0102))
+* implement stack deletion functionality ([390bc9e](https://github.com/unicornops/nextcloud-deck-macos/commit/390bc9e7e7533e38783a4b84e8df8a67abfe664c))
+
 ## [0.3.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.2.1...v0.3.0) (2026-03-07)
 
 
