@@ -1,11 +1,21 @@
 name: Build and Attach Release Assets
 
+# Trigger on tag push so we run when release-please pushes a version tag (release
+# published is unreliable when release-please creates the release). Also run on
+# manual release publish for non-release-please releases.
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [published]
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
 
 env:
   SCHEME: NextcloudDeck
@@ -17,10 +27,21 @@ jobs:
     name: Build and Upload Release Assets
     runs-on: macos-latest
     steps:
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+          echo "Resolved tag: $TAG"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ steps.tag.outputs.tag_name }}
 
       - name: Select Xcode version
         run: |
@@ -48,7 +69,7 @@ jobs:
       - name: Set version for artifacts
         id: version
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${{ steps.tag.outputs.tag_name }}"
           VERSION_SUFFIX="${VERSION#v}"
           echo "version_suffix=$VERSION_SUFFIX" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION_SUFFIX"
@@ -166,7 +187,7 @@ jobs:
       - name: Upload assets to release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.release.tag_name }}
+          tag_name: ${{ steps.tag.outputs.tag_name }}
           files: |
             ${{ steps.create-dmg.outputs.dmg_name }}
             ${{ steps.create-zip.outputs.zip_name }}
@@ -178,8 +199,8 @@ jobs:
         run: |
           echo "## Release Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tag**: ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ steps.tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **DMG**: ${{ steps.create-dmg.outputs.dmg_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **ZIP**: ${{ steps.create-zip.outputs.zip_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Assets attached to [release ${{ github.event.release.tag_name }}](${{ github.event.release.html_url }})." >> $GITHUB_STEP_SUMMARY
+          echo "Assets attached to [release ${{ steps.tag.outputs.tag_name }}](https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.tag_name }})." >> $GITHUB_STEP_SUMMARY
