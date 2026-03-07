@@ -42,8 +42,9 @@ struct StackColumnView: View {
         ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 8) {
                 ForEach(cards) { card in
-                    CardRowView(card: card)
-                        .onTapGesture { onSelectCard(card) }
+                    CardRowView(card: card) {
+                        onSelectCard(card)
+                    }
                 }
             }
             .padding(.horizontal, 10)
@@ -77,6 +78,7 @@ struct StackColumnView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .padding(10)
+                .accessibilityLabel("Add card")
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
@@ -98,6 +100,7 @@ struct StackColumnView: View {
 
 struct CardRowView: View {
     let card: Card
+    var action: () -> Void
     @State private var isHovering = false
 
     private var cardShape: RoundedRectangle {
@@ -105,56 +108,61 @@ struct CardRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(card.title)
-                .font(.system(.body, design: .default))
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-            if let due = card.duedate, !due.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "calendar")
-                        .font(.caption2)
-                    Text(formatDueDate(due))
-                        .font(.caption2)
-                }
-                .foregroundStyle(.secondary)
-            }
-            if let labels = card.labels, !labels.isEmpty {
-                HStack(spacing: 4) {
-                    ForEach(labels.prefix(3)) { label in
-                        Text(label.title)
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(card.title)
+                    .font(.system(.body, design: .default))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                if let due = card.duedate, !due.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
                             .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(hex: label.color ?? "cccccc") ?? .gray.opacity(0.3))
-                            .foregroundStyle(.white)
-                            .clipShape(Capsule())
+                        Text(formatDueDate(due))
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                if let labels = card.labels, !labels.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(labels.prefix(3)) { label in
+                            Text(label.title)
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color(hex: label.color ?? "cccccc") ?? .gray.opacity(0.3))
+                                .foregroundStyle(.white)
+                                .clipShape(Capsule())
+                        }
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(
+                (isHovering ? Color(nsColor: .controlBackgroundColor) : Color(nsColor: .windowBackgroundColor))
+                    .opacity(isHovering ? 1.0 : 0.98)
+            )
+            .clipShape(cardShape)
+            .overlay(
+                cardShape
+                    .strokeBorder(
+                        Color(nsColor: .separatorColor).opacity(isHovering ? 0.6 : 0.4),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: .black.opacity(isHovering ? 0.08 : 0.05), radius: isHovering ? 4 : 2, y: 2)
+            .contentShape(Rectangle())
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(
-            (isHovering ? Color(nsColor: .controlBackgroundColor) : Color(nsColor: .windowBackgroundColor))
-                .opacity(isHovering ? 1.0 : 0.98)
-        )
-        .clipShape(cardShape)
-        .overlay(
-            cardShape
-                .strokeBorder(
-                    Color(nsColor: .separatorColor).opacity(isHovering ? 0.6 : 0.4),
-                    lineWidth: 1
-                )
-        )
-        .shadow(color: .black.opacity(isHovering ? 0.08 : 0.05), radius: isHovering ? 4 : 2, y: 2)
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
         .onHover { hovering in
             isHovering = hovering
             DispatchQueue.main.async {
                 (hovering ? NSCursor.pointingHand : NSCursor.arrow).set()
             }
         }
+        .accessibilityLabel(card.title)
+        .accessibilityHint("Opens card details")
     }
     
     private func formatDueDate(_ iso: String) -> String {

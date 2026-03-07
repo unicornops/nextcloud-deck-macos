@@ -121,6 +121,9 @@ struct LoginView: View {
                 .padding(.bottom, 24)
         }
         .frame(minWidth: 480, minHeight: 580)
+        .onAppear {
+            focusedField = .server
+        }
     }
 
     private func signInWithBrowser() {

@@ -28,8 +28,16 @@ struct CardDetailSheet: View {
                 }
                 .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Save") {
+                Button {
                     save()
+                } label: {
+                    if isSaving {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .frame(minWidth: 44)
+                    } else {
+                        Text("Save")
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return, modifiers: .command)
@@ -39,24 +47,31 @@ struct CardDetailSheet: View {
             Divider()
             
             Form {
-                TextField("Title", text: $title)
-                TextEditor(text: $description)
-                    .frame(minHeight: 120)
-                    .font(.body)
+                Section("Title") {
+                    TextField("Title", text: $title)
+                }
+                Section("Description") {
+                    TextEditor(text: $description)
+                        .frame(minHeight: 120)
+                        .font(.body)
+                }
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
         }
         .frame(width: 440, height: 360)
+        .navigationTitle("Edit Card")
     }
     
     private func save() {
         isSaving = true
         Task {
             await appState.updateCard(boardId: boardId, stackId: card.stackId, card: card, title: title, description: description)
-            isSaving = false
-            dismiss()
-            onDismiss()
+            await MainActor.run {
+                isSaving = false
+                dismiss()
+                onDismiss()
+            }
         }
     }
 }

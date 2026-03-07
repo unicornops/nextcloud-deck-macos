@@ -18,8 +18,13 @@ struct NextcloudDeckApp: App {
                 }
                 .keyboardShortcut("r", modifiers: .command)
             }
+            CommandGroup(replacing: .appInfo) {
+                Button("About Nextcloud Deck") {
+                    NSApplication.shared.orderFrontStandardAboutPanel(options: [:])
+                }
+            }
             CommandGroup(replacing: .help) {
-                Button("Nextcloud Deck Help") {
+                Button("Deck API Reference") {
                     if let url = URL(string: "https://deck.readthedocs.io/en/latest/API/") {
                         NSWorkspace.shared.open(url)
                     }

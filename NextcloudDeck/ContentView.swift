@@ -36,6 +36,8 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: "person.circle")
                 }
+                .help("Account and actions")
+                .accessibilityLabel("Account menu")
             }
         }
     }

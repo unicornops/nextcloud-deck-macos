@@ -9,12 +9,17 @@ struct NewStackSheet: View {
     @State private var isSaving = false
     
     var body: some View {
-        VStack(spacing: 20) {
-            Text("New list")
-                .font(.headline)
-            TextField("List title", text: $title)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit { save() }
+        VStack(spacing: 0) {
+            Form {
+                Section("List title") {
+                    TextField("List title", text: $title)
+                        .onSubmit { save() }
+                }
+            }
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .frame(maxWidth: .infinity)
+            
             HStack {
                 Button("Cancel") {
                     dismiss()
@@ -22,13 +27,24 @@ struct NewStackSheet: View {
                 }
                 .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Create") { save() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
+                Button {
+                    save()
+                } label: {
+                    if isSaving {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .frame(minWidth: 60)
+                    } else {
+                        Text("Create")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
             }
+            .padding()
         }
-        .padding(24)
         .frame(width: 320)
+        .navigationTitle("New list")
     }
     
     private func save() {
@@ -37,9 +53,11 @@ struct NewStackSheet: View {
         isSaving = true
         Task {
             await appState.createStack(boardId: boardId, title: t)
-            isSaving = false
-            dismiss()
-            onDismiss()
+            await MainActor.run {
+                isSaving = false
+                dismiss()
+                onDismiss()
+            }
         }
     }
 }
