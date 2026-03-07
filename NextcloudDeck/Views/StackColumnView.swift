@@ -23,6 +23,10 @@ struct StackColumnView: View {
         .frame(width: 280)
         .background(Color(nsColor: .controlBackgroundColor).opacity(0.8))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
+        )
     }
     
     private var header: some View {
@@ -94,7 +98,12 @@ struct StackColumnView: View {
 
 struct CardRowView: View {
     let card: Card
-    
+    @State private var isHovering = false
+
+    private var cardShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(card.title)
@@ -126,9 +135,26 @@ struct CardRowView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color(nsColor: .windowBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
+        .background(
+            (isHovering ? Color(nsColor: .controlBackgroundColor) : Color(nsColor: .windowBackgroundColor))
+                .opacity(isHovering ? 1.0 : 0.98)
+        )
+        .clipShape(cardShape)
+        .overlay(
+            cardShape
+                .strokeBorder(
+                    Color(nsColor: .separatorColor).opacity(isHovering ? 0.6 : 0.4),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: .black.opacity(isHovering ? 0.08 : 0.05), radius: isHovering ? 4 : 2, y: 2)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            isHovering = hovering
+            DispatchQueue.main.async {
+                (hovering ? NSCursor.pointingHand : NSCursor.arrow).set()
+            }
+        }
     }
     
     private func formatDueDate(_ iso: String) -> String {
