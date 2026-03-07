@@ -6,10 +6,11 @@ struct StackColumnView: View {
     var onSelectCard: (Card) -> Void
     var onRefresh: () -> Void
     @EnvironmentObject private var appState: AppState
-    
+
     @State private var newCardTitle = ""
     @State private var isAddingCard = false
     @State private var pendingDelete = false
+    @State private var pendingCardDelete: Card?
     
     private var cards: [Card] {
         stack.cards ?? []
@@ -41,8 +42,28 @@ struct StackColumnView: View {
         } message: {
             Text("“\(stack.title)” and all its cards will be permanently deleted. This cannot be undone.")
         }
+        .confirmationDialog("Delete card?", isPresented: Binding(
+            get: { pendingCardDelete != nil },
+            set: { if !$0 { pendingCardDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                guard let card = pendingCardDelete else { return }
+                pendingCardDelete = nil
+                Task {
+                    await appState.deleteCard(boardId: board.id, stackId: stack.id, cardId: card.id)
+                    onRefresh()
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingCardDelete = nil
+            }
+        } message: {
+            if let card = pendingCardDelete {
+                Text("\u{201c}\(card.title)\u{201d} will be permanently deleted. This cannot be undone.")
+            }
+        }
     }
-    
+
     private var header: some View {
         HStack(alignment: .center, spacing: 6) {
             Text(stack.title)
@@ -72,7 +93,9 @@ struct StackColumnView: View {
         ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 8) {
                 ForEach(cards) { card in
-                    CardRowView(card: card) {
+                    CardRowView(card: card, onDelete: {
+                        pendingCardDelete = card
+                    }) {
                         onSelectCard(card)
                     }
                 }
@@ -130,6 +153,7 @@ struct StackColumnView: View {
 
 struct CardRowView: View {
     let card: Card
+    var onDelete: (() -> Void)?
     var action: () -> Void
     @State private var isHovering = false
 
@@ -193,6 +217,13 @@ struct CardRowView: View {
         }
         .accessibilityLabel(card.title)
         .accessibilityHint("Opens card details")
+        .contextMenu {
+            if let onDelete = onDelete {
+                Button("Delete card", role: .destructive) {
+                    onDelete()
+                }
+            }
+        }
     }
     
     private func formatDueDate(_ iso: String) -> String {
