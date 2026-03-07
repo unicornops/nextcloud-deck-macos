@@ -28,6 +28,38 @@ xcodebuild -scheme NextcloudDeck -configuration Debug -destination 'platform=mac
 open ~/Library/Developer/Xcode/DerivedData/NextcloudDeck-*/Build/Products/Debug/NextcloudDeck.app
 ```
 
+### Building a signed DMG for distribution
+
+From the repo root:
+
+1. **Generate the app icon** (requires [librsvg](https://wiki.gnome.org/Projects/LibRsvg) for SVG→PNG, or place a 1024×1024 `icon_1024.png` in `NextcloudDeck/Assets.xcassets/AppIcon.appiconset/`):
+
+   ```bash
+   ./generate-appicon.sh
+   ```
+
+2. **Build Release** (sign with your Developer ID before creating the DMG if you want a signed app):
+
+   ```bash
+   xcodebuild -project NextcloudDeck.xcodeproj -scheme NextcloudDeck -configuration Release -derivedDataPath build/DerivedData build
+   ```
+
+3. **Create the DMG**:
+
+   ```bash
+   APP_PATH=$(find build/DerivedData/Build/Products -name "NextcloudDeck.app" -type d | head -n 1)
+   ./create-dmg.sh "$APP_PATH" NextcloudDeck-1.0.0.dmg "Nextcloud Deck 1.0.0"
+   ```
+
+The icon source is `icon_source.svg`; edit it and re-run `./generate-appicon.sh` to refresh the app icon.
+
+## Releases
+
+On each published GitHub release, the **Build and Attach Release Assets** workflow builds the app (signed and notarized), generates a DMG and a ZIP, and attaches them to the release.
+
+- **Icon**: The workflow runs `./generate-appicon.sh` (using `librsvg` on the runner) so the built app and DMG use the icon from `icon_source.svg`.
+- **Signing and notarization**: The workflow signs and notarizes the app by default. Configure these repository secrets for the release job to succeed: `APPLE_CERTIFICATE_BASE64`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID`, `APPLE_DEVELOPER_ID`, `APPLE_APP_PASSWORD`.
+
 ## API
 
 The app uses the [Nextcloud Deck REST API](https://deck.readthedocs.io/en/latest/API/) (v1.0):

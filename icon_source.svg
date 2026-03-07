@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0082c9"/>
+      <stop offset="100%" style="stop-color:#004b87"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#f0f0f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="192" fill="url(#bg)"/>
+  <!-- Board / card stack motif -->
+  <rect x="212" y="280" width="600" height="464" rx="24" fill="url(#card)" opacity="0.95"/>
+  <rect x="252" y="320" width="520" height="384" rx="16" fill="#e8e8e8"/>
+  <rect x="272" y="360" width="120" height="80" rx="8" fill="#0082c9" opacity="0.6"/>
+  <rect x="412" y="360" width="120" height="80" rx="8" fill="#5fb359" opacity="0.6"/>
+  <rect x="552" y="360" width="120" height="80" rx="8" fill="#e8a433" opacity="0.6"/>
+  <rect x="692" y="360" width="80" height="80" rx="8" fill="#fff" opacity="0.8"/>
+</svg>
