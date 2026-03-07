@@ -9,16 +9,25 @@ struct NewStackSheet: View {
     @State private var isSaving = false
     
     var body: some View {
-        VStack(spacing: 0) {
-            Form {
-                Section("List title") {
-                    TextField("List title", text: $title)
-                        .onSubmit { save() }
-                }
+        VStack(alignment: .leading, spacing: 20) {
+            Text("New list")
+                .font(.headline)
+            
+            VStack(alignment: .leading, spacing: 6) {
+                Text("List title")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                TextField("Enter list name", text: $title)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { save() }
             }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-            .frame(maxWidth: .infinity)
+            
+            if let err = appState.errorMessage {
+                Text(err)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .lineLimit(4)
+            }
             
             HStack {
                 Button("Cancel") {
@@ -41,22 +50,27 @@ struct NewStackSheet: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
             }
-            .padding()
         }
+        .padding(24)
         .frame(width: 320)
-        .navigationTitle("New list")
+        .onAppear {
+            appState.errorMessage = nil
+        }
     }
     
     private func save() {
         let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }
         isSaving = true
+        appState.errorMessage = nil
         Task {
-            await appState.createStack(boardId: boardId, title: t)
+            let success = await appState.createStack(boardId: boardId, title: t)
             await MainActor.run {
                 isSaving = false
-                dismiss()
-                onDismiss()
+                if success {
+                    dismiss()
+                    onDismiss()
+                }
             }
         }
     }
