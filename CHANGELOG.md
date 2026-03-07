@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.2.0...v0.2.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* update GitHub Actions workflow for release builds ([9240a90](https://github.com/unicornops/nextcloud-deck-macos/commit/9240a909db370d15ae960b1243918c267bb0873c))
+* update GitHub Actions workflow for release builds ([751834c](https://github.com/unicornops/nextcloud-deck-macos/commit/751834c52f82bb6e0c1db444b35119d3e3432fdc))
+
 ## [0.2.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.1.0...v0.2.0) (2026-03-07)
 
 
