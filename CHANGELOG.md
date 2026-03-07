@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.2.1...v0.3.0) (2026-03-07)
+
+
+### Features
+
+* enhance URL handling in DeckAPI ([7280395](https://github.com/unicornops/nextcloud-deck-macos/commit/7280395ce7c3c53419ff201642c13a51ba97fa44))
+* enhance URL handling in DeckAPI ([a91dd65](https://github.com/unicornops/nextcloud-deck-macos/commit/a91dd65d48af8103e7c984e00fcfdddc1c4702db))
+
 ## [0.2.1](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.2.0...v0.2.1) (2026-03-07)
 
 
