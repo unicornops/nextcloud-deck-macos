@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.1.0...v0.2.0) (2026-03-07)
+
+
+### Features
+
+* add scripts for DMG creation and app icon generation ([f8822e0](https://github.com/unicornops/nextcloud-deck-macos/commit/f8822e00e963b6d5082e092d759caa6e9c6ea39b))
+* add scripts for DMG creation and app icon generation ([4162466](https://github.com/unicornops/nextcloud-deck-macos/commit/4162466af0c63163b8b638e43a0fd9770ff95a8e))
+
 ## [0.1.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.0.1...v0.1.0) (2026-03-07)
 
 
