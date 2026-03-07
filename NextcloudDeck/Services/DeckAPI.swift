@@ -227,6 +227,42 @@ final class DeckAPI {
     func getStack(boardId: Int, stackId: Int) async throws -> Stack {
         try await request("boards/\(boardId)/stacks/\(stackId)")
     }
+
+    /// Fetches stacks that have been archived (soft-deleted) on the board.
+    func getArchivedStacks(boardId: Int) async throws -> [Stack] {
+        var path = baseURL.path
+        if path.hasSuffix("/") { path.removeLast() }
+        path += "/boards/\(boardId)/stacks/archived"
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        components.path = path
+        guard let url = components.url else { throw DeckAPIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
+        if http.statusCode == 304 { throw DeckAPIError.notModified }
+        if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
+            throw DeckAPIError.badRequest(err.message)
+        }
+        if http.statusCode == 403 { throw DeckAPIError.permissionDenied }
+        guard (200...299).contains(http.statusCode) else {
+            throw DeckAPIError.httpStatus(http.statusCode)
+        }
+        do {
+            return try decoder.decode([Stack].self, from: data)
+        } catch let arrayError as DecodingError {
+            if let wrapper = try? decoder.decode(OCSStacksWrapper.self, from: data) { return wrapper.data }
+            if let ocs = try? decoder.decode(OCSStacksEnvelope.self, from: data) { return ocs.ocs.data }
+            let detail = decodingErrorDescription(arrayError)
+            throw DeckAPIError.badRequest("Could not decode archived stacks: \(detail)")
+        } catch {
+            throw DeckAPIError.badRequest("Could not decode archived stacks: \(error.localizedDescription)")
+        }
+    }
     
     func createStack(boardId: Int, title: String, order: Int = 999) async throws -> Stack {
         try await request("boards/\(boardId)/stacks", method: "POST", body: CreateStackRequest(title: title, order: order))

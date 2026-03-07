@@ -153,6 +153,17 @@ final class AppState: ObservableObject {
             return false
         }
     }
+
+    /// Permanently deletes the stack and its cards from the board.
+    func deleteStack(boardId: Int, stackId: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.deleteStack(boardId: boardId, stackId: stackId)
+            await loadStacks(boardId: boardId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
     
     func updateCard(boardId: Int, stackId: Int, card: Card, title: String?, description: String?) async {
         guard let api = deckAPI else { return }
@@ -163,7 +174,7 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
-    
+
     func deleteCard(boardId: Int, stackId: Int, cardId: Int) async {
         guard let api = deckAPI else { return }
         do {

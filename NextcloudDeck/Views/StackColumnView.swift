@@ -9,6 +9,7 @@ struct StackColumnView: View {
     
     @State private var newCardTitle = ""
     @State private var isAddingCard = false
+    @State private var pendingDelete = false
     
     private var cards: [Card] {
         stack.cards ?? []
@@ -27,15 +28,44 @@ struct StackColumnView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
         )
+        .confirmationDialog("Delete list?", isPresented: $pendingDelete) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    await appState.deleteStack(boardId: board.id, stackId: stack.id)
+                    onRefresh()
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDelete = false
+            }
+        } message: {
+            Text("“\(stack.title)” and all its cards will be permanently deleted. This cannot be undone.")
+        }
     }
     
     private var header: some View {
-        Text(stack.title)
-            .font(.headline)
-            .foregroundStyle(.primary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+        HStack(alignment: .center, spacing: 6) {
+            Text(stack.title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Menu {
+                Button(role: .destructive) {
+                    pendingDelete = true
+                } label: {
+                    Label("Delete list", systemImage: "trash")
+                }
+                .help("Permanently delete this list and its cards")
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
     
     private var cardList: some View {
