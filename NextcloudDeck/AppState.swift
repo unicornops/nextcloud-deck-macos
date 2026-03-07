@@ -141,13 +141,16 @@ final class AppState: ObservableObject {
         }
     }
     
-    func createStack(boardId: Int, title: String) async {
-        guard let api = deckAPI else { return }
+    /// Returns `true` if the stack was created successfully, `false` otherwise (and sets `errorMessage`).
+    func createStack(boardId: Int, title: String) async -> Bool {
+        guard let api = deckAPI else { return false }
         do {
             _ = try await api.createStack(boardId: boardId, title: title)
             await loadStacks(boardId: boardId)
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
     

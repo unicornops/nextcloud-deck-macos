@@ -69,12 +69,16 @@ struct BoardDetailView: View {
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
+            .help("Refresh lists")
+            .accessibilityLabel("Refresh lists")
             .disabled(appState.isLoadingStacks)
             Button {
                 showingNewStack = true
             } label: {
                 SwiftUI.Label("Add list", systemImage: "plus.rectangle.on.rectangle")
             }
+            .help("Add a new list to this board")
+            .accessibilityLabel("Add list")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
@@ -96,17 +100,11 @@ struct BoardDetailView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let err = appState.stacksError, appState.stacks.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
-                    Text("Could not load lists")
-                        .font(.headline)
+                ContentUnavailableView {
+                    Label("Could not load lists", systemImage: "exclamationmark.triangle")
+                } description: {
                     Text(err)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 320)
+                } actions: {
                     Button("Try again") {
                         Task { await appState.loadStacks(boardId: board.id) }
                     }

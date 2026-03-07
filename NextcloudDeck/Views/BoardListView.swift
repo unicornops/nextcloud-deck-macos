@@ -61,6 +61,8 @@ struct BoardListView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
+                .help("Refresh boards")
+                .accessibilityLabel("Refresh boards")
                 .disabled(appState.isLoading)
             }
         }
