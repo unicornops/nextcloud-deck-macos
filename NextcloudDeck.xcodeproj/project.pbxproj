@@ -56,7 +56,6 @@
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			sourceTree = "<group>";
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -190,7 +189,6 @@
 				A10000000000000000000020 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			sourceTree = "<group>";
 		};
 /* End PBXResourcesBuildPhase section */
 
@@ -218,7 +216,6 @@
 				A10000000000000000000011 /* Color+Hex.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			sourceTree = "<group>";
 		};
 /* End PBXSourcesBuildPhase section */
 
@@ -301,7 +298,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nextcloud.deck.macos;
+				PRODUCT_BUNDLE_IDENTIFIER = ie.unicornops.nextclouddeck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -326,7 +323,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nextcloud.deck.macos;
+				PRODUCT_BUNDLE_IDENTIFIER = ie.unicornops.nextclouddeck;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
