@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.5.0...v0.6.0) (2026-03-08)
+
+
+### Features
+
+* enhance KeychainStorage for credential management ([#18](https://github.com/unicornops/nextcloud-deck-macos/issues/18)) ([0dfa2e2](https://github.com/unicornops/nextcloud-deck-macos/commit/0dfa2e20dc0015eeb77c4b2789a9c75728fea0d9))
+
 ## [0.5.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.4.1...v0.5.0) (2026-03-08)
 
 
