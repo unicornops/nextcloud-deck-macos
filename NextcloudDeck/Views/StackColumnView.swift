@@ -1,4 +1,24 @@
 import SwiftUI
+import UniformTypeIdentifiers
+
+private struct DraggedCard: Codable {
+    let id: Int
+    let stackId: Int
+
+    var providerString: String {
+        "\(id):\(stackId)"
+    }
+
+    static func fromProviderString(_ value: String) -> DraggedCard? {
+        let parts = value.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 2,
+              let id = Int(parts[0]),
+              let stackId = Int(parts[1]) else {
+            return nil
+        }
+        return DraggedCard(id: id, stackId: stackId)
+    }
+}
 
 struct StackColumnView: View {
     let board: Board
@@ -11,11 +31,18 @@ struct StackColumnView: View {
     @State private var isAddingCard = false
     @State private var pendingDelete = false
     @State private var pendingCardDelete: Card?
-    
+    @State private var isDropTargeted = false
+
+    private let dropTypes = [
+        UTType.plainText.identifier,
+        UTType.utf8PlainText.identifier,
+        UTType.text.identifier
+    ]
+
     private var cards: [Card] {
         stack.cards ?? []
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
@@ -27,8 +54,11 @@ struct StackColumnView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
+                .strokeBorder(borderColor, lineWidth: isDropTargeted ? 2 : 1)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .animation(.easeInOut(duration: 0.15), value: isDropTargeted)
+        .onDrop(of: dropTypes, isTargeted: $isDropTargeted, perform: handleDrop(providers:))
         .confirmationDialog("Delete list?", isPresented: $pendingDelete) {
             Button("Delete", role: .destructive) {
                 Task {
@@ -88,7 +118,7 @@ struct StackColumnView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
     }
-    
+
     private var cardList: some View {
         ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 8) {
@@ -104,8 +134,9 @@ struct StackColumnView: View {
             .padding(.bottom, 8)
         }
         .frame(maxHeight: .infinity)
+        .background(dropTargetBackground)
     }
-    
+
     private var addCardField: some View {
         Group {
             if isAddingCard {
@@ -138,7 +169,7 @@ struct StackColumnView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .padding(10)
     }
-    
+
     private func submitNewCard() {
         let title = newCardTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
@@ -148,6 +179,59 @@ struct StackColumnView: View {
             await appState.createCard(boardId: board.id, stackId: stack.id, title: title)
             onRefresh()
         }
+    }
+
+    private var borderColor: Color {
+        if isDropTargeted {
+            return .accentColor
+        }
+        return Color(nsColor: .separatorColor).opacity(0.5)
+    }
+
+    private var dropTargetBackground: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color.accentColor.opacity(isDropTargeted ? 0.12 : 0.001))
+            .padding(.horizontal, 10)
+            .padding(.bottom, 8)
+    }
+
+    private func handleDrop(providers: [NSItemProvider]) -> Bool {
+        guard let provider = providers.first(where: { provider in
+            dropTypes.contains { provider.hasItemConformingToTypeIdentifier($0) }
+        }) else {
+            return false
+        }
+
+        let typeIdentifier = dropTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) ?? UTType.plainText.identifier
+
+        provider.loadItem(forTypeIdentifier: typeIdentifier, options: nil) { item, _ in
+            let draggedCard: DraggedCard?
+
+            if let data = item as? Data, let value = String(data: data, encoding: .utf8) {
+                draggedCard = DraggedCard.fromProviderString(value)
+            } else if let value = item as? String {
+                draggedCard = DraggedCard.fromProviderString(value)
+            } else if let text = item as? NSString {
+                draggedCard = DraggedCard.fromProviderString(text as String)
+            } else {
+                draggedCard = nil
+            }
+
+            guard let draggedCard, draggedCard.stackId != stack.id else { return }
+            let destinationOrder = cards.count
+
+            Task { @MainActor in
+                await appState.moveCard(
+                    boardId: board.id,
+                    cardId: draggedCard.id,
+                    fromStackId: draggedCard.stackId,
+                    toStackId: stack.id,
+                    order: destinationOrder
+                )
+            }
+        }
+
+        return true
     }
 }
 
@@ -209,6 +293,9 @@ struct CardRowView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onDrag {
+            NSItemProvider(object: NSString(string: DraggedCard(id: card.id, stackId: card.stackId).providerString))
+        }
         .onHover { hovering in
             isHovering = hovering
             DispatchQueue.main.async {
@@ -225,7 +312,7 @@ struct CardRowView: View {
             }
         }
     }
-    
+
     private func formatDueDate(_ iso: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
