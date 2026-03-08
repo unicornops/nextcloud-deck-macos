@@ -289,12 +289,18 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = NextcloudDeck/NextcloudDeck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				BUILD_DATE_UTC = local;
+				BUILD_REF = local;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
+				GIT_COMMIT_HASH = unknown;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_BuildDateUTC = "$(BUILD_DATE_UTC)";
+				INFOPLIST_KEY_BuildGitCommit = "$(GIT_COMMIT_HASH)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_BuildRef = "$(BUILD_REF)";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 UnicornOps. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -315,12 +321,18 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = NextcloudDeck/NextcloudDeck.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				BUILD_DATE_UTC = local;
+				BUILD_REF = local;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
+				GIT_COMMIT_HASH = unknown;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_BuildDateUTC = "$(BUILD_DATE_UTC)";
+				INFOPLIST_KEY_BuildGitCommit = "$(GIT_COMMIT_HASH)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_BuildRef = "$(BUILD_REF)";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 UnicornOps. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

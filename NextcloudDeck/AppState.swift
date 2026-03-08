@@ -12,6 +12,7 @@ final class AppState: ObservableObject {
     @Published var errorMessage: String?
     @Published var stacksError: String?
     @Published var showingLogin: Bool = false
+    @Published var showingAbout: Bool = false
 
     private var deckAPI: DeckAPI?
     private var credentials: (serverURL: URL, username: String, appPassword: String)?
