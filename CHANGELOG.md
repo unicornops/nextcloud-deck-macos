@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.9.0...v0.9.1) (2026-03-08)
+
+
+### Bug Fixes
+
+* **build:** add build info shell phase and plist loading ([#26](https://github.com/unicornops/nextcloud-deck-macos/issues/26)) ([88ad98a](https://github.com/unicornops/nextcloud-deck-macos/commit/88ad98afba00e3f6d05836916bb55fdab124a6a5))
+
 ## [0.9.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.8.0...v0.9.0) (2026-03-08)
 
 
