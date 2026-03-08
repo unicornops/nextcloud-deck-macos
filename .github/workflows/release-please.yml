@@ -164,6 +164,11 @@ jobs:
             -scheme ${{ env.SCHEME }} \
             -configuration Release \
             -derivedDataPath build/DerivedData \
+            MARKETING_VERSION="${{ steps.version.outputs.version }}" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            GIT_COMMIT_HASH="${{ github.sha }}" \
+            BUILD_REF="${{ steps.version.outputs.tag }}" \
+            BUILD_DATE_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="$CERT_TEAM_ID" \

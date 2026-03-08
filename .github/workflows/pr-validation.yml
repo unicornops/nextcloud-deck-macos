@@ -66,6 +66,10 @@ jobs:
             -scheme NextcloudDeck \
             -configuration Debug \
             -derivedDataPath build/DerivedData \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            GIT_COMMIT_HASH="${{ github.sha }}" \
+            BUILD_REF="${{ github.sha }}" \
+            BUILD_DATE_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             CODE_SIGNING_ALLOWED=NO \
             clean build
 
@@ -76,6 +80,10 @@ jobs:
             -scheme NextcloudDeck \
             -configuration Release \
             -derivedDataPath build/DerivedData \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            GIT_COMMIT_HASH="${{ github.sha }}" \
+            BUILD_REF="${{ github.sha }}" \
+            BUILD_DATE_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             CODE_SIGNING_ALLOWED=NO \
             clean build
 

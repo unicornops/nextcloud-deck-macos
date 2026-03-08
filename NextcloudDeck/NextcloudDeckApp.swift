@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct NextcloudDeckApp: App {
     @StateObject private var appState = AppState()
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -20,7 +20,7 @@ struct NextcloudDeckApp: App {
             }
             CommandGroup(replacing: .appInfo) {
                 Button("About Nextcloud Deck") {
-                    NSApplication.shared.orderFrontStandardAboutPanel(options: [:])
+                    appState.showingAbout = true
                 }
             }
             CommandGroup(replacing: .help) {
