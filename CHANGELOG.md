@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.9.1...v0.9.2) (2026-03-08)
+
+
+### Bug Fixes
+
+* **ui:** make CardRowView accessible as a button ([#28](https://github.com/unicornops/nextcloud-deck-macos/issues/28)) ([fdd0868](https://github.com/unicornops/nextcloud-deck-macos/commit/fdd0868e14b54c6a0154836db7e9f6549ad3e5a7))
+
 ## [0.9.1](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.9.0...v0.9.1) (2026-03-08)
 
 
