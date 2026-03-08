@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.8.0...v0.9.0) (2026-03-08)
+
+
+### Features
+
+* **ui:** add About sheet with build metadata ([#24](https://github.com/unicornops/nextcloud-deck-macos/issues/24)) ([67b59b1](https://github.com/unicornops/nextcloud-deck-macos/commit/67b59b1e95192a578c4bf9a1c262726f045f8f75))
+
 ## [0.8.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.7.0...v0.8.0) (2026-03-08)
 
 
