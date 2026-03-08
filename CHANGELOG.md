@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.6.0...v0.7.0) (2026-03-08)
+
+
+### Features
+
+* enforce HTTPS for credential storage and add entitlements ([#20](https://github.com/unicornops/nextcloud-deck-macos/issues/20)) ([048b711](https://github.com/unicornops/nextcloud-deck-macos/commit/048b711ce9be36cc2590046a7738d82fbc3275a3))
+
 ## [0.6.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.5.0...v0.6.0) (2026-03-08)
 
 
