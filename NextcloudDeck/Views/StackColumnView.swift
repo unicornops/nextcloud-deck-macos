@@ -246,53 +246,51 @@ struct CardRowView: View {
     }
 
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(card.title)
-                    .font(.system(.body, design: .default))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                if let due = card.duedate, !due.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "calendar")
-                            .font(.caption2)
-                        Text(formatDueDate(due))
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(card.title)
+                .font(.system(.body, design: .default))
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            if let due = card.duedate, !due.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                        .font(.caption2)
+                    Text(formatDueDate(due))
+                        .font(.caption2)
                 }
-                if let labels = card.labels, !labels.isEmpty {
-                    HStack(spacing: 4) {
-                        ForEach(labels.prefix(3)) { label in
-                            Text(label.title)
-                                .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color(hex: label.color ?? "cccccc") ?? .gray.opacity(0.3))
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
-                        }
+                .foregroundStyle(.secondary)
+            }
+            if let labels = card.labels, !labels.isEmpty {
+                HStack(spacing: 4) {
+                    ForEach(labels.prefix(3)) { label in
+                        Text(label.title)
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(hex: label.color ?? "cccccc") ?? .gray.opacity(0.3))
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
                     }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(
-                (isHovering ? Color(nsColor: .controlBackgroundColor) : Color(nsColor: .windowBackgroundColor))
-                    .opacity(isHovering ? 1.0 : 0.98)
-            )
-            .clipShape(cardShape)
-            .overlay(
-                cardShape
-                    .strokeBorder(
-                        Color(nsColor: .separatorColor).opacity(isHovering ? 0.6 : 0.4),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(color: .black.opacity(isHovering ? 0.08 : 0.05), radius: isHovering ? 4 : 2, y: 2)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            (isHovering ? Color(nsColor: .controlBackgroundColor) : Color(nsColor: .windowBackgroundColor))
+                .opacity(isHovering ? 1.0 : 0.98)
+        )
+        .clipShape(cardShape)
+        .overlay(
+            cardShape
+                .strokeBorder(
+                    Color(nsColor: .separatorColor).opacity(isHovering ? 0.6 : 0.4),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: .black.opacity(isHovering ? 0.08 : 0.05), radius: isHovering ? 4 : 2, y: 2)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: action)
         .onDrag {
             NSItemProvider(object: NSString(string: DraggedCard(id: card.id, stackId: card.stackId).providerString))
         }
@@ -304,6 +302,7 @@ struct CardRowView: View {
         }
         .accessibilityLabel(card.title)
         .accessibilityHint("Opens card details")
+        .accessibilityAddTraits(.isButton)
         .contextMenu {
             if let onDelete = onDelete {
                 Button("Delete card", role: .destructive) {
