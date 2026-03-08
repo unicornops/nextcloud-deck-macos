@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.7.0...v0.8.0) (2026-03-08)
+
+
+### Features
+
+* **cards:** enable drag and drop to move cards between stacks ([#22](https://github.com/unicornops/nextcloud-deck-macos/issues/22)) ([8d4aa66](https://github.com/unicornops/nextcloud-deck-macos/commit/8d4aa6645abaef1def73f55db26d3ace4bc47504))
+
 ## [0.7.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.6.0...v0.7.0) (2026-03-08)
 
 
