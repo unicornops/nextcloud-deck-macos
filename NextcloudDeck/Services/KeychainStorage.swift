@@ -19,9 +19,19 @@ final class KeychainStorage {
     /// Data remains encrypted and device-only; not accessible when device is locked before first unlock.
     private static let accessibility = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
 
-    static func save(serverURL: URL, username: String, appPassword: String) throws {
+    /// Ensures the URL uses HTTPS (required for security and App Store).
+    private static func httpsURL(from url: URL) -> URL {
+        guard url.scheme == "http" else { return url }
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        components.scheme = "https"
+        return components.url ?? url
+    }
+
+    /// Saves credentials and returns the server URL used for storage (always HTTPS).
+    static func save(serverURL: URL, username: String, appPassword: String) throws -> URL {
+        let urlToStore = Self.httpsURL(from: serverURL)
         let payload = CredentialsPayload(
-            serverURL: serverURL.absoluteString,
+            serverURL: urlToStore.absoluteString,
             username: username,
             appPassword: appPassword
         )
@@ -38,16 +48,17 @@ final class KeychainStorage {
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else { throw KeychainError.saveFailed(status) }
+        return urlToStore
     }
 
     static func load() -> (serverURL: URL, username: String, appPassword: String)? {
         if let creds = loadFromSingleItem() {
             return creds
         }
-        if let creds = loadFromLegacyItems() {
-            try? save(serverURL: creds.serverURL, username: creds.username, appPassword: creds.appPassword)
+        if let creds = loadFromLegacyItems(),
+           let storedURL = try? save(serverURL: creds.serverURL, username: creds.username, appPassword: creds.appPassword) {
             try? deleteLegacyItems()
-            return creds
+            return (storedURL, creds.username, creds.appPassword)
         }
         return nil
     }

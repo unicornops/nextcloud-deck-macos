@@ -12,6 +12,8 @@ struct LoginView: View {
     private var serverURL: URL? {
         var s = serverInput.trimmingCharacters(in: .whitespacesAndNewlines)
         if !s.hasPrefix("http") { s = "https://" + s }
+        // Require HTTPS for security (App Store and best practice).
+        if s.hasPrefix("http://") { s = "https://" + s.dropFirst(7) }
         return URL(string: s)
     }
     
