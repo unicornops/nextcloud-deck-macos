@@ -38,9 +38,9 @@ final class AppState: ObservableObject {
         defer { isLoading = false }
         do {
             let appPassword = try await NextcloudAuth.getAppPassword(serverURL: serverURL, username: username, password: password)
-            try KeychainStorage.save(serverURL: serverURL, username: username, appPassword: appPassword)
-            credentials = (serverURL, username, appPassword)
-            deckAPI = DeckAPI(serverURL: serverURL, username: username, appPassword: appPassword)
+            let storedURL = try KeychainStorage.save(serverURL: serverURL, username: username, appPassword: appPassword)
+            credentials = (storedURL, username, appPassword)
+            deckAPI = DeckAPI(serverURL: storedURL, username: username, appPassword: appPassword)
             isLoggedIn = true
             showingLogin = false
             await loadBoards()
@@ -61,9 +61,9 @@ final class AppState: ObservableObject {
         defer { isLoading = false }
         do {
             let (url, loginName, appPassword) = try await NextcloudAuth.loginWithBrowser(serverURL: serverURL)
-            try KeychainStorage.save(serverURL: url, username: loginName, appPassword: appPassword)
-            credentials = (url, loginName, appPassword)
-            deckAPI = DeckAPI(serverURL: url, username: loginName, appPassword: appPassword)
+            let storedURL = try KeychainStorage.save(serverURL: url, username: loginName, appPassword: appPassword)
+            credentials = (storedURL, loginName, appPassword)
+            deckAPI = DeckAPI(serverURL: storedURL, username: loginName, appPassword: appPassword)
             isLoggedIn = true
             showingLogin = false
             await loadBoards()
