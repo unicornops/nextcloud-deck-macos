@@ -50,6 +50,29 @@ struct Card: Identifiable, Codable {
         case archived, duedate, deletedAt, commentsUnread, overdue
         case etag = "ETag"
     }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(title, forKey: .title)
+        try c.encode(description ?? "", forKey: .description)
+        try c.encode(stackId, forKey: .stackId)
+        try c.encode(type ?? "plain", forKey: .type)
+        try c.encodeIfPresent(lastModified, forKey: .lastModified)
+        try c.encodeIfPresent(createdAt, forKey: .createdAt)
+        try c.encode(labels ?? [], forKey: .labels)
+        try c.encode(assignedUsers ?? [], forKey: .assignedUsers)
+        try c.encodeIfPresent(attachments, forKey: .attachments)
+        try c.encode(attachmentCount ?? 0, forKey: .attachmentCount)
+        try c.encodeIfPresent(owner, forKey: .owner)
+        try c.encode(order, forKey: .order)
+        try c.encode(archived, forKey: .archived)
+        try c.encodeIfPresent(duedate, forKey: .duedate)
+        try c.encodeIfPresent(deletedAt, forKey: .deletedAt)
+        try c.encode(commentsUnread ?? 0, forKey: .commentsUnread)
+        try c.encodeIfPresent(overdue, forKey: .overdue)
+        try c.encodeIfPresent(etag, forKey: .etag)
+    }
 }
 
 private extension KeyedDecodingContainer {
@@ -75,7 +98,7 @@ struct Attachment: Codable, Identifiable {
     var createdBy: String?
     var deletedAt: Int?
     var extendedData: AttachmentExtendedData?
-    
+
     enum CodingKeys: String, CodingKey {
         case id, cardId, type, data, lastModified, createdAt, createdBy, deletedAt, extendedData
     }
@@ -92,7 +115,7 @@ struct AttachmentInfo: Codable {
     var basename: String?
     var fileExtension: String?
     var filename: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case dirname, basename, filename
         case fileExtension = "extension"

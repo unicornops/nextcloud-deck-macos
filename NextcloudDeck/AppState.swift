@@ -12,15 +12,15 @@ final class AppState: ObservableObject {
     @Published var errorMessage: String?
     @Published var stacksError: String?
     @Published var showingLogin: Bool = false
-    
+
     private var deckAPI: DeckAPI?
     private var credentials: (serverURL: URL, username: String, appPassword: String)?
-    
+
     var selectedBoard: Board? {
         guard let id = selectedBoardId else { return nil }
         return boards.first { $0.id == id }
     }
-    
+
     init() {
         if let creds = KeychainStorage.load() {
             credentials = creds
@@ -31,7 +31,7 @@ final class AppState: ObservableObject {
             showingLogin = true
         }
     }
-    
+
     func login(serverURL: URL, username: String, password: String) async {
         isLoading = true
         errorMessage = nil
@@ -71,7 +71,7 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
-    
+
     func logout() {
         try? KeychainStorage.delete()
         credentials = nil
@@ -82,7 +82,7 @@ final class AppState: ObservableObject {
         stacks = []
         showingLogin = true
     }
-    
+
     func loadBoards() async {
         guard deckAPI != nil else { return }
         isLoading = true
@@ -107,7 +107,7 @@ final class AppState: ObservableObject {
         guard isLoggedIn else { return }
         await loadBoards()
     }
-    
+
     func loadStacks(boardId: Int) async {
         guard let api = deckAPI else { return }
         stacks = []
@@ -121,16 +121,16 @@ final class AppState: ObservableObject {
             stacksError = error.localizedDescription
         }
     }
-    
+
     func selectBoard(_ board: Board) {
         selectedBoardId = board.id
         Task { await loadStacks(boardId: board.id) }
     }
-    
+
     func refresh() async {
         await loadBoards()
     }
-    
+
     func createCard(boardId: Int, stackId: Int, title: String) async {
         guard let api = deckAPI else { return }
         do {
@@ -140,7 +140,7 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
-    
+
     /// Returns `true` if the stack was created successfully, `false` otherwise (and sets `errorMessage`).
     func createStack(boardId: Int, title: String) async -> Bool {
         guard let api = deckAPI else { return false }
@@ -164,7 +164,7 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
-    
+
     func updateCard(boardId: Int, stackId: Int, card: Card, title: String?, description: String?) async {
         guard let api = deckAPI else { return }
         do {
@@ -184,7 +184,7 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
-    
+
     func reorderCard(boardId: Int, fromStackId: Int, cardId: Int, toStackId: Int, order: Int) async {
         guard let api = deckAPI else { return }
         do {
@@ -193,6 +193,23 @@ final class AppState: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func moveCard(boardId: Int, cardId: Int, fromStackId: Int, toStackId: Int, order: Int) async {
+        guard fromStackId != toStackId else { return }
+        guard let api = deckAPI else { return }
+
+        if let card = stacks.first(where: { $0.id == fromStackId })?.cards?.first(where: { $0.id == cardId }) {
+            do {
+                _ = try await api.moveCardToStack(card: card, toStackId: toStackId, order: order)
+                await loadStacks(boardId: boardId)
+                return
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+
+        await reorderCard(boardId: boardId, fromStackId: fromStackId, cardId: cardId, toStackId: toStackId, order: order)
     }
 
     func assignLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async {

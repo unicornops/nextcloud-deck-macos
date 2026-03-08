@@ -4,14 +4,15 @@ import Foundation
 /// https://deck.readthedocs.io/en/latest/API/
 final class DeckAPI {
     private let baseURL: URL
+    private let deckAppBaseURL: URL
     private let username: String
     private let appPassword: String
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
-    
+
     private static let apiPath = "/index.php/apps/deck/api/v1.0"
-    
+
     init(serverURL: URL, username: String, appPassword: String) {
         self.baseURL = serverURL
             .appendingPathComponent("index.php")
@@ -19,24 +20,36 @@ final class DeckAPI {
             .appendingPathComponent("deck")
             .appendingPathComponent("api")
             .appendingPathComponent("v1.0")
+        self.deckAppBaseURL = serverURL
+            .appendingPathComponent("index.php")
+            .appendingPathComponent("apps")
+            .appendingPathComponent("deck")
         self.username = username
         self.appPassword = appPassword
         self.session = URLSession.shared
         self.decoder = JSONDecoder()
         self.encoder = JSONEncoder()
     }
-    
+
     private var authHeader: String {
         let credentials = "\(username):\(appPassword)"
         guard let data = credentials.data(using: .utf8) else { return "" }
         return "Basic \(data.base64EncodedString())"
     }
-    
+
     /// Builds a full URL by appending the relative path to the base URL (avoids `URL(string:relativeTo:)` replacing the last path component and dropping `/v1.0`).
     private func url(for path: String) -> URL? {
         let basePath = baseURL.path
         let pathToUse = (basePath.hasSuffix("/") ? basePath : basePath + "/") + path
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        components.path = pathToUse
+        return components.url
+    }
+
+    private func deckAppURL(for path: String) -> URL? {
+        let basePath = deckAppBaseURL.path
+        let pathToUse = (basePath.hasSuffix("/") ? basePath : basePath + "/") + path
+        var components = URLComponents(url: deckAppBaseURL, resolvingAgainstBaseURL: false)!
         components.path = pathToUse
         return components.url
     }
@@ -55,14 +68,14 @@ final class DeckAPI {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         req.setValue(authHeader, forHTTPHeaderField: "Authorization")
-        
+
         if let body = body {
             req.httpBody = try encoder.encode(body)
         }
-        
+
         let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
-        
+
         if http.statusCode == 304 { throw DeckAPIError.notModified }
         if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
             throw DeckAPIError.badRequest(err.message)
@@ -71,10 +84,10 @@ final class DeckAPI {
         guard (200...299).contains(http.statusCode) else {
             throw DeckAPIError.httpStatus(http.statusCode)
         }
-        
+
         return try decoder.decode(T.self, from: data)
     }
-    
+
     private func requestNoContent(_ path: String, method: String = "GET", body: (any Encodable)? = nil) async throws {
         guard let url = url(for: path) else {
             throw DeckAPIError.invalidURL
@@ -97,7 +110,7 @@ final class DeckAPI {
             throw DeckAPIError.httpStatus(http.statusCode)
         }
     }
-    
+
     // MARK: - Boards
 
     func getBoards(details: Bool = true) async throws -> [Board] {
@@ -147,23 +160,23 @@ final class DeckAPI {
     private struct OCSBoardsResponse: Decodable {
         let data: [Board]
     }
-    
+
     func getBoard(id: Int) async throws -> Board {
         try await request("boards/\(id)")
     }
-    
+
     func createBoard(title: String, color: String = "0082c9") async throws -> Board {
         try await request("boards", method: "POST", body: CreateBoardRequest(title: title, color: color))
     }
-    
+
     func updateBoard(id: Int, title: String?, color: String?, archived: Bool?) async throws -> Board {
         try await request("boards/\(id)", method: "PUT", body: UpdateBoardRequest(title: title, color: color, archived: archived))
     }
-    
+
     func deleteBoard(id: Int) async throws {
         try await requestNoContent("boards/\(id)", method: "DELETE")
     }
-    
+
     // MARK: - Stacks
 
     func getStacks(boardId: Int) async throws -> [Stack] {
@@ -223,7 +236,23 @@ final class DeckAPI {
     private struct OCSStacksEnvelope: Decodable {
         let ocs: OCSStacksWrapper
     }
-    
+
+    private struct OCSCardWrapper: Decodable {
+        let data: Card
+    }
+
+    private struct OCSCardEnvelope: Decodable {
+        let ocs: OCSCardWrapper
+    }
+
+    private struct OCSCardArrayWrapper: Decodable {
+        let data: [Card]
+    }
+
+    private struct OCSCardArrayEnvelope: Decodable {
+        let ocs: OCSCardArrayWrapper
+    }
+
     func getStack(boardId: Int, stackId: Int) async throws -> Stack {
         try await request("boards/\(boardId)/stacks/\(stackId)")
     }
@@ -263,45 +292,142 @@ final class DeckAPI {
             throw DeckAPIError.badRequest("Could not decode archived stacks: \(error.localizedDescription)")
         }
     }
-    
+
     func createStack(boardId: Int, title: String, order: Int = 999) async throws -> Stack {
         try await request("boards/\(boardId)/stacks", method: "POST", body: CreateStackRequest(title: title, order: order))
     }
-    
+
     func updateStack(boardId: Int, stackId: Int, title: String?, order: Int?) async throws -> Stack {
         try await request("boards/\(boardId)/stacks/\(stackId)", method: "PUT", body: UpdateStackRequest(title: title, order: order))
     }
-    
+
     func deleteStack(boardId: Int, stackId: Int) async throws {
         try await requestNoContent("boards/\(boardId)/stacks/\(stackId)", method: "DELETE")
     }
-    
+
     // MARK: - Cards
-    
+
     func getCard(boardId: Int, stackId: Int, cardId: Int) async throws -> Card {
         try await request("boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)")
     }
-    
+
     func createCard(boardId: Int, stackId: Int, title: String, description: String? = nil, order: Int = 999, duedate: String? = nil) async throws -> Card {
         try await request("boards/\(boardId)/stacks/\(stackId)/cards", method: "POST", body: CreateCardRequest(title: title, type: "plain", order: order, description: description, duedate: duedate))
     }
-    
+
     func updateCard(boardId: Int, stackId: Int, cardId: Int, title: String?, description: String?, order: Int?, duedate: String?) async throws -> Card {
         try await request("boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)", method: "PUT", body: UpdateCardRequest(title: title, description: description, type: "plain", order: order, duedate: duedate))
     }
-    
+
     func deleteCard(boardId: Int, stackId: Int, cardId: Int) async throws {
         try await requestNoContent("boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)", method: "DELETE")
     }
-    
+
     func reorderCard(boardId: Int, stackId: Int, cardId: Int, order: Int, newStackId: Int?) async throws -> Card {
-        try await request("boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/reorder", method: "PUT", body: ReorderCardRequest(order: order, stackId: newStackId))
+        let body = try encoder.encode(ReorderCardRequest(order: order, stackId: newStackId))
+        let paths = [
+            "cards/\(cardId)/reorder",
+            "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/reorder"
+        ]
+
+        var lastError: Error?
+
+        for path in paths {
+            guard let requestURL = url(for: path) else {
+                lastError = DeckAPIError.invalidURL
+                continue
+            }
+
+            do {
+                let (data, _) = try await performRequest(url: requestURL, method: "PUT", body: body)
+                return try await decodeReorderedCardResponse(
+                    data: data,
+                    boardId: boardId,
+                    stackId: stackId,
+                    newStackId: newStackId,
+                    cardId: cardId
+                )
+            } catch {
+                lastError = error
+                if !shouldTryLegacyReorderFallback(error) || path == paths.last {
+                    throw error
+                }
+            }
+        }
+
+        if let lastError {
+            throw lastError
+        }
+
+        throw DeckAPIError.invalidResponse
     }
-    
+
+    private func shouldTryLegacyReorderFallback(_ error: Error) -> Bool {
+        switch error {
+        case DeckAPIError.httpStatus(404), DeckAPIError.httpStatus(405), DeckAPIError.badRequest:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func decodeReorderedCardResponse(
+        data: Data,
+        boardId: Int,
+        stackId: Int,
+        newStackId: Int?,
+        cardId: Int
+    ) async throws -> Card {
+        if data.isEmpty {
+            return try await getCard(boardId: boardId, stackId: newStackId ?? stackId, cardId: cardId)
+        }
+
+        if let card = try? decoder.decode(Card.self, from: data) {
+            return card
+        }
+
+        if let wrapper = try? decoder.decode(OCSCardWrapper.self, from: data) {
+            return wrapper.data
+        }
+
+        if let envelope = try? decoder.decode(OCSCardEnvelope.self, from: data) {
+            return envelope.ocs.data
+        }
+
+        return try await getCard(boardId: boardId, stackId: newStackId ?? stackId, cardId: cardId)
+    }
+
+    func moveCardToStack(card: Card, toStackId: Int, order: Int) async throws -> [Card] {
+        guard let requestURL = deckAppURL(for: "cards/\(card.id)/reorder") else {
+            throw DeckAPIError.invalidURL
+        }
+
+        var updatedCard = card
+        updatedCard.stackId = toStackId
+        updatedCard.order = order
+        let body = try encoder.encode(updatedCard)
+
+        let (data, _) = try await performRequest(url: requestURL, method: "PUT", body: body)
+
+        if let cards = try? decoder.decode([Card].self, from: data) {
+            return cards
+        }
+
+        if let wrapper = try? decoder.decode(OCSCardArrayWrapper.self, from: data) {
+            return wrapper.data
+        }
+
+        if let envelope = try? decoder.decode(OCSCardArrayEnvelope.self, from: data) {
+            return envelope.ocs.data
+        }
+
+        throw DeckAPIError.badRequest("Could not decode moved cards response")
+    }
+
     func assignLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async throws {
         try await requestNoContent("boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/assignLabel", method: "PUT", body: LabelIdRequest(labelId: labelId))
     }
-    
+
     func removeLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async throws {
         try await requestNoContent("boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/removeLabel", method: "PUT", body: LabelIdRequest(labelId: labelId))
     }
@@ -379,7 +505,7 @@ enum DeckAPIError: LocalizedError {
     case badRequest(String)
     case permissionDenied
     case httpStatus(Int)
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidURL: return "Invalid URL"
