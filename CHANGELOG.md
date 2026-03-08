@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.4.1...v0.5.0) (2026-03-08)
+
+
+### Features
+
+* add label management functionality ([#17](https://github.com/unicornops/nextcloud-deck-macos/issues/17)) ([d7b0690](https://github.com/unicornops/nextcloud-deck-macos/commit/d7b06906c84b3555cde854655caec4fb51178061))
+
+
+### Chores
+
+* update product bundle identifier and remove unused sourceTree entries ([#15](https://github.com/unicornops/nextcloud-deck-macos/issues/15)) ([53cd7f8](https://github.com/unicornops/nextcloud-deck-macos/commit/53cd7f899cd892b03ca2d460843a04495d492b44))
+
 ## [0.4.1](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.4.0...v0.4.1) (2026-03-07)
 
 
