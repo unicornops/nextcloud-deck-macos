@@ -51,12 +51,31 @@ struct ContentView: View {
 }
 
 private struct BuildMetadata {
+    private static let buildInfo: [String: Any] = {
+        guard let url = Bundle.main.url(forResource: "BuildInfo", withExtension: "plist"),
+              let data = try? Data(contentsOf: url),
+              let info = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else {
+            return [:]
+        }
+        return info
+    }()
+
     static let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "Nextcloud Deck"
-    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
-    static let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"
-    static let gitCommit = Bundle.main.object(forInfoDictionaryKey: "BuildGitCommit") as? String ?? "unknown"
-    static let buildRef = Bundle.main.object(forInfoDictionaryKey: "BuildRef") as? String ?? "local"
-    static let buildDateUTC = Bundle.main.object(forInfoDictionaryKey: "BuildDateUTC") as? String ?? "unknown"
+    static let version = buildInfo["BuildVersion"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        ?? "Unknown"
+    static let buildNumber = buildInfo["BuildNumber"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        ?? "Unknown"
+    static let gitCommit = buildInfo["BuildGitCommit"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "BuildGitCommit") as? String
+        ?? "unknown"
+    static let buildRef = buildInfo["BuildRef"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "BuildRef") as? String
+        ?? "local"
+    static let buildDateUTC = buildInfo["BuildDateUTC"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "BuildDateUTC") as? String
+        ?? "unknown"
 
     static var shortCommit: String {
         gitCommit == "unknown" ? gitCommit : String(gitCommit.prefix(7))
