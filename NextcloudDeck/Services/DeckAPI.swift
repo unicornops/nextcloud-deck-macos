@@ -305,6 +305,13 @@ final class DeckAPI {
     func removeLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async throws {
         try await requestNoContent("boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/removeLabel", method: "PUT", body: LabelIdRequest(labelId: labelId))
     }
+
+    // MARK: - Labels
+
+    /// Creates a new label on the board. Returns the created label (or reload board to get it).
+    func createLabel(boardId: Int, title: String, color: String = "31CC7C") async throws -> DeckLabel {
+        try await request("boards/\(boardId)/labels", method: "POST", body: CreateLabelRequest(title: title, color: color))
+    }
 }
 
 // MARK: - Request DTOs
@@ -358,6 +365,11 @@ private struct ReorderCardRequest: Encodable {
 
 private struct LabelIdRequest: Encodable {
     let labelId: Int
+}
+
+private struct CreateLabelRequest: Encodable {
+    let title: String
+    let color: String
 }
 
 enum DeckAPIError: LocalizedError {

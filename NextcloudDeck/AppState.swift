@@ -194,4 +194,42 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
+
+    func assignLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.assignLabel(boardId: boardId, stackId: stackId, cardId: cardId, labelId: labelId)
+            await loadStacks(boardId: boardId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func removeLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.removeLabel(boardId: boardId, stackId: stackId, cardId: cardId, labelId: labelId)
+            await loadStacks(boardId: boardId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Creates a new label on the board and refreshes board/stacks. Returns the new label id if successful.
+    func createLabel(boardId: Int, title: String, color: String) async -> Int? {
+        guard let api = deckAPI else { return nil }
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        do {
+            let label = try await api.createLabel(boardId: boardId, title: trimmed, color: color)
+            await loadBoards()
+            if let bid = selectedBoardId, bid == boardId {
+                await loadStacks(boardId: boardId)
+            }
+            return label.id
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
 }
