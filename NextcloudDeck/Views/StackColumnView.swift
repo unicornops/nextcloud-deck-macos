@@ -31,7 +31,10 @@ struct StackColumnView: View {
     @State private var isAddingCard = false
     @State private var pendingDelete = false
     @State private var pendingCardDelete: Card?
-    @State private var isDropTargeted = false
+    @State private var dragInsertIndex: Int? = nil
+    @State private var isColumnDropTargeted = false
+
+    private var isDropTargeted: Bool { dragInsertIndex != nil || isColumnDropTargeted }
 
     private let dropTypes = [
         UTType.plainText.identifier,
@@ -40,7 +43,7 @@ struct StackColumnView: View {
     ]
 
     private var cards: [Card] {
-        stack.cards ?? []
+        (stack.cards ?? []).sorted { $0.order < $1.order }
     }
 
     var body: some View {
@@ -58,7 +61,7 @@ struct StackColumnView: View {
         )
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .animation(.easeInOut(duration: 0.15), value: isDropTargeted)
-        .onDrop(of: dropTypes, isTargeted: $isDropTargeted, perform: handleDrop(providers:))
+        .onDrop(of: dropTypes, isTargeted: $isColumnDropTargeted, perform: handleColumnDrop(providers:))
         .confirmationDialog("Delete list?", isPresented: $pendingDelete) {
             Button("Delete", role: .destructive) {
                 Task {
@@ -70,7 +73,7 @@ struct StackColumnView: View {
                 pendingDelete = false
             }
         } message: {
-            Text("“\(stack.title)” and all its cards will be permanently deleted. This cannot be undone.")
+            Text("\u{201c}\(stack.title)\u{201d} and all its cards will be permanently deleted. This cannot be undone.")
         }
         .confirmationDialog("Delete card?", isPresented: Binding(
             get: { pendingCardDelete != nil },
@@ -120,21 +123,65 @@ struct StackColumnView: View {
     }
 
     private var cardList: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            LazyVStack(spacing: 8) {
-                ForEach(cards) { card in
-                    CardRowView(card: card, onDelete: {
-                        pendingCardDelete = card
+        let currentCards = cards
+        return ScrollView(.vertical, showsIndicators: true) {
+            LazyVStack(spacing: 0) {
+                insertionGap(at: 0)
+                ForEach(0 ..< currentCards.count, id: \.self) { index in
+                    CardRowView(card: currentCards[index], onDelete: {
+                        pendingCardDelete = currentCards[index]
                     }) {
-                        onSelectCard(card)
+                        onSelectCard(currentCards[index])
                     }
+                    .padding(.horizontal, 10)
+                    insertionGap(at: index + 1)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 8)
+            .padding(.bottom, 4)
         }
         .frame(maxHeight: .infinity)
         .background(dropTargetBackground)
+    }
+
+    @ViewBuilder
+    private func insertionGap(at index: Int) -> some View {
+        let targeted = dragInsertIndex == index
+        ZStack(alignment: .center) {
+            Color.clear
+                .frame(height: targeted ? 20 : 8)
+            if targeted {
+                HStack(spacing: 0) {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 8, height: 8)
+                    Rectangle()
+                        .fill(Color.accentColor)
+                        .frame(height: 2)
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 8, height: 8)
+                }
+                .padding(.horizontal, 10)
+            }
+        }
+        .contentShape(Rectangle())
+        .animation(.easeInOut(duration: 0.1), value: targeted)
+        .onDrop(
+            of: dropTypes,
+            isTargeted: Binding(
+                get: { dragInsertIndex == index },
+                set: { isTargeted in
+                    if isTargeted {
+                        dragInsertIndex = index
+                    } else if dragInsertIndex == index {
+                        dragInsertIndex = nil
+                    }
+                }
+            ),
+            perform: { providers in
+                handleDropAtIndex(providers: providers, insertIndex: index)
+            }
+        )
     }
 
     private var addCardField: some View {
@@ -195,7 +242,65 @@ struct StackColumnView: View {
             .padding(.bottom, 8)
     }
 
-    private func handleDrop(providers: [NSItemProvider]) -> Bool {
+    private func handleDropAtIndex(providers: [NSItemProvider], insertIndex: Int) -> Bool {
+        guard let provider = providers.first(where: { provider in
+            dropTypes.contains { provider.hasItemConformingToTypeIdentifier($0) }
+        }) else {
+            return false
+        }
+
+        let typeIdentifier = dropTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) ?? UTType.plainText.identifier
+
+        provider.loadItem(forTypeIdentifier: typeIdentifier, options: nil) { item, _ in
+            let draggedCard: DraggedCard?
+
+            if let data = item as? Data, let value = String(data: data, encoding: .utf8) {
+                draggedCard = DraggedCard.fromProviderString(value)
+            } else if let value = item as? String {
+                draggedCard = DraggedCard.fromProviderString(value)
+            } else if let text = item as? NSString {
+                draggedCard = DraggedCard.fromProviderString(text as String)
+            } else {
+                draggedCard = nil
+            }
+
+            guard let draggedCard else { return }
+
+            Task { @MainActor in
+                if draggedCard.stackId == stack.id {
+                    // Reorder within the same stack
+                    let currentCards = cards
+                    guard let fromIndex = currentCards.firstIndex(where: { $0.id == draggedCard.id }) else { return }
+                    // Adjust target: after removing the card the indices above it shift down by one
+                    let targetOrder = insertIndex > fromIndex ? insertIndex - 1 : insertIndex
+                    guard targetOrder != fromIndex else { return }
+                    await appState.reorderCard(
+                        boardId: board.id,
+                        fromStackId: stack.id,
+                        cardId: draggedCard.id,
+                        toStackId: stack.id,
+                        order: targetOrder
+                    )
+                } else {
+                    // Move card from another stack, inserting at the specific position
+                    await appState.moveCard(
+                        boardId: board.id,
+                        cardId: draggedCard.id,
+                        fromStackId: draggedCard.stackId,
+                        toStackId: stack.id,
+                        order: insertIndex
+                    )
+                }
+            }
+        }
+
+        return true
+    }
+
+    // Fallback drop handler on the whole column — only handles cross-stack moves,
+    // appending the card to the end of this list. Gap drops take priority for
+    // precise placement (both cross-stack and within-stack reordering).
+    private func handleColumnDrop(providers: [NSItemProvider]) -> Bool {
         guard let provider = providers.first(where: { provider in
             dropTypes.contains { provider.hasItemConformingToTypeIdentifier($0) }
         }) else {
@@ -218,7 +323,6 @@ struct StackColumnView: View {
             }
 
             guard let draggedCard, draggedCard.stackId != stack.id else { return }
-            let destinationOrder = cards.count
 
             Task { @MainActor in
                 await appState.moveCard(
@@ -226,7 +330,7 @@ struct StackColumnView: View {
                     cardId: draggedCard.id,
                     fromStackId: draggedCard.stackId,
                     toStackId: stack.id,
-                    order: destinationOrder
+                    order: cards.count
                 )
             }
         }
