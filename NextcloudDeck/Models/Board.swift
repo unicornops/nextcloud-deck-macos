@@ -45,7 +45,8 @@ struct Board: Identifiable, Codable, Hashable {
         shared = try c.decodeIfPresent(Int.self, forKey: .shared)
         deletedAt = try c.decodeIfPresent(Int.self, forKey: .deletedAt)
         lastModified = try c.decodeIfPresent(Int.self, forKey: .lastModified)
-        settings = try c.decodeIfPresent(BoardSettings.self, forKey: .settings)
+        // PHP returns empty settings as [] (array) instead of {} (object)
+        settings = try? c.decodeIfPresent(BoardSettings.self, forKey: .settings)
     }
 
     enum CodingKeys: String, CodingKey {

@@ -22,6 +22,16 @@ final class AppState: ObservableObject {
         return boards.first { $0.id == id }
     }
 
+    /// Boards that are not archived and not soft-deleted.
+    var activeBoards: [Board] {
+        boards.filter { !$0.archived && ($0.deletedAt == nil || $0.deletedAt == 0) }
+    }
+
+    /// Boards that are archived but not soft-deleted.
+    var archivedBoards: [Board] {
+        boards.filter { $0.archived && ($0.deletedAt == nil || $0.deletedAt == 0) }
+    }
+
     init() {
         if let creds = KeychainStorage.load() {
             credentials = creds
@@ -139,6 +149,79 @@ final class AppState: ObservableObject {
             await loadStacks(boardId: boardId)
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    func archiveBoard(id: Int) async {
+        guard let api = deckAPI,
+              let board = boards.first(where: { $0.id == id }) else { return }
+        do {
+            _ = try await api.updateBoard(id: id, title: board.title, color: board.color, archived: true)
+            if let idx = boards.firstIndex(where: { $0.id == id }) {
+                boards[idx].archived = true
+            }
+            if selectedBoardId == id {
+                selectedBoardId = activeBoards.first?.id
+                stacks = []
+                if let bid = selectedBoardId {
+                    await loadStacks(boardId: bid)
+                }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func unarchiveBoard(id: Int) async {
+        guard let api = deckAPI,
+              let board = boards.first(where: { $0.id == id }) else { return }
+        do {
+            _ = try await api.updateBoard(id: id, title: board.title, color: board.color, archived: false)
+            if let idx = boards.firstIndex(where: { $0.id == id }) {
+                boards[idx].archived = false
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func restoreBoard(id: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.undoDeleteBoard(id: id)
+            await loadBoards()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func deleteBoard(id: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.deleteBoard(id: id)
+            boards.removeAll { $0.id == id }
+            if selectedBoardId == id {
+                selectedBoardId = boards.first?.id
+                stacks = []
+                if let bid = selectedBoardId {
+                    await loadStacks(boardId: bid)
+                }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Returns `true` if the board was created successfully, `false` otherwise (and sets `errorMessage`).
+    func createBoard(title: String, color: String) async -> Bool {
+        guard let api = deckAPI else { return false }
+        do {
+            _ = try await api.createBoard(title: title, color: color)
+            await loadBoards()
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
         }
     }
 

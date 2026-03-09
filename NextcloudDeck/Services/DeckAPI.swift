@@ -136,6 +136,7 @@ final class DeckAPI {
         let ocs: OCSBoardsWrapper
     }
 
+
     private func performRequest(url: URL, method: String, body: Data? = nil) async throws -> (Data, URLResponse) {
         var req = URLRequest(url: url)
         req.httpMethod = method
@@ -166,7 +167,10 @@ final class DeckAPI {
     }
 
     func createBoard(title: String, color: String = "0082c9") async throws -> Board {
-        try await request("boards", method: "POST", body: CreateBoardRequest(title: title, color: color))
+        guard let url = url(for: "boards") else { throw DeckAPIError.invalidURL }
+        let body = try encoder.encode(CreateBoardRequest(title: title, color: color))
+        let (data, _) = try await performRequest(url: url, method: "POST", body: body)
+        return try decoder.decode(Board.self, from: data)
     }
 
     func updateBoard(id: Int, title: String?, color: String?, archived: Bool?) async throws -> Board {
@@ -175,6 +179,10 @@ final class DeckAPI {
 
     func deleteBoard(id: Int) async throws {
         try await requestNoContent("boards/\(id)", method: "DELETE")
+    }
+
+    func undoDeleteBoard(id: Int) async throws {
+        try await requestNoContent("boards/\(id)/undo_delete", method: "POST")
     }
 
     // MARK: - Stacks

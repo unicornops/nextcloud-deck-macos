@@ -24,6 +24,7 @@
 		A1000000000000000000000F /* CardDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000F /* CardDetailSheet.swift */; };
 		A10000000000000000000010 /* NewStackSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* NewStackSheet.swift */; };
 		A10000000000000000000011 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Color+Hex.swift */; };
+		A10000000000000000000012 /* NewBoardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* NewBoardSheet.swift */; };
 		A10000000000000000000020 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -46,6 +47,7 @@
 		A2000000000000000000000F /* CardDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardDetailSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000010 /* NewStackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewStackSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000011 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
+		A20000000000000000000012 /* NewBoardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewBoardSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000020 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000000000000000000021 /* NextcloudDeck.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NextcloudDeck.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -123,6 +125,7 @@
 				A2000000000000000000000E /* StackColumnView.swift */,
 				A2000000000000000000000F /* CardDetailSheet.swift */,
 				A20000000000000000000010 /* NewStackSheet.swift */,
+				A20000000000000000000012 /* NewBoardSheet.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -238,6 +241,7 @@
 				A1000000000000000000000E /* StackColumnView.swift in Sources */,
 				A1000000000000000000000F /* CardDetailSheet.swift in Sources */,
 				A10000000000000000000010 /* NewStackSheet.swift in Sources */,
+				A10000000000000000000012 /* NewBoardSheet.swift in Sources */,
 				A10000000000000000000011 /* Color+Hex.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
