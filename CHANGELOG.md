@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.11.0...v0.12.0) (2026-03-09)
+
+
+### Features
+
+* **cards:** enable drag-and-drop reordering within stacks ([#34](https://github.com/unicornops/nextcloud-deck-macos/issues/34)) ([2bb7215](https://github.com/unicornops/nextcloud-deck-macos/commit/2bb7215caff9d9fec8a05a27cf8e79fb5f02e0dc))
+
 ## [0.11.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.10.0...v0.11.0) (2026-03-09)
 
 
