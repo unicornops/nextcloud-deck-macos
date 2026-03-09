@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.10.0...v0.11.0) (2026-03-09)
+
+
+### Features
+
+* **auth:** simplify login to browser-based flow only ([#32](https://github.com/unicornops/nextcloud-deck-macos/issues/32)) ([f7a637a](https://github.com/unicornops/nextcloud-deck-macos/commit/f7a637abeef7a503b4f120cd590af1423f36d8bd))
+
 ## [0.10.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.9.2...v0.10.0) (2026-03-09)
 
 
