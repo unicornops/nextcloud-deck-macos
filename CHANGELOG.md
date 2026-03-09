@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.9.2...v0.10.0) (2026-03-09)
+
+
+### Features
+
+* **boards:** add add, archive, unarchive, and delete board actions ([#30](https://github.com/unicornops/nextcloud-deck-macos/issues/30)) ([eaa3e8f](https://github.com/unicornops/nextcloud-deck-macos/commit/eaa3e8f4b5d6b65550d40c15ac057ffe2c31cdd9))
+
 ## [0.9.2](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.9.1...v0.9.2) (2026-03-08)
 
 
