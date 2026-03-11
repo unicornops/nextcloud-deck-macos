@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.13.0...v0.13.1) (2026-03-11)
+
+
+### Chores
+
+* **ci:** pin GitHub Actions and add dependabot config ([#38](https://github.com/unicornops/nextcloud-deck-macos/issues/38)) ([1f0a138](https://github.com/unicornops/nextcloud-deck-macos/commit/1f0a138324b7488220966dd49159c522cd28729e))
+
 ## [0.13.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.12.0...v0.13.0) (2026-03-11)
 
 
