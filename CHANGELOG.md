@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.2](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.13.1...v0.13.2) (2026-03-11)
+
+
+### Chores
+
+* add SwiftFormat, SwiftLint, and pre-commit config ([#40](https://github.com/unicornops/nextcloud-deck-macos/issues/40)) ([489929a](https://github.com/unicornops/nextcloud-deck-macos/commit/489929a35c3c8c0d6485753393413c506a784a92))
+* **tooling:** add PMD CPD and shared decoding helpers ([#42](https://github.com/unicornops/nextcloud-deck-macos/issues/42)) ([64e1ce7](https://github.com/unicornops/nextcloud-deck-macos/commit/64e1ce7215ba447afeaac0585082602e5ef87a3a))
+
 ## [0.13.1](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.13.0...v0.13.1) (2026-03-11)
 
 
