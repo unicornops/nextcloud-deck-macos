@@ -102,6 +102,33 @@ struct Attachment: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, cardId, type, data, lastModified, createdAt, createdBy, deletedAt, extendedData
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decodeIntOrString(forKey: .id)) ?? 0
+        cardId = try? c.decodeIntOrStringIfPresent(forKey: .cardId)
+        type = (try? c.decodeIfPresent(String.self, forKey: .type)) ?? nil
+        data = (try? c.decodeIfPresent(String.self, forKey: .data))
+            ?? (try? c.decodeIfPresent(Int.self, forKey: .data)).map { String($0) }
+        lastModified = try? c.decodeIntOrStringIfPresent(forKey: .lastModified)
+        createdAt = try? c.decodeIntOrStringIfPresent(forKey: .createdAt)
+        createdBy = (try? c.decodeIfPresent(String.self, forKey: .createdBy)) ?? nil
+        deletedAt = try? c.decodeIntOrStringIfPresent(forKey: .deletedAt)
+        extendedData = try? c.decodeIfPresent(AttachmentExtendedData.self, forKey: .extendedData)
+    }
+
+    /// Display name for the attachment (filename).
+    var displayName: String {
+        extendedData?.info?.basename ?? extendedData?.info?.filename ?? data ?? "Attachment \(id)"
+    }
+
+    /// Human-readable file size.
+    var formattedSize: String? {
+        guard let bytes = extendedData?.filesize else { return nil }
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
+    }
 }
 
 struct AttachmentExtendedData: Codable {

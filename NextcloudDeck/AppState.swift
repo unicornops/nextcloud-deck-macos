@@ -333,4 +333,66 @@ final class AppState: ObservableObject {
             return nil
         }
     }
+
+    // MARK: - Attachments
+
+    /// Fetches the full card (including attachments) from the API.
+    func getFullCard(boardId: Int, stackId: Int, cardId: Int) async -> Card? {
+        guard let api = deckAPI else { return nil }
+        do {
+            return try await api.getCard(boardId: boardId, stackId: stackId, cardId: cardId)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Fetches attachments for a card.
+    func getAttachments(boardId: Int, stackId: Int, cardId: Int) async -> [Attachment] {
+        guard let api = deckAPI else { return [] }
+        do {
+            return try await api.getAttachments(boardId: boardId, stackId: stackId, cardId: cardId)
+        } catch {
+            errorMessage = error.localizedDescription
+            return []
+        }
+    }
+
+    /// Downloads an attachment and saves it to the user's chosen location.
+    func downloadAttachment(boardId: Int, stackId: Int, cardId: Int, attachment: Attachment, saveURL: URL) async -> Bool {
+        guard let api = deckAPI else { return false }
+        do {
+            let data = try await api.downloadAttachment(boardId: boardId, stackId: stackId, cardId: cardId, attachmentId: attachment.id, type: attachment.type)
+            try data.write(to: saveURL)
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Uploads a file as an attachment to a card. Refreshes stacks on success.
+    func uploadAttachment(boardId: Int, stackId: Int, cardId: Int, fileURL: URL) async -> Attachment? {
+        guard let api = deckAPI else { return nil }
+        let filename = fileURL.lastPathComponent
+        do {
+            let attachment = try await api.uploadAttachment(boardId: boardId, stackId: stackId, cardId: cardId, fileURL: fileURL, filename: filename)
+            await loadStacks(boardId: boardId)
+            return attachment
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Deletes an attachment from a card.
+    func deleteAttachment(boardId: Int, stackId: Int, cardId: Int, attachmentId: Int, type: String? = nil) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.deleteAttachment(boardId: boardId, stackId: stackId, cardId: cardId, attachmentId: attachmentId, type: type)
+            await loadStacks(boardId: boardId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 }

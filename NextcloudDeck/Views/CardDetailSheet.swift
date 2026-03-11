@@ -1,4 +1,6 @@
 import SwiftUI
+import UniformTypeIdentifiers
+import AppKit
 
 struct CardDetailSheet: View {
     let card: Card
@@ -15,6 +17,11 @@ struct CardDetailSheet: View {
     @State private var newLabelTitle = ""
     @State private var newLabelColor = "31CC7C"
     @State private var isCreatingLabel = false
+    @State private var attachments: [Attachment] = []
+    @State private var isLoadingAttachments = false
+    @State private var isUploadingAttachment = false
+    @State private var showFileImporter = false
+    @State private var attachmentError: String?
     
     private var board: Board? {
         guard let b = appState.selectedBoard, b.id == boardId else { return nil }
@@ -30,6 +37,12 @@ struct CardDetailSheet: View {
     private var cardLabels: [DeckLabel] {
         (currentCard ?? card).labels ?? []
     }
+
+    /// Attachments to display: from API load, or from card (stacks may include attachments).
+    private var displayedAttachments: [Attachment] {
+        if !attachments.isEmpty { return attachments }
+        return (currentCard ?? card).attachments ?? []
+    }
     
     private var availableBoardLabels: [DeckLabel] {
         guard let board = board else { return [] }
@@ -43,6 +56,7 @@ struct CardDetailSheet: View {
         self.onDismiss = onDismiss
         _title = State(initialValue: card.title)
         _description = State(initialValue: card.description ?? "")
+        _attachments = State(initialValue: card.attachments ?? [])
     }
     
     var body: some View {
@@ -84,6 +98,9 @@ struct CardDetailSheet: View {
                 Section("Labels") {
                     labelsContent
                 }
+                Section("Attachments") {
+                    attachmentsContent
+                }
                 Section {
                     Button("Delete card", role: .destructive) {
                         showDeleteConfirmation = true
@@ -93,10 +110,20 @@ struct CardDetailSheet: View {
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
         }
-        .frame(width: 440, height: 420)
+        .frame(width: 440, height: 520)
         .navigationTitle("Edit Card")
         .sheet(isPresented: $showCreateLabel) {
             createLabelSheet
+        }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.item, .data, .content],
+            allowsMultipleSelection: true
+        ) { result in
+            handleFileImport(result: result)
+        }
+        .task {
+            await loadAttachments()
         }
         .confirmationDialog("Delete card?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -116,6 +143,132 @@ struct CardDetailSheet: View {
         }
     }
     
+    // MARK: - Attachments UI
+
+    private var attachmentsContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if isLoadingAttachments {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Loading attachments…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } else if displayedAttachments.isEmpty {
+                if let err = attachmentError {
+                    Text(err)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                } else {
+                    Text("No attachments")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                ForEach(displayedAttachments) { attachment in
+                    AttachmentRowView(
+                        attachment: attachment,
+                        onDownload: { downloadAttachment(attachment) },
+                        onDelete: {
+                            Task {
+                                await appState.deleteAttachment(boardId: boardId, stackId: card.stackId, cardId: card.id, attachmentId: attachment.id, type: attachment.type)
+                                await loadAttachments()
+                            }
+                        }
+                    )
+                }
+            }
+            HStack {
+                Button {
+                    showFileImporter = true
+                } label: {
+                    Label("Add file…", systemImage: "paperclip")
+                }
+                .disabled(isUploadingAttachment)
+                if isUploadingAttachment {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                }
+            }
+        }
+    }
+
+    private func loadAttachments() async {
+        await MainActor.run {
+            isLoadingAttachments = true
+            attachmentError = nil
+        }
+
+        var loaded: [Attachment] = []
+
+        // 1. Try full card fetch (may include attachments inline)
+        let fullCard = await appState.getFullCard(boardId: boardId, stackId: card.stackId, cardId: card.id)
+        if let atts = fullCard?.attachments, !atts.isEmpty {
+            loaded = atts
+        }
+
+        // 2. Dedicated attachments endpoint
+        if loaded.isEmpty {
+            loaded = await appState.getAttachments(boardId: boardId, stackId: card.stackId, cardId: card.id)
+        }
+
+        // 3. Fall back to card data already in stacks
+        if loaded.isEmpty {
+            loaded = (currentCard ?? card).attachments ?? []
+        }
+
+        await MainActor.run {
+            if !loaded.isEmpty {
+                attachments = loaded
+            } else if let count = (currentCard ?? card).attachmentCount, count > 0 {
+                attachmentError = "Could not load \(count) attachment(s)."
+            }
+            isLoadingAttachments = false
+        }
+    }
+
+    private func handleFileImport(result: Result<[URL], Error>) {
+        guard case .success(let urls) = result else { return }
+        let fileURLs = urls.filter { !$0.hasDirectoryPath }
+        guard !fileURLs.isEmpty else { return }
+        Task {
+            await MainActor.run { isUploadingAttachment = true }
+            for url in fileURLs {
+                guard url.startAccessingSecurityScopedResource() else { continue }
+                defer { url.stopAccessingSecurityScopedResource() }
+                if await appState.uploadAttachment(boardId: boardId, stackId: card.stackId, cardId: card.id, fileURL: url) != nil {
+                    await loadAttachments()
+                }
+            }
+            await MainActor.run { isUploadingAttachment = false }
+        }
+    }
+
+    private func downloadAttachment(_ attachment: Attachment) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = attachment.displayName
+        panel.allowedContentTypes = [.data]
+        panel.canCreateDirectories = true
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            Task {
+                let success = await appState.downloadAttachment(
+                    boardId: boardId,
+                    stackId: card.stackId,
+                    cardId: card.id,
+                    attachment: attachment,
+                    saveURL: url
+                )
+                if !success {
+                    await MainActor.run {
+                        appState.errorMessage = "Could not download attachment"
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Labels UI
     
     private var labelsContent: some View {
@@ -193,6 +346,51 @@ struct CardDetailSheet: View {
                 onDismiss()
             }
         }
+    }
+}
+
+// MARK: - Attachment row
+
+private struct AttachmentRowView: View {
+    let attachment: Attachment
+    var onDownload: () -> Void
+    var onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "doc.fill")
+                .foregroundStyle(.secondary)
+                .frame(width: 20, alignment: .center)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(attachment.displayName)
+                    .font(.subheadline)
+                    .lineLimit(1)
+                if let size = attachment.formattedSize {
+                    Text(size)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                onDownload()
+            } label: {
+                Image(systemName: "arrow.down.circle")
+            }
+            .buttonStyle(.plain)
+            .help("Download")
+            Button {
+                onDelete()
+            } label: {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.plain)
+            .help("Remove attachment")
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
 

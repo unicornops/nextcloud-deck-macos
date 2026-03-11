@@ -28,7 +28,13 @@ struct Stack: Identifiable, Codable {
         lastModified = try c.decodeIntOrStringIfPresent(forKey: .lastModified)
         order = try c.decodeIntOrStringIfPresent(forKey: .order) ?? 999
         if c.contains(.cards) {
-            cards = (try? c.decode([Card].self, forKey: .cards)) ?? []
+            var decoded = (try? c.decode([Card].self, forKey: .cards)) ?? []
+            // Ensure each card has the correct stackId (some Deck servers omit it
+            // from the nested card objects since it is implicit from the parent stack).
+            for i in decoded.indices where decoded[i].stackId == 0 {
+                decoded[i].stackId = id
+            }
+            cards = decoded
         } else {
             cards = nil
         }

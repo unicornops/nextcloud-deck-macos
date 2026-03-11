@@ -364,6 +364,15 @@ struct CardRowView: View {
                 }
                 .foregroundStyle(.secondary)
             }
+            if let count = card.attachmentCount, count > 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "paperclip")
+                        .font(.caption2)
+                    Text("\(count)")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.secondary)
+            }
             if let labels = card.labels, !labels.isEmpty {
                 HStack(spacing: 4) {
                     ForEach(labels.prefix(3)) { label in
