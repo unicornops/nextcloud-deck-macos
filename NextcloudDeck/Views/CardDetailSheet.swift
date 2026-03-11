@@ -469,45 +469,13 @@ private struct CreateLabelSheet: View {
     var onCreate: () -> Void
     var onCancel: () -> Void
 
-    private static let presetColors: [(name: String, hex: String)] = [
-        ("Green", "31CC7C"),
-        ("Blue", "317CCC"),
-        ("Red", "FF7A66"),
-        ("Yellow", "F1DB50"),
-        ("Purple", "9C59B6"),
-        ("Orange", "F39C12"),
-    ]
-
     var body: some View {
         VStack(spacing: 16) {
             Text("New tag")
                 .font(.headline)
             TextField("Tag name", text: $title)
                 .textFieldStyle(.roundedBorder)
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Color")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 8) {
-                    ForEach(Self.presetColors, id: \.hex) { preset in
-                        Button {
-                            color = preset.hex
-                        } label: {
-                            Circle()
-                                .fill(Color(hex: preset.hex) ?? .gray)
-                                .frame(width: 24, height: 24)
-                                .overlay(
-                                    Circle()
-                                        .strokeBorder(
-                                            Color.primary.opacity(0.3),
-                                            lineWidth: color == preset.hex ? 3 : 0
-                                        )
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
+            BoardColorPickerView(selectedHex: $color)
             HStack {
                 Button("Cancel") {
                     onCancel()

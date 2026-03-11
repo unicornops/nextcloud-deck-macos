@@ -15,6 +15,49 @@ A native macOS app for [Nextcloud Deck](https://github.com/nextcloud/deck) with 
 - Xcode 15+ (to build)
 - A Nextcloud server with the [Deck](https://apps.nextcloud.com/apps/deck) app installed.
 
+## Developer tooling
+
+The project uses several tools to enforce code quality. Install them all with Homebrew:
+
+```bash
+brew install pre-commit swiftformat swiftlint pmd
+pre-commit install && pre-commit install --hook-type commit-msg
+```
+
+| Tool | Purpose | Config |
+|------|---------|--------|
+| [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) | Code formatting | `.swiftformat` |
+| [SwiftLint](https://github.com/realm/SwiftLint) | Style & lint rules | `.swiftlint.yml` |
+| [PMD](https://pmd.github.io) | Static analysis + copy-paste detection | `pmd-ruleset.xml` |
+| [pre-commit](https://pre-commit.com) | Runs all checks before each commit | `.pre-commit-config.yaml` |
+
+### PMD
+
+PMD runs two checks on every commit and on every pull request:
+
+- **Static analysis** (`pmd check`) — all four built-in Swift rules:
+  - `ProhibitedInterfaceBuilder` — flags accidental `@IBOutlet`/`@IBAction` usage in this pure-SwiftUI app.
+  - `UnavailableFunction` — ensures `@available(*, unavailable)` stubs call `fatalError()`.
+  - `ForceCast` — prohibits `as!` which can crash at runtime.
+  - `ForceTry` — prohibits `try!` which suppresses structured error handling.
+- **Copy-paste detection** (`pmd cpd`) — finds duplicated blocks of 50+ tokens across all Swift source files.
+
+To suppress a specific PMD violation in source (use sparingly, with a reason):
+
+```swift
+let value = foo as! Bar // NOPMD - safe: type is guaranteed by the API contract
+```
+
+Run PMD locally at any time:
+
+```bash
+# Static analysis
+pmd check --rulesets pmd-ruleset.xml --dir NextcloudDeck --format text
+
+# Copy-paste detection
+pmd cpd --minimum-tokens 105 --dir NextcloudDeck --language swift --format text
+```
+
 ## Build and run
 
 1. Open `NextcloudDeck.xcodeproj` in Xcode.

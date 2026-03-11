@@ -9,6 +9,36 @@ This document gives coding agents (e.g. Cursor, GitHub Copilot, Claude) shared c
 - **Auth:** Nextcloud Login Flow / getapppassword; app password stored in system Keychain (see `KeychainStorage.swift`, `NextcloudAuth.swift`).
 - **Layout:** `NextcloudDeck/` — Models (Board, Stack, Card, Label), Services (DeckAPI, NextcloudAuth, KeychainStorage), Views (Login, board list, board detail, cards, stacks), Helpers (e.g. Color+Hex).
 
+## Developer tooling
+
+The project uses the following tools to enforce code quality. All run automatically via pre-commit and in the `PMD Static Analysis` GitHub Actions job on every PR.
+
+| Tool | Purpose | Config |
+|------|---------|--------|
+| [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) | Code formatting | `.swiftformat` |
+| [SwiftLint](https://github.com/realm/SwiftLint) | Style & lint rules | `.swiftlint.yml` |
+| [PMD](https://pmd.github.io) | Static analysis + copy-paste detection | `pmd-ruleset.xml` |
+| [pre-commit](https://pre-commit.com) | Runs all checks before each commit | `.pre-commit-config.yaml` |
+
+Install all tools: `brew install pre-commit swiftformat swiftlint pmd`
+
+### PMD rules
+
+All four built-in PMD Swift rules are enabled in `pmd-ruleset.xml`:
+
+- **`ProhibitedInterfaceBuilder`** (priority 2) — flags accidental `@IBOutlet`/`@IBAction`/`@IBInspectable` usage. This is a pure SwiftUI app; Interface Builder attributes must not appear.
+- **`UnavailableFunction`** (priority 2) — `@available(*, unavailable)` stubs (e.g. `required init?(coder:)`) must call `fatalError()`, not return silently.
+- **`ForceCast`** (priority 1, error) — `as!` crashes at runtime if the cast fails; use `as?` or typed `Codable` decoding instead.
+- **`ForceTry`** (priority 1, error) — `try!` suppresses structured error handling; all network and Keychain paths use `async/await` with explicit error propagation.
+
+PMD CPD (copy-paste detection) is also run with a 50-token minimum to flag duplicated blocks that should be extracted.
+
+To suppress a violation in source (use sparingly, with a reason):
+
+```swift
+let value = foo as! Bar // NOPMD - safe: type is guaranteed by the API contract
+```
+
 ## Conventional commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) for every commit. The project uses release-please with these types:

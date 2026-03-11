@@ -244,7 +244,14 @@ struct StackColumnView: View {
             .padding(.bottom, 8)
     }
 
-    private func handleDropAtIndex(providers: [NSItemProvider], insertIndex: Int) -> Bool {
+    /// Picks the first matching provider from `providers`, loads its item, and
+    /// parses it as a `DraggedCard`. Returns `nil` when no matching provider is
+    /// found or the payload cannot be interpreted as a card.
+    private func loadDraggedCard(
+        from providers: [NSItemProvider],
+        completion: @escaping (DraggedCard) -> Void
+    )
+        -> Bool {
         guard let provider = providers.first(where: { provider in
             dropTypes.contains { provider.hasItemConformingToTypeIdentifier($0) }
         }) else {
@@ -269,6 +276,14 @@ struct StackColumnView: View {
             }
 
             guard let draggedCard else { return }
+            completion(draggedCard)
+        }
+
+        return true
+    }
+
+    private func handleDropAtIndex(providers: [NSItemProvider], insertIndex: Int) -> Bool {
+        loadDraggedCard(from: providers) { draggedCard in
 
             Task { @MainActor in
                 if draggedCard.stackId == stack.id {
@@ -297,38 +312,14 @@ struct StackColumnView: View {
                 }
             }
         }
-
-        return true
     }
 
     /// Fallback drop handler on the whole column — only handles cross-stack moves,
     /// appending the card to the end of this list. Gap drops take priority for
     /// precise placement (both cross-stack and within-stack reordering).
     private func handleColumnDrop(providers: [NSItemProvider]) -> Bool {
-        guard let provider = providers.first(where: { provider in
-            dropTypes.contains { provider.hasItemConformingToTypeIdentifier($0) }
-        }) else {
-            return false
-        }
-
-        let typeIdentifier = dropTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) ?? UTType
-            .plainText.identifier
-
-        provider.loadItem(forTypeIdentifier: typeIdentifier, options: nil) { item, _ in
-            let draggedCard: DraggedCard? = if let data = item as? Data, let value = String(
-                data: data,
-                encoding: .utf8
-            ) {
-                DraggedCard.fromProviderString(value)
-            } else if let value = item as? String {
-                DraggedCard.fromProviderString(value)
-            } else if let text = item as? NSString {
-                DraggedCard.fromProviderString(text as String)
-            } else {
-                nil
-            }
-
-            guard let draggedCard, draggedCard.stackId != stack.id else { return }
+        loadDraggedCard(from: providers) { draggedCard in
+            guard draggedCard.stackId != stack.id else { return }
 
             Task { @MainActor in
                 await appState.moveCard(
@@ -340,8 +331,6 @@ struct StackColumnView: View {
                 )
             }
         }
-
-        return true
     }
 }
 

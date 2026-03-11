@@ -1,5 +1,5 @@
 # Pre-commit hook configuration for Nextcloud Deck macOS
-# Install: brew install pre-commit swiftformat swiftlint
+# Install: brew install pre-commit swiftformat swiftlint pmd
 # Setup:   pre-commit install && pre-commit install --hook-type commit-msg
 
 repos:
@@ -55,6 +55,42 @@ repos:
         args: [lint, --config, .swiftlint.yml]
         types: [swift]
         pass_filenames: false
+
+  # ---------------------------------------------------------------------------
+  # PMD CPD (copy-paste detection) for Swift
+  # (pmd must be installed: brew install pmd)
+  #
+  # NOTE: `pmd check` (static analysis) is intentionally omitted.
+  # PMD's Swift grammar predates Swift 5.9 and cannot parse existential types
+  # (any Encodable), if/switch expressions, or async/await signatures — all of
+  # which are used in this codebase. Running `pmd check` produces dozens of
+  # spurious ANTLR parse warnings and an NPE in the UnavailableFunction rule.
+  # See pmd-ruleset.xml for the full explanation and the disabled rule refs.
+  #
+  # CPD operates at the token level and does not require a full parse, so it
+  # works correctly regardless of grammar limitations.
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: pmd-cpd
+        name: PMD CPD (Swift copy-paste detection)
+        language: system
+        entry: pmd cpd
+        args:
+          # 105 tokens: calibrated to skip unavoidable structural overlap between
+          # the two private request-building helpers in DeckAPI (request<T> and
+          # requestNoContent both call performRequest) and the identical call-site
+          # boilerplate in NewBoardSheet / NewStackSheet after extracting
+          # CreateSheetFooter. All real duplications above this threshold were
+          # refactored away; see Helpers/CodingKeyHelpers.swift,
+          # Helpers/BoardColorPickerView.swift, and Helpers/CreateSheetFooter.swift.
+          - --minimum-tokens=105
+          - --dir=NextcloudDeck
+          - --language=swift
+          - --format=text
+          - --fail-on-violation
+        pass_filenames: false
+        types: [swift]
 
   # ---------------------------------------------------------------------------
   # Conventional Commits enforcement

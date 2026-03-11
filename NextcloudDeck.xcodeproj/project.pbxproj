@@ -25,6 +25,9 @@
 		A10000000000000000000010 /* NewStackSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* NewStackSheet.swift */; };
 		A10000000000000000000011 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Color+Hex.swift */; };
 		A10000000000000000000012 /* NewBoardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* NewBoardSheet.swift */; };
+		A10000000000000000000013 /* CodingKeyHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* CodingKeyHelpers.swift */; };
+		A10000000000000000000014 /* BoardColorPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* BoardColorPickerView.swift */; };
+		A10000000000000000000015 /* CreateSheetFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* CreateSheetFooter.swift */; };
 		A10000000000000000000020 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -48,6 +51,9 @@
 		A20000000000000000000010 /* NewStackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewStackSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000011 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
 		A20000000000000000000012 /* NewBoardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewBoardSheet.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 /* CodingKeyHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodingKeyHelpers.swift; sourceTree = "<group>"; };
+		A20000000000000000000014 /* BoardColorPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardColorPickerView.swift; sourceTree = "<group>"; };
+		A20000000000000000000015 /* CreateSheetFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSheetFooter.swift; sourceTree = "<group>"; };
 		A20000000000000000000020 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000000000000000000021 /* NextcloudDeck.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NextcloudDeck.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -134,6 +140,9 @@
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000011 /* Color+Hex.swift */,
+				A20000000000000000000013 /* CodingKeyHelpers.swift */,
+				A20000000000000000000014 /* BoardColorPickerView.swift */,
+				A20000000000000000000015 /* CreateSheetFooter.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -167,7 +176,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2630;
 			};
 			buildConfigurationList = A60000000000000000000001 /* Build configuration list for PBXProject "NextcloudDeck" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -216,7 +225,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "\"$SRCROOT/write-build-info.sh\"";
+			shellScript = "set -euo pipefail\n\nbuild_info_path=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/BuildInfo.plist\"\n\nresolve_commit() {\n  if [[ -n \"${GIT_COMMIT_HASH:-}\" && \"${GIT_COMMIT_HASH}\" != \"unknown\" ]]; then\n    printf '%s' \"${GIT_COMMIT_HASH}\"\n    return\n  fi\n  git -C \"${SRCROOT}\" rev-parse HEAD 2>/dev/null || printf 'unknown'\n}\n\nresolve_ref() {\n  if [[ -n \"${BUILD_REF:-}\" && \"${BUILD_REF}\" != \"local\" ]]; then\n    printf '%s' \"${BUILD_REF}\"\n    return\n  fi\n  git -C \"${SRCROOT}\" describe --tags --always --dirty 2>/dev/null || printf 'local'\n}\n\nresolve_build_date() {\n  if [[ -n \"${BUILD_DATE_UTC:-}\" && \"${BUILD_DATE_UTC}\" != \"unknown\" && \"${BUILD_DATE_UTC}\" != \"local\" ]]; then\n    printf '%s' \"${BUILD_DATE_UTC}\"\n    return\n  fi\n  date -u +\"%Y-%m-%dT%H:%M:%SZ\"\n}\n\nmkdir -p \"$(dirname \"${build_info_path}\")\"\n\ncat > \"${build_info_path}\" <<EOF\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"https://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n  <key>BuildVersion</key>\n  <string>${MARKETING_VERSION:-Unknown}</string>\n  <key>BuildNumber</key>\n  <string>${CURRENT_PROJECT_VERSION:-Unknown}</string>\n  <key>BuildRef</key>\n  <string>$(resolve_ref)</string>\n  <key>BuildGitCommit</key>\n  <string>$(resolve_commit)</string>\n  <key>BuildDateUTC</key>\n  <string>$(resolve_build_date)</string>\n</dict>\n</plist>\nEOF\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -243,6 +252,9 @@
 				A10000000000000000000010 /* NewStackSheet.swift in Sources */,
 				A10000000000000000000012 /* NewBoardSheet.swift in Sources */,
 				A10000000000000000000011 /* Color+Hex.swift in Sources */,
+				A10000000000000000000013 /* CodingKeyHelpers.swift in Sources */,
+				A10000000000000000000014 /* BoardColorPickerView.swift in Sources */,
+				A10000000000000000000015 /* CreateSheetFooter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,24 +272,50 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -294,17 +332,43 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -314,20 +378,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = NextcloudDeck/NextcloudDeck.entitlements;
-				CODE_SIGN_STYLE = Automatic;
 				BUILD_DATE_UTC = local;
 				BUILD_REF = local;
+				CODE_SIGN_ENTITLEMENTS = NextcloudDeck/NextcloudDeck.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
-				GIT_COMMIT_HASH = unknown;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				GIT_COMMIT_HASH = unknown;
 				INFOPLIST_KEY_BuildDateUTC = "$(BUILD_DATE_UTC)";
 				INFOPLIST_KEY_BuildGitCommit = "$(GIT_COMMIT_HASH)";
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_BuildRef = "$(BUILD_REF)";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 UnicornOps. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -346,20 +414,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = NextcloudDeck/NextcloudDeck.entitlements;
-				CODE_SIGN_STYLE = Automatic;
 				BUILD_DATE_UTC = local;
 				BUILD_REF = local;
+				CODE_SIGN_ENTITLEMENTS = NextcloudDeck/NextcloudDeck.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
-				GIT_COMMIT_HASH = unknown;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				GIT_COMMIT_HASH = unknown;
 				INFOPLIST_KEY_BuildDateUTC = "$(BUILD_DATE_UTC)";
 				INFOPLIST_KEY_BuildGitCommit = "$(GIT_COMMIT_HASH)";
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_BuildRef = "$(BUILD_REF)";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 UnicornOps. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

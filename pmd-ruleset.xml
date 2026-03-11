@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PMD ruleset for Nextcloud Deck macOS
+  https://docs.pmd-code.org/latest/pmd_rules_swift.html
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  NOTE: PMD static analysis (pmd check) is DISABLED for this project │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  PMD's Swift grammar is derived from an older language specification and
+  cannot parse several constructs used throughout this codebase:
+
+    • Existential types            any Encodable, any Error
+    • if/switch expressions        let x = if cond { a } else { b }
+    • async/await function sigs    func foo() async throws -> T
+    • Trailing closures in SwiftUI .toolbar { }, .sheet(isPresented:) { }
+
+  Attempting to run `pmd check` produces dozens of ANTLR parse warnings
+  and one confirmed NPE bug in the UnavailableFunction rule (null function
+  body on protocol/abstract declarations). The violations reported are
+  therefore unreliable and cannot be acted on safely.
+
+  CPD (copy-paste detection) IS still enabled and works correctly; it
+  operates at the token level without requiring a full parse of every
+  modern Swift construct. Run it via:
+
+    pmd cpd --minimum-tokens 50 --dir NextcloudDeck --language swift
+
+  This file is kept so the ruleset reference is preserved for when PMD's
+  Swift grammar is updated to support Swift 5.9+. Track progress at:
+    https://github.com/pmd/pmd/issues/new (search "Swift" in issues)
+
+  Suppressing a CPD false-positive in source is not directly supported;
+  use the --exclude-file-list CLI option if a file must be skipped.
+  For pmd check violations (once re-enabled), use:
+    // NOPMD - <reason>
+-->
+<ruleset name="Nextcloud Deck macOS Swift Ruleset"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
+                             https://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+
+    <description>
+        PMD configuration for the Nextcloud Deck macOS Swift codebase.
+
+        Static analysis rules are currently inactive because PMD's Swift grammar
+        predates Swift 5.9 and cannot parse existential types, if/switch
+        expressions, or async/await signatures — all of which are used throughout
+        this project. Re-enable the rule references below once PMD ships an
+        updated Swift grammar.
+
+        CPD (copy-paste detection) is the active check; it is invoked directly
+        via CLI flags in .pre-commit-config.yaml and pr-validation.yml rather
+        than through this ruleset file.
+
+        References:
+          - https://docs.pmd-code.org/latest/pmd_rules_swift.html
+          - https://deck.readthedocs.io/en/latest/API/
+    </description>
+
+    <!--
+    ═══════════════════════════════════════════════════════════════════════
+    DISABLED RULES — re-enable when PMD Swift grammar supports Swift 5.9+
+    ═══════════════════════════════════════════════════════════════════════
+
+    Best Practices
+    ──────────────
+    ProhibitedInterfaceBuilder (priority 2)
+      This project is a pure SwiftUI app — no XIBs or Storyboards are used.
+      Would catch any accidental @IBOutlet / @IBAction / @IBInspectable usage.
+
+    <rule ref="category/swift/bestpractices.xml/ProhibitedInterfaceBuilder">
+        <priority>2</priority>
+    </rule>
+
+    UnavailableFunction (priority 2)
+      Functions marked @available(*, unavailable) (e.g. required init?(coder:)
+      stubs) must call fatalError() rather than silently returning, so callers
+      get an immediate, informative crash instead of undefined behaviour.
+      Consistent with the existing `unavailable_function` SwiftLint rule.
+      BLOCKED BY: NPE bug when functionBody() returns null on abstract decls.
+
+    <rule ref="category/swift/bestpractices.xml/UnavailableFunction">
+        <priority>2</priority>
+    </rule>
+
+    Error Prone
+    ───────────
+    ForceCast (priority 1)
+      Force casts (as!) can crash at runtime. The codebase uses Codable —
+      use conditional casts (as?) or typed decoding instead.
+
+    <rule ref="category/swift/errorprone.xml/ForceCast">
+        <priority>1</priority>
+    </rule>
+
+    ForceTry (priority 1)
+      Force try (try!) suppresses structured error propagation and crashes on
+      failure. All network and Keychain operations use async/await with explicit
+      error handling; force try undermines that contract.
+
+    <rule ref="category/swift/errorprone.xml/ForceTry">
+        <priority>1</priority>
+    </rule>
+
+    ═══════════════════════════════════════════════════════════════════════
+    END DISABLED RULES
+    ═══════════════════════════════════════════════════════════════════════
+    -->
+
+</ruleset>
