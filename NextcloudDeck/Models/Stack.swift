@@ -9,7 +9,15 @@ struct Stack: Identifiable, Codable {
     var cards: [Card]?
     var order: Int
 
-    init(id: Int, title: String, boardId: Int, deletedAt: Int? = nil, lastModified: Int? = nil, cards: [Card]? = nil, order: Int = 999) {
+    init(
+        id: Int,
+        title: String,
+        boardId: Int,
+        deletedAt: Int? = nil,
+        lastModified: Int? = nil,
+        cards: [Card]? = nil,
+        order: Int = 999
+    ) {
         self.id = id
         self.title = title
         self.boardId = boardId
@@ -21,12 +29,12 @@ struct Stack: Identifiable, Codable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decodeIntOrString(forKey: .id)
-        title = try c.decode(String.self, forKey: .title)
-        boardId = try c.decodeIntOrString(forKey: .boardId)
-        deletedAt = try c.decodeIntOrStringIfPresent(forKey: .deletedAt)
-        lastModified = try c.decodeIntOrStringIfPresent(forKey: .lastModified)
-        order = try c.decodeIntOrStringIfPresent(forKey: .order) ?? 999
+        self.id = try c.decodeIntOrString(forKey: .id)
+        self.title = try c.decode(String.self, forKey: .title)
+        self.boardId = try c.decodeIntOrString(forKey: .boardId)
+        self.deletedAt = try c.decodeIntOrStringIfPresent(forKey: .deletedAt)
+        self.lastModified = try c.decodeIntOrStringIfPresent(forKey: .lastModified)
+        self.order = try c.decodeIntOrStringIfPresent(forKey: .order) ?? 999
         if c.contains(.cards) {
             var decoded = (try? c.decode([Card].self, forKey: .cards)) ?? []
             // Ensure each card has the correct stackId (some Deck servers omit it
@@ -34,9 +42,9 @@ struct Stack: Identifiable, Codable {
             for i in decoded.indices where decoded[i].stackId == 0 {
                 decoded[i].stackId = id
             }
-            cards = decoded
+            self.cards = decoded
         } else {
-            cards = nil
+            self.cards = nil
         }
     }
 
@@ -49,8 +57,12 @@ private extension KeyedDecodingContainer {
     func decodeIntOrString(forKey key: Key) throws -> Int {
         if let i = try? decode(Int.self, forKey: key) { return i }
         if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }
-        throw DecodingError.typeMismatch(Int.self, DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int or String"))
+        throw DecodingError.typeMismatch(
+            Int.self,
+            DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int or String")
+        )
     }
+
     func decodeIntOrStringIfPresent(forKey key: Key) throws -> Int? {
         if let i = try? decode(Int.self, forKey: key) { return i }
         if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }

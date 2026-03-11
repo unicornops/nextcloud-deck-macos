@@ -50,7 +50,7 @@ struct ContentView: View {
     }
 }
 
-private struct BuildMetadata {
+private enum BuildMetadata {
     private static let buildInfo: [String: Any] = {
         guard let url = Bundle.main.url(forResource: "BuildInfo", withExtension: "plist"),
               let data = try? Data(contentsOf: url),

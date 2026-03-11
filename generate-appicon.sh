@@ -25,7 +25,7 @@ elif command -v rsvg-convert &>/dev/null && [ -f "$SOURCE_SVG" ]; then
   echo "Converted SVG with rsvg-convert"
 elif [ -f "$SOURCE_SVG" ]; then
   QLDIR=$(mktemp -d)
-  trap "rm -rf '$QLDIR'" EXIT
+  trap 'rm -rf "$QLDIR"' EXIT
   qlmanage -t -s 1024 -o "$QLDIR" "$SOURCE_SVG" 2>/dev/null || true
   for f in "$QLDIR"/*.png; do
     [ -f "$f" ] && TEMP_PNG="$f" && break

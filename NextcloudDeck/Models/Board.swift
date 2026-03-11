@@ -15,7 +15,21 @@ struct Board: Identifiable, Codable, Hashable {
     var lastModified: Int?
     var settings: BoardSettings?
 
-    init(id: Int, title: String, color: String? = nil, archived: Bool = false, owner: DeckUser? = nil, labels: [DeckLabel] = [], acl: [ACLEntry] = [], permissions: BoardPermissions? = nil, users: [DeckUser] = [], shared: Int? = nil, deletedAt: Int? = nil, lastModified: Int? = nil, settings: BoardSettings? = nil) {
+    init(
+        id: Int,
+        title: String,
+        color: String? = nil,
+        archived: Bool = false,
+        owner: DeckUser? = nil,
+        labels: [DeckLabel] = [],
+        acl: [ACLEntry] = [],
+        permissions: BoardPermissions? = nil,
+        users: [DeckUser] = [],
+        shared: Int? = nil,
+        deletedAt: Int? = nil,
+        lastModified: Int? = nil,
+        settings: BoardSettings? = nil
+    ) {
         self.id = id
         self.title = title
         self.color = color
@@ -33,24 +47,25 @@ struct Board: Identifiable, Codable, Hashable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decodeIntOrString(forKey: .id)
-        title = try c.decode(String.self, forKey: .title)
-        color = try c.decodeIfPresent(String.self, forKey: .color)
-        archived = try c.decodeIfPresent(Bool.self, forKey: .archived) ?? false
-        owner = try c.decodeIfPresent(DeckUser.self, forKey: .owner)
-        labels = try c.decodeIfPresent([DeckLabel].self, forKey: .labels) ?? []
-        acl = try c.decodeIfPresent([ACLEntry].self, forKey: .acl) ?? []
-        permissions = try c.decodeIfPresent(BoardPermissions.self, forKey: .permissions)
-        users = try c.decodeIfPresent([DeckUser].self, forKey: .users) ?? []
-        shared = try c.decodeIfPresent(Int.self, forKey: .shared)
-        deletedAt = try c.decodeIfPresent(Int.self, forKey: .deletedAt)
-        lastModified = try c.decodeIfPresent(Int.self, forKey: .lastModified)
+        self.id = try c.decodeIntOrString(forKey: .id)
+        self.title = try c.decode(String.self, forKey: .title)
+        self.color = try c.decodeIfPresent(String.self, forKey: .color)
+        self.archived = try c.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+        self.owner = try c.decodeIfPresent(DeckUser.self, forKey: .owner)
+        self.labels = try c.decodeIfPresent([DeckLabel].self, forKey: .labels) ?? []
+        self.acl = try c.decodeIfPresent([ACLEntry].self, forKey: .acl) ?? []
+        self.permissions = try c.decodeIfPresent(BoardPermissions.self, forKey: .permissions)
+        self.users = try c.decodeIfPresent([DeckUser].self, forKey: .users) ?? []
+        self.shared = try c.decodeIfPresent(Int.self, forKey: .shared)
+        self.deletedAt = try c.decodeIfPresent(Int.self, forKey: .deletedAt)
+        self.lastModified = try c.decodeIfPresent(Int.self, forKey: .lastModified)
         // PHP returns empty settings as [] (array) instead of {} (object)
-        settings = try? c.decodeIfPresent(BoardSettings.self, forKey: .settings)
+        self.settings = try? c.decodeIfPresent(BoardSettings.self, forKey: .settings)
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, title, color, archived, owner, labels, acl, permissions, users, shared, deletedAt, lastModified, settings
+        case id, title, color, archived, owner, labels, acl, permissions, users, shared, deletedAt, lastModified,
+             settings
     }
 }
 
@@ -58,7 +73,10 @@ private extension KeyedDecodingContainer {
     func decodeIntOrString(forKey key: Key) throws -> Int {
         if let i = try? decode(Int.self, forKey: key) { return i }
         if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }
-        throw DecodingError.typeMismatch(Int.self, DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int or String"))
+        throw DecodingError.typeMismatch(
+            Int.self,
+            DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int or String")
+        )
     }
 }
 
@@ -67,7 +85,7 @@ struct BoardPermissions: Codable, Hashable {
     let permissionEdit: Bool
     let permissionManage: Bool
     let permissionShare: Bool
-    
+
     enum CodingKeys: String, CodingKey {
         case permissionRead = "PERMISSION_READ"
         case permissionEdit = "PERMISSION_EDIT"
@@ -79,7 +97,7 @@ struct BoardPermissions: Codable, Hashable {
 struct BoardSettings: Codable, Hashable {
     var notifyDue: String?
     var calendar: Bool?
-    
+
     enum CodingKeys: String, CodingKey {
         case notifyDue = "notify-due"
         case calendar
@@ -110,9 +128,9 @@ struct DeckUser: Codable, Hashable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        primaryKey = try c.decodeIfPresent(String.self, forKey: .primaryKey)
-        uid = try c.decodeIfPresent(String.self, forKey: .uid) ?? ""
-        displayname = try c.decodeIfPresent(String.self, forKey: .displayname)
+        self.primaryKey = try c.decodeIfPresent(String.self, forKey: .primaryKey)
+        self.uid = try c.decodeIfPresent(String.self, forKey: .uid) ?? ""
+        self.displayname = try c.decodeIfPresent(String.self, forKey: .displayname)
     }
 
     enum CodingKeys: String, CodingKey {

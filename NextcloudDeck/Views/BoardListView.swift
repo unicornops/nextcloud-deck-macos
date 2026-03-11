@@ -138,7 +138,9 @@ struct BoardListView: View {
         } message: {
             if let boardId = pendingBoardDelete,
                let board = appState.boards.first(where: { $0.id == boardId }) {
-                Text("\u{201c}\(board.title)\u{201d} and all its lists and cards will be permanently deleted. This cannot be undone.")
+                Text(
+                    "\u{201c}\(board.title)\u{201d} and all its lists and cards will be permanently deleted. This cannot be undone."
+                )
             }
         }
     }
@@ -146,7 +148,7 @@ struct BoardListView: View {
 
 private struct BoardRowView: View {
     let board: Board
-    
+
     var body: some View {
         SwiftUI.Label {
             Text(board.title)
@@ -157,7 +159,7 @@ private struct BoardRowView: View {
                 .frame(width: 12, height: 12)
         }
     }
-    
+
     private var boardColor: Color {
         guard let hex = board.color, !hex.isEmpty else { return .accentColor }
         return Color(hex: hex) ?? .accentColor

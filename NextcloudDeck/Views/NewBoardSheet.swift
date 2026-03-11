@@ -45,7 +45,10 @@ struct NewBoardSheet: View {
                                 .frame(width: 24, height: 24)
                                 .overlay(
                                     Circle()
-                                        .strokeBorder(Color.primary.opacity(0.3), lineWidth: color == preset.hex ? 3 : 0)
+                                        .strokeBorder(
+                                            Color.primary.opacity(0.3),
+                                            lineWidth: color == preset.hex ? 3 : 0
+                                        )
                                 )
                         }
                         .buttonStyle(.plain)

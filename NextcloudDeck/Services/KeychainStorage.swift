@@ -6,7 +6,7 @@ import Security
 /// Uses a single Keychain item so the user is not prompted multiple times at launch.
 /// Accessibility is set so the item can be read after the user has unlocked their Mac (at login)
 /// without requiring Keychain password re-entry each time the app opens.
-final class KeychainStorage {
+enum KeychainStorage {
     private static let service = "com.nextcloud.deck.macos"
     /// Single account key for all credentials (avoids three separate Keychain accesses at launch).
     private static let credentialsAccount = "credentials"
@@ -44,7 +44,7 @@ final class KeychainStorage {
             kSecAttrService as String: service,
             kSecAttrAccount as String: credentialsAccount,
             kSecValueData as String: data,
-            kSecAttrAccessible as String: accessibility
+            kSecAttrAccessible as String: accessibility,
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else { throw KeychainError.saveFailed(status) }
@@ -56,7 +56,11 @@ final class KeychainStorage {
             return creds
         }
         if let creds = loadFromLegacyItems(),
-           let storedURL = try? save(serverURL: creds.serverURL, username: creds.username, appPassword: creds.appPassword) {
+           let storedURL = try? save(
+               serverURL: creds.serverURL,
+               username: creds.username,
+               appPassword: creds.appPassword
+           ) {
             try? deleteLegacyItems()
             return (storedURL, creds.username, creds.appPassword)
         }
@@ -70,7 +74,7 @@ final class KeychainStorage {
             kSecAttrService as String: service,
             kSecAttrAccount as String: credentialsAccount,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -95,7 +99,7 @@ final class KeychainStorage {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -112,7 +116,7 @@ final class KeychainStorage {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: credentialsAccount
+            kSecAttrAccount as String: credentialsAccount,
         ]
         let status = SecItemDelete(query as CFDictionary)
         if status != errSecSuccess && status != errSecItemNotFound {
@@ -125,7 +129,7 @@ final class KeychainStorage {
             let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
-                kSecAttrAccount as String: account
+                kSecAttrAccount as String: account,
             ]
             let status = SecItemDelete(query as CFDictionary)
             if status != errSecSuccess && status != errSecItemNotFound {
@@ -134,7 +138,9 @@ final class KeychainStorage {
         }
     }
 
-    static var isLoggedIn: Bool { load() != nil }
+    static var isLoggedIn: Bool {
+        load() != nil
+    }
 }
 
 private struct CredentialsPayload: Codable {
@@ -146,11 +152,11 @@ private struct CredentialsPayload: Codable {
 enum KeychainError: LocalizedError {
     case saveFailed(OSStatus)
     case deleteFailed(OSStatus)
-    
+
     var errorDescription: String? {
         switch self {
-        case .saveFailed(let s): return "Keychain save failed: \(s)"
-        case .deleteFailed(let s): return "Keychain delete failed: \(s)"
+        case let .saveFailed(s): "Keychain save failed: \(s)"
+        case let .deleteFailed(s): "Keychain delete failed: \(s)"
         }
     }
 }

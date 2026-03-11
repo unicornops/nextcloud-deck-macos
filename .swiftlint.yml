@@ -1,0 +1,241 @@
+# SwiftLint configuration for Nextcloud Deck macOS
+# https://github.com/realm/SwiftLint
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+included:
+  - NextcloudDeck
+
+excluded:
+  - build
+  - DerivedData
+  - .build
+  - .swiftpm
+  - NextcloudDeck.xcodeproj
+
+# ---------------------------------------------------------------------------
+# Rules
+# ---------------------------------------------------------------------------
+# Start from the default set and opt-in to useful extras.
+# Disabled rules are documented with a reason.
+
+disabled_rules:
+  # SwiftUI view bodies regularly exceed this threshold legitimately.
+  - function_body_length
+  # SwiftUI views with many @State/@Binding properties exceed this easily.
+  - file_length
+  # Trailing closure syntax is idiomatic in SwiftUI (.toolbar { }, etc.).
+  - trailing_closure
+  # Multiple returns in guard / switch chains are intentional.
+  - implicit_return
+  # Extensions with internal access are idiomatic Swift (Codable conformances, etc.).
+  - no_extension_access_modifier
+  # SwiftUI layout literals are clearer as inline values; too noisy for this codebase.
+  - no_magic_numbers
+  # Nimble is not used in this project.
+  - nimble_operator
+
+opt_in_rules:
+  - array_init
+  - closure_spacing
+  - collection_alignment
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - discouraged_assert
+  - discouraged_none_name
+  - discouraged_optional_boolean
+  - empty_collection_literal
+  - empty_count
+  - empty_string
+  - enum_case_associated_values_count
+  - expiring_todo
+  - explicit_init
+  - fallthrough
+  - fatal_error_message
+  - file_name_no_space
+  - first_where
+  - flatmap_over_map_reduce
+  - force_unwrapping
+  - ibinspectable_in_extension
+  - identical_operands
+  - joined_default_parameter
+  - last_where
+  - legacy_multiple
+  - literal_expression_end_indentation
+  - local_doc_comment
+  - lower_acl_than_parent
+  - modifier_order
+  - multiline_arguments
+  - multiline_function_chains
+  - multiline_literal_brackets
+  - multiline_parameters
+  - operator_usage_whitespace
+  - optional_enum_case_matching
+  - overridden_super_call
+  - pattern_matching_keywords
+  - prefer_self_in_static_references
+  - prefer_self_type_over_type_of_self
+  - prefer_zero_over_explicit_init
+  - prohibited_super_call
+  - raw_value_for_camel_cased_codable_enum
+  - reduce_into
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - return_value_from_void_function
+  - sorted_first_last
+  - static_operator
+  - toggle_bool
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - unowned_variable_capture
+  - untyped_error_in_catch
+  - vertical_parameter_alignment_on_call
+  - vertical_whitespace_between_cases
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+  - yoda_condition
+
+# ---------------------------------------------------------------------------
+# Rule configuration
+# ---------------------------------------------------------------------------
+
+line_length:
+  warning: 120
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+  ignores_function_declarations: false
+  ignores_interpolated_strings: true
+
+type_body_length:
+  warning: 400
+  error: 700
+
+function_parameter_count:
+  warning: 6
+  error: 8
+
+cyclomatic_complexity:
+  warning: 15
+  error: 25
+
+nesting:
+  type_level:
+    warning: 2
+  function_level:
+    warning: 3
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  max_length:
+    warning: 60
+    error: 80
+  excluded:
+    # Common single-letter variables used throughout the codebase.
+    - id
+    - i
+    - x
+    - y
+    - z
+    - r
+    - g
+    - b
+    - c
+    - s
+    - t
+    - dx
+    - dy
+    - ok
+
+type_name:
+  min_length:
+    warning: 3
+  max_length:
+    warning: 50
+    error: 60
+
+vertical_whitespace:
+  max_empty_lines: 1
+
+multiline_arguments:
+  first_argument_location: next_line
+  only_enforce_after_first_closure_on_first_line: true
+
+modifier_order:
+  preferred_modifier_order:
+    - override
+    - acl
+    - setterACL
+    - dynamic
+    - mutators
+    - lazy
+    - final
+    - required
+    - convenience
+    - typeMethods
+    - owned
+
+# ---------------------------------------------------------------------------
+# Downgrade pre-existing violation patterns to warnings
+# These are real issues worth fixing over time, but should not block commits
+# on already-written code. New code should avoid triggering these.
+# ---------------------------------------------------------------------------
+
+# Codable DTOs use ?? nil as a defensive decode fallback; warn, don't error.
+redundant_nil_coalescing:
+  severity: warning
+
+# Optional<Bool> appears in the Deck API response DTOs; warn, don't error.
+discouraged_optional_boolean:
+  severity: warning
+
+# Force unwraps exist in URL-building paths that are known-safe; warn, don't error.
+force_unwrapping:
+  severity: warning
+
+# Large tuples are used in Keychain and auth return types; warn, don't error.
+large_tuple:
+  warning: 3
+  error: 6
+
+# Multiline function chains appear in URLComponents / String transforms; warn only.
+multiline_function_chains:
+  severity: warning
+
+# trailing_comma conflicts with SwiftFormat's `--commas always` rule; warn only.
+trailing_comma:
+  mandatory_comma: false
+  severity: warning
+
+# ---------------------------------------------------------------------------
+# Custom rules
+# ---------------------------------------------------------------------------
+
+# Credentials must never appear in source — this catches common patterns.
+# (Secrets live in Keychain only; see KeychainStorage.swift.)
+custom_rules:
+  no_hardcoded_credentials:
+    name: "No Hardcoded Credentials"
+    regex: '(password|secret|token|api_key|apikey)\s*=\s*"[^"]+'
+    match_kinds:
+      - identifier
+      - string
+    message: "Credentials must not be hardcoded. Use Keychain (KeychainStorage) instead."
+    severity: error
+
+  no_print_in_production:
+    name: "No print() in Production Code"
+    regex: '\bprint\s*\('
+    message: "Avoid print() in production code; use os.log / Logger instead."
+    severity: warning
+
+  mark_format:
+    name: "MARK Comment Format"
+    regex: '//\s*MARK:[^ -]'
+    message: "MARK comments should follow the format: // MARK: - Section Name"
+    severity: warning

@@ -23,25 +23,25 @@ struct Card: Identifiable, Codable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = (try? c.decodeIntOrString(forKey: .id)) ?? 0
-        title = (try? c.decode(String.self, forKey: .title)) ?? ""
-        description = (try? c.decodeIfPresent(String.self, forKey: .description)) ?? nil
-        stackId = (try? c.decodeIntOrString(forKey: .stackId)) ?? 0
-        type = (try? c.decodeIfPresent(String.self, forKey: .type)) ?? nil
-        lastModified = (try? c.decodeIntOrStringIfPresent(forKey: .lastModified)) ?? nil
-        createdAt = (try? c.decodeIntOrStringIfPresent(forKey: .createdAt)) ?? nil
-        labels = (try? c.decodeIfPresent([DeckLabel].self, forKey: .labels)) ?? nil
-        assignedUsers = (try? c.decodeIfPresent([DeckUser].self, forKey: .assignedUsers)) ?? nil
-        attachments = (try? c.decodeIfPresent([Attachment].self, forKey: .attachments)) ?? nil
-        attachmentCount = (try? c.decodeIntOrStringIfPresent(forKey: .attachmentCount)) ?? nil
-        owner = (try? c.decodeIfPresent(String.self, forKey: .owner)) ?? nil
-        order = (try? c.decodeIntOrStringIfPresent(forKey: .order)) ?? 999
-        archived = (try? c.decodeIfPresent(Bool.self, forKey: .archived)) ?? false
-        duedate = (try? c.decodeIfPresent(String.self, forKey: .duedate)) ?? nil
-        deletedAt = (try? c.decodeIntOrStringIfPresent(forKey: .deletedAt)) ?? nil
-        commentsUnread = (try? c.decodeIntOrStringIfPresent(forKey: .commentsUnread)) ?? nil
-        overdue = (try? c.decodeIntOrStringIfPresent(forKey: .overdue)) ?? nil
-        etag = (try? c.decodeIfPresent(String.self, forKey: .etag)) ?? nil
+        self.id = (try? c.decodeIntOrString(forKey: .id)) ?? 0
+        self.title = (try? c.decode(String.self, forKey: .title)) ?? ""
+        self.description = (try? c.decodeIfPresent(String.self, forKey: .description)) ?? nil
+        self.stackId = (try? c.decodeIntOrString(forKey: .stackId)) ?? 0
+        self.type = (try? c.decodeIfPresent(String.self, forKey: .type)) ?? nil
+        self.lastModified = (try? c.decodeIntOrStringIfPresent(forKey: .lastModified)) ?? nil
+        self.createdAt = (try? c.decodeIntOrStringIfPresent(forKey: .createdAt)) ?? nil
+        self.labels = (try? c.decodeIfPresent([DeckLabel].self, forKey: .labels)) ?? nil
+        self.assignedUsers = (try? c.decodeIfPresent([DeckUser].self, forKey: .assignedUsers)) ?? nil
+        self.attachments = (try? c.decodeIfPresent([Attachment].self, forKey: .attachments)) ?? nil
+        self.attachmentCount = (try? c.decodeIntOrStringIfPresent(forKey: .attachmentCount)) ?? nil
+        self.owner = (try? c.decodeIfPresent(String.self, forKey: .owner)) ?? nil
+        self.order = (try? c.decodeIntOrStringIfPresent(forKey: .order)) ?? 999
+        self.archived = (try? c.decodeIfPresent(Bool.self, forKey: .archived)) ?? false
+        self.duedate = (try? c.decodeIfPresent(String.self, forKey: .duedate)) ?? nil
+        self.deletedAt = (try? c.decodeIntOrStringIfPresent(forKey: .deletedAt)) ?? nil
+        self.commentsUnread = (try? c.decodeIntOrStringIfPresent(forKey: .commentsUnread)) ?? nil
+        self.overdue = (try? c.decodeIntOrStringIfPresent(forKey: .overdue)) ?? nil
+        self.etag = (try? c.decodeIfPresent(String.self, forKey: .etag)) ?? nil
     }
 
     enum CodingKeys: String, CodingKey {
@@ -79,8 +79,12 @@ private extension KeyedDecodingContainer {
     func decodeIntOrString(forKey key: Key) throws -> Int {
         if let i = try? decode(Int.self, forKey: key) { return i }
         if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }
-        throw DecodingError.typeMismatch(Int.self, DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int or String"))
+        throw DecodingError.typeMismatch(
+            Int.self,
+            DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int or String")
+        )
     }
+
     func decodeIntOrStringIfPresent(forKey key: Key) throws -> Int? {
         if let i = try? decode(Int.self, forKey: key) { return i }
         if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }
@@ -105,16 +109,16 @@ struct Attachment: Codable, Identifiable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = (try? c.decodeIntOrString(forKey: .id)) ?? 0
-        cardId = try? c.decodeIntOrStringIfPresent(forKey: .cardId)
-        type = (try? c.decodeIfPresent(String.self, forKey: .type)) ?? nil
-        data = (try? c.decodeIfPresent(String.self, forKey: .data))
+        self.id = (try? c.decodeIntOrString(forKey: .id)) ?? 0
+        self.cardId = try? c.decodeIntOrStringIfPresent(forKey: .cardId)
+        self.type = (try? c.decodeIfPresent(String.self, forKey: .type)) ?? nil
+        self.data = (try? c.decodeIfPresent(String.self, forKey: .data))
             ?? (try? c.decodeIfPresent(Int.self, forKey: .data)).map { String($0) }
-        lastModified = try? c.decodeIntOrStringIfPresent(forKey: .lastModified)
-        createdAt = try? c.decodeIntOrStringIfPresent(forKey: .createdAt)
-        createdBy = (try? c.decodeIfPresent(String.self, forKey: .createdBy)) ?? nil
-        deletedAt = try? c.decodeIntOrStringIfPresent(forKey: .deletedAt)
-        extendedData = try? c.decodeIfPresent(AttachmentExtendedData.self, forKey: .extendedData)
+        self.lastModified = try? c.decodeIntOrStringIfPresent(forKey: .lastModified)
+        self.createdAt = try? c.decodeIntOrStringIfPresent(forKey: .createdAt)
+        self.createdBy = (try? c.decodeIfPresent(String.self, forKey: .createdBy)) ?? nil
+        self.deletedAt = try? c.decodeIntOrStringIfPresent(forKey: .deletedAt)
+        self.extendedData = try? c.decodeIfPresent(AttachmentExtendedData.self, forKey: .extendedData)
     }
 
     /// Display name for the attachment (filename).

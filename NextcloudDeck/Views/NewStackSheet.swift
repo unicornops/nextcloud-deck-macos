@@ -7,12 +7,12 @@ struct NewStackSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var isSaving = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("New list")
                 .font(.headline)
-            
+
             VStack(alignment: .leading, spacing: 6) {
                 Text("List title")
                     .font(.subheadline)
@@ -21,14 +21,14 @@ struct NewStackSheet: View {
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { save() }
             }
-            
+
             if let err = appState.errorMessage {
                 Text(err)
                     .font(.caption)
                     .foregroundStyle(.red)
                     .lineLimit(4)
             }
-            
+
             HStack {
                 Button("Cancel") {
                     dismiss()
@@ -57,7 +57,7 @@ struct NewStackSheet: View {
             appState.errorMessage = nil
         }
     }
-    
+
     private func save() {
         let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }

@@ -1,6 +1,6 @@
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
-import AppKit
 
 struct CardDetailSheet: View {
     let card: Card
@@ -8,7 +8,7 @@ struct CardDetailSheet: View {
     var onDismiss: () -> Void
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var title: String
     @State private var description: String
     @State private var isSaving = false
@@ -22,18 +22,18 @@ struct CardDetailSheet: View {
     @State private var isUploadingAttachment = false
     @State private var showFileImporter = false
     @State private var attachmentError: String?
-    
+
     private var board: Board? {
         guard let b = appState.selectedBoard, b.id == boardId else { return nil }
         return b
     }
-    
+
     /// Latest card from stacks so label assign/remove updates in the sheet.
     private var currentCard: Card? {
         guard let stack = appState.stacks.first(where: { $0.id == card.stackId }) else { return nil }
         return stack.cards?.first(where: { $0.id == card.id })
     }
-    
+
     private var cardLabels: [DeckLabel] {
         (currentCard ?? card).labels ?? []
     }
@@ -43,13 +43,13 @@ struct CardDetailSheet: View {
         if !attachments.isEmpty { return attachments }
         return (currentCard ?? card).attachments ?? []
     }
-    
+
     private var availableBoardLabels: [DeckLabel] {
-        guard let board = board else { return [] }
+        guard let board else { return [] }
         let assignedIds = Set(cardLabels.map(\.id))
         return board.labels.filter { !assignedIds.contains($0.id) }
     }
-    
+
     init(card: Card, boardId: Int, onDismiss: @escaping () -> Void) {
         self.card = card
         self.boardId = boardId
@@ -58,7 +58,7 @@ struct CardDetailSheet: View {
         _description = State(initialValue: card.description ?? "")
         _attachments = State(initialValue: card.attachments ?? [])
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -85,7 +85,7 @@ struct CardDetailSheet: View {
             }
             .padding()
             Divider()
-            
+
             Form {
                 Section("Title") {
                     TextField("Title", text: $title)
@@ -142,7 +142,7 @@ struct CardDetailSheet: View {
             Text("This card will be permanently deleted. This cannot be undone.")
         }
     }
-    
+
     // MARK: - Attachments UI
 
     private var attachmentsContent: some View {
@@ -172,7 +172,13 @@ struct CardDetailSheet: View {
                         onDownload: { downloadAttachment(attachment) },
                         onDelete: {
                             Task {
-                                await appState.deleteAttachment(boardId: boardId, stackId: card.stackId, cardId: card.id, attachmentId: attachment.id, type: attachment.type)
+                                await appState.deleteAttachment(
+                                    boardId: boardId,
+                                    stackId: card.stackId,
+                                    cardId: card.id,
+                                    attachmentId: attachment.id,
+                                    type: attachment.type
+                                )
                                 await loadAttachments()
                             }
                         }
@@ -229,7 +235,7 @@ struct CardDetailSheet: View {
     }
 
     private func handleFileImport(result: Result<[URL], Error>) {
-        guard case .success(let urls) = result else { return }
+        guard case let .success(urls) = result else { return }
         let fileURLs = urls.filter { !$0.hasDirectoryPath }
         guard !fileURLs.isEmpty else { return }
         Task {
@@ -237,7 +243,12 @@ struct CardDetailSheet: View {
             for url in fileURLs {
                 guard url.startAccessingSecurityScopedResource() else { continue }
                 defer { url.stopAccessingSecurityScopedResource() }
-                if await appState.uploadAttachment(boardId: boardId, stackId: card.stackId, cardId: card.id, fileURL: url) != nil {
+                if await appState.uploadAttachment(
+                    boardId: boardId,
+                    stackId: card.stackId,
+                    cardId: card.id,
+                    fileURL: url
+                ) != nil {
                     await loadAttachments()
                 }
             }
@@ -270,7 +281,7 @@ struct CardDetailSheet: View {
     }
 
     // MARK: - Labels UI
-    
+
     private var labelsContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             if !cardLabels.isEmpty {
@@ -278,7 +289,12 @@ struct CardDetailSheet: View {
                     ForEach(cardLabels) { label in
                         LabelChip(label: label) {
                             Task {
-                                await appState.removeLabel(boardId: boardId, stackId: card.stackId, cardId: card.id, labelId: label.id)
+                                await appState.removeLabel(
+                                    boardId: boardId,
+                                    stackId: card.stackId,
+                                    cardId: card.id,
+                                    labelId: label.id
+                                )
                             }
                         }
                     }
@@ -288,7 +304,12 @@ struct CardDetailSheet: View {
                 ForEach(availableBoardLabels) { label in
                     Button {
                         Task {
-                            await appState.assignLabel(boardId: boardId, stackId: card.stackId, cardId: card.id, labelId: label.id)
+                            await appState.assignLabel(
+                                boardId: boardId,
+                                stackId: card.stackId,
+                                cardId: card.id,
+                                labelId: label.id
+                            )
                         }
                     } label: {
                         Label(label.title, systemImage: "tag.fill")
@@ -312,7 +333,7 @@ struct CardDetailSheet: View {
             .disabled(board == nil)
         }
     }
-    
+
     private var createLabelSheet: some View {
         CreateLabelSheet(
             title: $newLabelTitle,
@@ -321,8 +342,17 @@ struct CardDetailSheet: View {
             onCreate: {
                 isCreatingLabel = true
                 Task {
-                    if let labelId = await appState.createLabel(boardId: boardId, title: newLabelTitle, color: newLabelColor) {
-                        await appState.assignLabel(boardId: boardId, stackId: card.stackId, cardId: card.id, labelId: labelId)
+                    if let labelId = await appState.createLabel(
+                        boardId: boardId,
+                        title: newLabelTitle,
+                        color: newLabelColor
+                    ) {
+                        await appState.assignLabel(
+                            boardId: boardId,
+                            stackId: card.stackId,
+                            cardId: card.id,
+                            labelId: labelId
+                        )
                         await MainActor.run {
                             showCreateLabel = false
                             newLabelTitle = ""
@@ -335,11 +365,17 @@ struct CardDetailSheet: View {
             onCancel: { showCreateLabel = false }
         )
     }
-    
+
     private func save() {
         isSaving = true
         Task {
-            await appState.updateCard(boardId: boardId, stackId: card.stackId, card: card, title: title, description: description)
+            await appState.updateCard(
+                boardId: boardId,
+                stackId: card.stackId,
+                card: card,
+                title: title,
+                description: description
+            )
             await MainActor.run {
                 isSaving = false
                 dismiss()
@@ -399,7 +435,7 @@ private struct AttachmentRowView: View {
 private struct LabelChip: View {
     let label: DeckLabel
     var onRemove: (() -> Void)?
-    
+
     var body: some View {
         HStack(spacing: 4) {
             Text(label.title)
@@ -432,7 +468,7 @@ private struct CreateLabelSheet: View {
     @Binding var isCreating: Bool
     var onCreate: () -> Void
     var onCancel: () -> Void
-    
+
     private static let presetColors: [(name: String, hex: String)] = [
         ("Green", "31CC7C"),
         ("Blue", "317CCC"),
@@ -441,7 +477,7 @@ private struct CreateLabelSheet: View {
         ("Purple", "9C59B6"),
         ("Orange", "F39C12"),
     ]
-    
+
     var body: some View {
         VStack(spacing: 16) {
             Text("New tag")
@@ -462,7 +498,10 @@ private struct CreateLabelSheet: View {
                                 .frame(width: 24, height: 24)
                                 .overlay(
                                     Circle()
-                                        .strokeBorder(Color.primary.opacity(0.3), lineWidth: color == preset.hex ? 3 : 0)
+                                        .strokeBorder(
+                                            Color.primary.opacity(0.3),
+                                            lineWidth: color == preset.hex ? 3 : 0
+                                        )
                                 )
                         }
                         .buttonStyle(.plain)

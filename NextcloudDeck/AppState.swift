@@ -3,16 +3,16 @@ import SwiftUI
 
 @MainActor
 final class AppState: ObservableObject {
-    @Published var isLoggedIn: Bool = false
+    @Published var isLoggedIn = false
     @Published var boards: [Board] = []
     @Published var selectedBoardId: Int?
     @Published var stacks: [Stack] = []
-    @Published var isLoading: Bool = false
-    @Published var isLoadingStacks: Bool = false
+    @Published var isLoading = false
+    @Published var isLoadingStacks = false
     @Published var errorMessage: String?
     @Published var stacksError: String?
-    @Published var showingLogin: Bool = false
-    @Published var showingAbout: Bool = false
+    @Published var showingLogin = false
+    @Published var showingAbout = false
 
     private var deckAPI: DeckAPI?
     private var credentials: (serverURL: URL, username: String, appPassword: String)?
@@ -34,12 +34,12 @@ final class AppState: ObservableObject {
 
     init() {
         if let creds = KeychainStorage.load() {
-            credentials = creds
-            deckAPI = DeckAPI(serverURL: creds.serverURL, username: creds.username, appPassword: creds.appPassword)
-            isLoggedIn = true
+            self.credentials = creds
+            self.deckAPI = DeckAPI(serverURL: creds.serverURL, username: creds.username, appPassword: creds.appPassword)
+            self.isLoggedIn = true
             Task { await loadBoards() }
         } else {
-            showingLogin = true
+            self.showingLogin = true
         }
     }
 
@@ -48,7 +48,11 @@ final class AppState: ObservableObject {
         errorMessage = nil
         defer { isLoading = false }
         do {
-            let appPassword = try await NextcloudAuth.getAppPassword(serverURL: serverURL, username: username, password: password)
+            let appPassword = try await NextcloudAuth.getAppPassword(
+                serverURL: serverURL,
+                username: username,
+                password: password
+            )
             let storedURL = try KeychainStorage.save(serverURL: serverURL, username: username, appPassword: appPassword)
             credentials = (storedURL, username, appPassword)
             deckAPI = DeckAPI(serverURL: storedURL, username: username, appPassword: appPassword)
@@ -57,7 +61,8 @@ final class AppState: ObservableObject {
             await loadBoards()
         } catch {
             let msg = error.localizedDescription
-            if msg.lowercased().contains("two-factor") || msg.lowercased().contains("2fa") || msg.lowercased().contains("second factor") {
+            if msg.lowercased().contains("two-factor") || msg.lowercased().contains("2fa") || msg.lowercased()
+                .contains("second factor") {
                 errorMessage = "This account uses two-factor authentication. Use “Sign in with browser” above."
             } else {
                 errorMessage = msg
@@ -252,7 +257,15 @@ final class AppState: ObservableObject {
     func updateCard(boardId: Int, stackId: Int, card: Card, title: String?, description: String?) async {
         guard let api = deckAPI else { return }
         do {
-            _ = try await api.updateCard(boardId: boardId, stackId: stackId, cardId: card.id, title: title ?? card.title, description: description ?? card.description, order: nil, duedate: nil)
+            _ = try await api.updateCard(
+                boardId: boardId,
+                stackId: stackId,
+                cardId: card.id,
+                title: title ?? card.title,
+                description: description ?? card.description,
+                order: nil,
+                duedate: nil
+            )
             await loadStacks(boardId: boardId)
         } catch {
             errorMessage = error.localizedDescription
@@ -272,7 +285,13 @@ final class AppState: ObservableObject {
     func reorderCard(boardId: Int, fromStackId: Int, cardId: Int, toStackId: Int, order: Int) async {
         guard let api = deckAPI else { return }
         do {
-            _ = try await api.reorderCard(boardId: boardId, stackId: fromStackId, cardId: cardId, order: order, newStackId: toStackId)
+            _ = try await api.reorderCard(
+                boardId: boardId,
+                stackId: fromStackId,
+                cardId: cardId,
+                order: order,
+                newStackId: toStackId
+            )
             await loadStacks(boardId: boardId)
         } catch {
             errorMessage = error.localizedDescription
@@ -293,7 +312,13 @@ final class AppState: ObservableObject {
             }
         }
 
-        await reorderCard(boardId: boardId, fromStackId: fromStackId, cardId: cardId, toStackId: toStackId, order: order)
+        await reorderCard(
+            boardId: boardId,
+            fromStackId: fromStackId,
+            cardId: cardId,
+            toStackId: toStackId,
+            order: order
+        )
     }
 
     func assignLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async {
@@ -359,10 +384,23 @@ final class AppState: ObservableObject {
     }
 
     /// Downloads an attachment and saves it to the user's chosen location.
-    func downloadAttachment(boardId: Int, stackId: Int, cardId: Int, attachment: Attachment, saveURL: URL) async -> Bool {
+    func downloadAttachment(
+        boardId: Int,
+        stackId: Int,
+        cardId: Int,
+        attachment: Attachment,
+        saveURL: URL
+    ) async
+        -> Bool {
         guard let api = deckAPI else { return false }
         do {
-            let data = try await api.downloadAttachment(boardId: boardId, stackId: stackId, cardId: cardId, attachmentId: attachment.id, type: attachment.type)
+            let data = try await api.downloadAttachment(
+                boardId: boardId,
+                stackId: stackId,
+                cardId: cardId,
+                attachmentId: attachment.id,
+                type: attachment.type
+            )
             try data.write(to: saveURL)
             return true
         } catch {
@@ -376,7 +414,13 @@ final class AppState: ObservableObject {
         guard let api = deckAPI else { return nil }
         let filename = fileURL.lastPathComponent
         do {
-            let attachment = try await api.uploadAttachment(boardId: boardId, stackId: stackId, cardId: cardId, fileURL: fileURL, filename: filename)
+            let attachment = try await api.uploadAttachment(
+                boardId: boardId,
+                stackId: stackId,
+                cardId: cardId,
+                fileURL: fileURL,
+                filename: filename
+            )
             await loadStacks(boardId: boardId)
             return attachment
         } catch {
@@ -389,7 +433,13 @@ final class AppState: ObservableObject {
     func deleteAttachment(boardId: Int, stackId: Int, cardId: Int, attachmentId: Int, type: String? = nil) async {
         guard let api = deckAPI else { return }
         do {
-            try await api.deleteAttachment(boardId: boardId, stackId: stackId, cardId: cardId, attachmentId: attachmentId, type: type)
+            try await api.deleteAttachment(
+                boardId: boardId,
+                stackId: stackId,
+                cardId: cardId,
+                attachmentId: attachmentId,
+                type: type
+            )
             await loadStacks(boardId: boardId)
         } catch {
             errorMessage = error.localizedDescription
