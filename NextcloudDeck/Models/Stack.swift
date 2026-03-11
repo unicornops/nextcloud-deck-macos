@@ -52,20 +52,3 @@ struct Stack: Identifiable, Codable {
         case id, title, boardId, deletedAt, lastModified, cards, order
     }
 }
-
-private extension KeyedDecodingContainer {
-    func decodeIntOrString(forKey key: Key) throws -> Int {
-        if let i = try? decode(Int.self, forKey: key) { return i }
-        if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }
-        throw DecodingError.typeMismatch(
-            Int.self,
-            DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int or String")
-        )
-    }
-
-    func decodeIntOrStringIfPresent(forKey key: Key) throws -> Int? {
-        if let i = try? decode(Int.self, forKey: key) { return i }
-        if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }
-        return nil
-    }
-}

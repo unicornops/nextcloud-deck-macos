@@ -77,56 +77,20 @@ final class DeckAPI {
         body: (any Encodable)? = nil
     ) async throws
         -> T {
-        guard let url = url(for: path) else {
-            throw DeckAPIError.invalidURL
-        }
-        var req = URLRequest(url: url)
-        req.httpMethod = method
-        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
-
-        if let body {
-            req.httpBody = try encoder.encode(body)
-        }
-
-        let (data, response) = try await session.data(for: req)
-        guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
-
-        if http.statusCode == 304 { throw DeckAPIError.notModified }
-        if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
-            throw DeckAPIError.badRequest(err.message)
-        }
-        if http.statusCode == 403 { throw DeckAPIError.permissionDenied }
-        guard (200 ... 299).contains(http.statusCode) else {
-            throw DeckAPIError.httpStatus(http.statusCode)
-        }
-
+        guard let requestURL = url(for: path) else { throw DeckAPIError.invalidURL }
+        let encodedBody = try body.map { try encoder.encode($0) }
+        let (data, _) = try await performRequest(url: requestURL, method: method, body: encodedBody)
         return try decoder.decode(T.self, from: data)
     }
 
-    private func requestNoContent(_ path: String, method: String = "GET", body: (any Encodable)? = nil) async throws {
-        guard let url = url(for: path) else {
-            throw DeckAPIError.invalidURL
-        }
-        var req = URLRequest(url: url)
-        req.httpMethod = method
-        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
-        if let body {
-            req.httpBody = try encoder.encode(body)
-        }
-        let (data, response) = try await session.data(for: req)
-        guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
-        if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
-            throw DeckAPIError.badRequest(err.message)
-        }
-        guard (200 ... 299).contains(http.statusCode) else {
-            throw DeckAPIError.httpStatus(http.statusCode)
-        }
+    private func requestNoContent(
+        _ path: String,
+        method: String = "GET",
+        body: (any Encodable)? = nil
+    ) async throws {
+        guard let requestURL = url(for: path) else { throw DeckAPIError.invalidURL }
+        let encodedBody = try body.map { try encoder.encode($0) }
+        _ = try await performRequest(url: requestURL, method: method, body: encodedBody)
     }
 
     // MARK: - Boards
@@ -209,38 +173,9 @@ final class DeckAPI {
     // MARK: - Stacks
 
     func getStacks(boardId: Int) async throws -> [Stack] {
-        var path = baseURL.path
-        if path.hasSuffix("/") { path.removeLast() }
-        path += "/boards/\(boardId)/stacks"
-        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
-        components.path = path
-        guard let url = components.url else { throw DeckAPIError.invalidURL }
-        var req = URLRequest(url: url)
-        req.httpMethod = "GET"
-        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
-        let (data, response) = try await session.data(for: req)
-        guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
-        if http.statusCode == 304 { throw DeckAPIError.notModified }
-        if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
-            throw DeckAPIError.badRequest(err.message)
-        }
-        if http.statusCode == 403 { throw DeckAPIError.permissionDenied }
-        guard (200 ... 299).contains(http.statusCode) else {
-            throw DeckAPIError.httpStatus(http.statusCode)
-        }
-        do {
-            return try decoder.decode([Stack].self, from: data)
-        } catch let arrayError as DecodingError {
-            if let wrapper = try? decoder.decode(OCSStacksWrapper.self, from: data) { return wrapper.data }
-            if let ocs = try? decoder.decode(OCSStacksEnvelope.self, from: data) { return ocs.ocs.data }
-            let detail = decodingErrorDescription(arrayError)
-            throw DeckAPIError.badRequest("Could not decode stacks: \(detail)")
-        } catch {
-            throw DeckAPIError.badRequest("Could not decode stacks: \(error.localizedDescription)")
-        }
+        guard let url = url(for: "boards/\(boardId)/stacks") else { throw DeckAPIError.invalidURL }
+        let (data, _) = try await performRequest(url: url, method: "GET")
+        return try decodeStacks(from: data, context: "stacks")
     }
 
     private func decodingErrorDescription(_ error: DecodingError) -> String {
@@ -288,37 +223,23 @@ final class DeckAPI {
 
     /// Fetches stacks that have been archived (soft-deleted) on the board.
     func getArchivedStacks(boardId: Int) async throws -> [Stack] {
-        var path = baseURL.path
-        if path.hasSuffix("/") { path.removeLast() }
-        path += "/boards/\(boardId)/stacks/archived"
-        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
-        components.path = path
-        guard let url = components.url else { throw DeckAPIError.invalidURL }
-        var req = URLRequest(url: url)
-        req.httpMethod = "GET"
-        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
-        let (data, response) = try await session.data(for: req)
-        guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
-        if http.statusCode == 304 { throw DeckAPIError.notModified }
-        if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
-            throw DeckAPIError.badRequest(err.message)
-        }
-        if http.statusCode == 403 { throw DeckAPIError.permissionDenied }
-        guard (200 ... 299).contains(http.statusCode) else {
-            throw DeckAPIError.httpStatus(http.statusCode)
-        }
+        guard let url = url(for: "boards/\(boardId)/stacks/archived") else { throw DeckAPIError.invalidURL }
+        let (data, _) = try await performRequest(url: url, method: "GET")
+        return try decodeStacks(from: data, context: "archived stacks")
+    }
+
+    /// Decodes a `[Stack]` from raw response data, trying direct decode first then
+    /// OCS wrapper formats. `context` is used only in error messages.
+    private func decodeStacks(from data: Data, context: String) throws -> [Stack] {
         do {
             return try decoder.decode([Stack].self, from: data)
         } catch let arrayError as DecodingError {
             if let wrapper = try? decoder.decode(OCSStacksWrapper.self, from: data) { return wrapper.data }
             if let ocs = try? decoder.decode(OCSStacksEnvelope.self, from: data) { return ocs.ocs.data }
             let detail = decodingErrorDescription(arrayError)
-            throw DeckAPIError.badRequest("Could not decode archived stacks: \(detail)")
+            throw DeckAPIError.badRequest("Could not decode \(context): \(detail)")
         } catch {
-            throw DeckAPIError.badRequest("Could not decode archived stacks: \(error.localizedDescription)")
+            throw DeckAPIError.badRequest("Could not decode \(context): \(error.localizedDescription)")
         }
     }
 
@@ -348,7 +269,12 @@ final class DeckAPI {
         let path = "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)"
         guard let requestURL = url(for: path) else { throw DeckAPIError.invalidURL }
         let (data, _) = try await performRequest(url: requestURL, method: "GET")
+        return try decodeCard(from: data, context: "card response")
+    }
 
+    /// Decodes a `Card` from raw response data, trying direct decode first then
+    /// OCS wrapper formats. `context` is used only in the error message.
+    private func decodeCard(from data: Data, context: String) throws -> Card {
         if let card = try? decoder.decode(Card.self, from: data) {
             return card
         }
@@ -358,7 +284,7 @@ final class DeckAPI {
         if let envelope = try? decoder.decode(OCSCardEnvelope.self, from: data) {
             return envelope.ocs.data
         }
-        throw DeckAPIError.badRequest("Could not decode card response")
+        throw DeckAPIError.badRequest("Could not decode \(context)")
     }
 
     func createCard(
@@ -470,16 +396,8 @@ final class DeckAPI {
             return try await getCard(boardId: boardId, stackId: newStackId ?? stackId, cardId: cardId)
         }
 
-        if let card = try? decoder.decode(Card.self, from: data) {
+        if let card = try? decodeCard(from: data, context: "reorder response") {
             return card
-        }
-
-        if let wrapper = try? decoder.decode(OCSCardWrapper.self, from: data) {
-            return wrapper.data
-        }
-
-        if let envelope = try? decoder.decode(OCSCardEnvelope.self, from: data) {
-            return envelope.ocs.data
         }
 
         return try await getCard(boardId: boardId, stackId: newStackId ?? stackId, cardId: cardId)
@@ -682,25 +600,7 @@ final class DeckAPI {
         // 1. Internal Deck route (singular "attachment")
         if let internalURL = deckAppURL(for: "cards/\(cardId)/attachment") {
             do {
-                var req = URLRequest(url: internalURL)
-                req.httpMethod = "POST"
-                req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
-                req.setValue("application/json", forHTTPHeaderField: "Accept")
-                req.setValue(authHeader, forHTTPHeaderField: "Authorization")
-                for (key, value) in extraHeaders {
-                    req.setValue(value, forHTTPHeaderField: key)
-                }
-                req.httpBody = body
-
-                let (data, response) = try await session.data(for: req)
-                guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
-                if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
-                    throw DeckAPIError.badRequest(err.message)
-                }
-                if http.statusCode == 403 { throw DeckAPIError.permissionDenied }
-                guard (200 ... 299).contains(http.statusCode) else {
-                    throw DeckAPIError.httpStatus(http.statusCode)
-                }
+                let data = try await performMultipartRequest(url: internalURL, body: body, extraHeaders: extraHeaders)
                 return try decoder.decode(Attachment.self, from: data)
             } catch {
                 // Fall through to REST API fallback
@@ -716,6 +616,20 @@ final class DeckAPI {
         components.queryItems = [URLQueryItem(name: "type", value: "file")]
         guard let url = components.url else { throw DeckAPIError.invalidURL }
 
+        let data = try await performMultipartRequest(url: url, body: body, extraHeaders: extraHeaders)
+        return try decoder.decode(Attachment.self, from: data)
+    }
+
+    /// Executes a multipart POST request to `url`, applying standard Deck auth
+    /// headers plus any caller-supplied `extraHeaders` (e.g. Content-Type with
+    /// boundary, Content-Length). Validates the HTTP status and returns the
+    /// response body on success.
+    private func performMultipartRequest(
+        url: URL,
+        body: Data,
+        extraHeaders: [String: String]
+    ) async throws
+        -> Data {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
@@ -735,7 +649,7 @@ final class DeckAPI {
         guard (200 ... 299).contains(http.statusCode) else {
             throw DeckAPIError.httpStatus(http.statusCode)
         }
-        return try decoder.decode(Attachment.self, from: data)
+        return data
     }
 
     /// Deletes an attachment from a card.

@@ -22,33 +22,14 @@ struct NewStackSheet: View {
                     .onSubmit { save() }
             }
 
-            if let err = appState.errorMessage {
-                Text(err)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .lineLimit(4)
-            }
-
-            HStack {
-                Button("Cancel") {
-                    dismiss()
-                    onDismiss()
-                }
-                .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button {
-                    save()
-                } label: {
-                    if isSaving {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .frame(minWidth: 60)
-                    } else {
-                        Text("Create")
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
+            CreateSheetFooter(
+                isDisabled: title.trimmingCharacters(in: .whitespaces).isEmpty,
+                isSaving: $isSaving
+            ) {
+                save()
+            } onCancel: {
+                dismiss()
+                onDismiss()
             }
         }
         .padding(24)

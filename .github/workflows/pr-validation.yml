@@ -10,6 +10,52 @@ permissions:
   pull-requests: read
 
 jobs:
+  pmd:
+    name: PMD Static Analysis
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install PMD
+        run: brew install pmd
+
+      # NOTE: `pmd check` (static analysis) is intentionally omitted.
+      # PMD's Swift grammar predates Swift 5.9 and cannot parse existential
+      # types (any Encodable), if/switch expressions, or async/await signatures
+      # — all of which are used throughout this codebase. Running `pmd check`
+      # produces dozens of spurious ANTLR parse warnings and an NPE in the
+      # UnavailableFunction rule. See pmd-ruleset.xml for full details and the
+      # commented-out rule references to re-enable when PMD's grammar catches up.
+
+      - name: Run PMD CPD (copy-paste detection)
+        run: |
+          pmd cpd \
+            --minimum-tokens 105 \
+            --dir NextcloudDeck \
+            --language swift \
+            --format text \
+            --fail-on-violation \
+            --report-file cpd-report.txt || CPD_EXIT=$?
+
+          if [ -f cpd-report.txt ] && [ -s cpd-report.txt ]; then
+            echo "### CPD duplications found:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat cpd-report.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat cpd-report.txt
+          fi
+
+          exit ${CPD_EXIT:-0}
+
+      - name: Upload PMD reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pmd-reports
+          path: cpd-report.txt
+          if-no-files-found: ignore
+
   build:
     name: Build and Test
     runs-on: macos-latest
@@ -132,3 +178,5 @@ jobs:
           echo "- **macOS**: $(sw_vers -productVersion)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "⚠️ **Note**: This is an unsigned build. Signed builds are only created on release." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ **PMD CPD (copy-paste detection) results**: see the 'PMD Static Analysis' job above." >> $GITHUB_STEP_SUMMARY
