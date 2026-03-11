@@ -9,11 +9,11 @@ struct DeckLabel: Identifiable, Codable, Hashable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = (try? c.decodeIntOrString(forKey: .id)) ?? 0
-        title = (try? c.decode(String.self, forKey: .title)) ?? ""
-        color = (try? c.decodeIfPresent(String.self, forKey: .color)) ?? nil
-        boardId = (try? c.decodeIntOrStringIfPresent(forKey: .boardId)) ?? nil
-        cardId = (try? c.decodeIntOrStringIfPresent(forKey: .cardId)) ?? nil
+        self.id = (try? c.decodeIntOrString(forKey: .id)) ?? 0
+        self.title = (try? c.decode(String.self, forKey: .title)) ?? ""
+        self.color = (try? c.decodeIfPresent(String.self, forKey: .color)) ?? nil
+        self.boardId = (try? c.decodeIntOrStringIfPresent(forKey: .boardId)) ?? nil
+        self.cardId = (try? c.decodeIntOrStringIfPresent(forKey: .cardId)) ?? nil
     }
 
     func encode(to encoder: Encoder) throws {
@@ -34,8 +34,12 @@ private extension KeyedDecodingContainer {
     func decodeIntOrString(forKey key: Key) throws -> Int {
         if let i = try? decode(Int.self, forKey: key) { return i }
         if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }
-        throw DecodingError.typeMismatch(Int.self, DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int or String"))
+        throw DecodingError.typeMismatch(
+            Int.self,
+            DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int or String")
+        )
     }
+
     func decodeIntOrStringIfPresent(forKey key: Key) throws -> Int? {
         if let i = try? decode(Int.self, forKey: key) { return i }
         if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }

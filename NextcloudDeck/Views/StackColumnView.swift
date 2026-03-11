@@ -34,12 +34,14 @@ struct StackColumnView: View {
     @State private var dragInsertIndex: Int? = nil
     @State private var isColumnDropTargeted = false
 
-    private var isDropTargeted: Bool { dragInsertIndex != nil || isColumnDropTargeted }
+    private var isDropTargeted: Bool {
+        dragInsertIndex != nil || isColumnDropTargeted
+    }
 
     private let dropTypes = [
         UTType.plainText.identifier,
         UTType.utf8PlainText.identifier,
-        UTType.text.identifier
+        UTType.text.identifier,
     ]
 
     private var cards: [Card] {
@@ -249,19 +251,21 @@ struct StackColumnView: View {
             return false
         }
 
-        let typeIdentifier = dropTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) ?? UTType.plainText.identifier
+        let typeIdentifier = dropTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) ?? UTType
+            .plainText.identifier
 
         provider.loadItem(forTypeIdentifier: typeIdentifier, options: nil) { item, _ in
-            let draggedCard: DraggedCard?
-
-            if let data = item as? Data, let value = String(data: data, encoding: .utf8) {
-                draggedCard = DraggedCard.fromProviderString(value)
+            let draggedCard: DraggedCard? = if let data = item as? Data, let value = String(
+                data: data,
+                encoding: .utf8
+            ) {
+                DraggedCard.fromProviderString(value)
             } else if let value = item as? String {
-                draggedCard = DraggedCard.fromProviderString(value)
+                DraggedCard.fromProviderString(value)
             } else if let text = item as? NSString {
-                draggedCard = DraggedCard.fromProviderString(text as String)
+                DraggedCard.fromProviderString(text as String)
             } else {
-                draggedCard = nil
+                nil
             }
 
             guard let draggedCard else { return }
@@ -297,9 +301,9 @@ struct StackColumnView: View {
         return true
     }
 
-    // Fallback drop handler on the whole column — only handles cross-stack moves,
-    // appending the card to the end of this list. Gap drops take priority for
-    // precise placement (both cross-stack and within-stack reordering).
+    /// Fallback drop handler on the whole column — only handles cross-stack moves,
+    /// appending the card to the end of this list. Gap drops take priority for
+    /// precise placement (both cross-stack and within-stack reordering).
     private func handleColumnDrop(providers: [NSItemProvider]) -> Bool {
         guard let provider = providers.first(where: { provider in
             dropTypes.contains { provider.hasItemConformingToTypeIdentifier($0) }
@@ -307,19 +311,21 @@ struct StackColumnView: View {
             return false
         }
 
-        let typeIdentifier = dropTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) ?? UTType.plainText.identifier
+        let typeIdentifier = dropTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) ?? UTType
+            .plainText.identifier
 
         provider.loadItem(forTypeIdentifier: typeIdentifier, options: nil) { item, _ in
-            let draggedCard: DraggedCard?
-
-            if let data = item as? Data, let value = String(data: data, encoding: .utf8) {
-                draggedCard = DraggedCard.fromProviderString(value)
+            let draggedCard: DraggedCard? = if let data = item as? Data, let value = String(
+                data: data,
+                encoding: .utf8
+            ) {
+                DraggedCard.fromProviderString(value)
             } else if let value = item as? String {
-                draggedCard = DraggedCard.fromProviderString(value)
+                DraggedCard.fromProviderString(value)
             } else if let text = item as? NSString {
-                draggedCard = DraggedCard.fromProviderString(text as String)
+                DraggedCard.fromProviderString(text as String)
             } else {
-                draggedCard = nil
+                nil
             }
 
             guard let draggedCard, draggedCard.stackId != stack.id else { return }
@@ -417,7 +423,7 @@ struct CardRowView: View {
         .accessibilityHint("Opens card details")
         .accessibilityAddTraits(.isButton)
         .contextMenu {
-            if let onDelete = onDelete {
+            if let onDelete {
                 Button("Delete card", role: .destructive) {
                     onDelete()
                 }
@@ -439,10 +445,24 @@ struct CardRowView: View {
 
 #Preview {
     StackColumnView(
-        board: Board(id: 1, title: "Test", color: "0082c9", archived: false, owner: nil, labels: [], acl: [], permissions: nil, users: [], shared: nil, deletedAt: nil, lastModified: nil, settings: nil),
+        board: Board(
+            id: 1,
+            title: "Test",
+            color: "0082c9",
+            archived: false,
+            owner: nil,
+            labels: [],
+            acl: [],
+            permissions: nil,
+            users: [],
+            shared: nil,
+            deletedAt: nil,
+            lastModified: nil,
+            settings: nil
+        ),
         stack: Stack(id: 1, title: "To Do", boardId: 1, deletedAt: nil, lastModified: nil, cards: [], order: 0),
         onSelectCard: { _ in },
-        onRefresh: { }
+        onRefresh: {}
     )
     .environmentObject(AppState())
 }

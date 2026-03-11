@@ -1,0 +1,104 @@
+# SwiftFormat configuration for Nextcloud Deck macOS
+# https://github.com/nicklockwood/SwiftFormat
+
+# ---------------------------------------------------------------------------
+# Swift version
+# ---------------------------------------------------------------------------
+--swiftversion 5.9
+
+# ---------------------------------------------------------------------------
+# Indentation & spacing
+# ---------------------------------------------------------------------------
+--indent 4
+--tabwidth 4
+--smarttabs enabled
+--indentcase false
+--ifdef no-indent
+--xcodeindentation disabled
+
+# ---------------------------------------------------------------------------
+# Line length
+# ---------------------------------------------------------------------------
+--maxwidth 120
+
+# ---------------------------------------------------------------------------
+# Braces & blank lines
+# ---------------------------------------------------------------------------
+--allman false
+--elseposition same-line
+--guardelse same-line
+--emptybraces no-space
+--type-blank-lines remove
+--linebreaks lf
+
+# ---------------------------------------------------------------------------
+# Imports
+# ---------------------------------------------------------------------------
+--import-grouping testable-last
+
+# ---------------------------------------------------------------------------
+# Trailing commas & semicolons
+# ---------------------------------------------------------------------------
+--commas always
+--semicolons never
+
+# ---------------------------------------------------------------------------
+# Wrapping
+# ---------------------------------------------------------------------------
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapreturntype if-multiline
+--wrapconditions after-first
+--wraptypealiases before-first
+--closingparen balanced
+--funcattributes prev-line
+--typeattributes prev-line
+--varattributes preserve
+
+# ---------------------------------------------------------------------------
+# Self & redundant syntax
+# ---------------------------------------------------------------------------
+--self init-only
+--redundant-type inferred
+--short-optionals always
+--strip-unused-args closure-only
+--extension-acl on-extension
+
+# ---------------------------------------------------------------------------
+# Operators & ranges
+# ---------------------------------------------------------------------------
+--operator-func spaced
+--ranges spaced
+
+# ---------------------------------------------------------------------------
+# Miscellaneous
+# ---------------------------------------------------------------------------
+--header ignore
+--trim-whitespace always
+--decimalgrouping 3,6
+--binarygrouping 4,8
+--octalgrouping 4,8
+--hexgrouping 4,8
+--hexliteralcase uppercase
+--exponentcase lowercase
+--exponentgrouping disabled
+--fractiongrouping disabled
+--patternlet hoist
+--acronyms ID,URL,UUID,API,JSON,HTTP,HTTPS,OCS
+
+# ---------------------------------------------------------------------------
+# Disabled rules (preserve intentional patterns in this codebase)
+# ---------------------------------------------------------------------------
+--disable andOperator
+--disable blankLinesAtStartOfScope
+--disable blankLinesAtEndOfScope
+--disable initCoderUnavailable
+--disable preferKeyPath
+--disable sortedSwitchCases
+--disable wrapMultilineStatementBraces
+
+# ---------------------------------------------------------------------------
+# Excluded paths
+# ---------------------------------------------------------------------------
+--exclude build,DerivedData,.build,.swiftpm,NextcloudDeck.xcodeproj

@@ -1,0 +1,78 @@
+# Pre-commit hook configuration for Nextcloud Deck macOS
+# Install: brew install pre-commit swiftformat swiftlint
+# Setup:   pre-commit install && pre-commit install --hook-type commit-msg
+
+repos:
+  # ---------------------------------------------------------------------------
+  # General file hygiene
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-json
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: detect-private-key
+
+  # ---------------------------------------------------------------------------
+  # Shell scripts (create-dmg.sh, generate-appicon.sh, write-build-info.sh)
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
+
+  # ---------------------------------------------------------------------------
+  # Swift formatting (swiftformat must be installed: brew install swiftformat)
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: swiftformat
+        name: SwiftFormat
+        language: system
+        entry: swiftformat
+        args: [--config, .swiftformat]
+        types: [swift]
+        pass_filenames: true
+
+  # ---------------------------------------------------------------------------
+  # Swift linting (swiftlint must be installed: brew install swiftlint)
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: swiftlint
+        name: SwiftLint
+        language: system
+        entry: swiftlint
+        args: [lint, --config, .swiftlint.yml]
+        types: [swift]
+        pass_filenames: false
+
+  # ---------------------------------------------------------------------------
+  # Conventional Commits enforcement
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        # Types must match changelog-sections in release-please-config.json
+        args:
+          - feat
+          - fix
+          - docs
+          - chore
+          - refactor
+          - perf
+          - style
+          - test
+          - build
+          - ci

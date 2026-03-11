@@ -5,7 +5,7 @@ struct BoardDetailView: View {
     @State private var selectedCard: Card?
     @State private var newStackTitle = ""
     @State private var showingNewStack = false
-    
+
     var body: some View {
         Group {
             if let board = appState.selectedBoard {
@@ -55,7 +55,7 @@ struct BoardDetailView: View {
             await appState.loadStacks(boardId: bid)
         }
     }
-    
+
     private func boardHeader(_ board: Board) -> some View {
         HStack {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -83,12 +83,12 @@ struct BoardDetailView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
     }
-    
+
     private func boardColor(_ board: Board) -> Color {
         guard let hex = board.color, !hex.isEmpty else { return .accentColor }
         return Color(hex: hex) ?? .accentColor
     }
-    
+
     private func scrollableStacks(_ board: Board) -> some View {
         Group {
             if appState.isLoadingStacks && appState.stacks.isEmpty {

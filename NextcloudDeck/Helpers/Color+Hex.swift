@@ -13,9 +13,9 @@ extension Color {
             g = Double((rgb & 0x00FF00) >> 8) / 255
             b = Double(rgb & 0x0000FF) / 255
         } else if length == 8 {
-            r = Double((rgb & 0xFF000000) >> 24) / 255
-            g = Double((rgb & 0x00FF0000) >> 16) / 255
-            b = Double((rgb & 0x0000FF00) >> 8) / 255
+            r = Double((rgb & 0xFF00_0000) >> 24) / 255
+            g = Double((rgb & 0x00FF_0000) >> 16) / 255
+            b = Double((rgb & 0x0000_FF00) >> 8) / 255
         } else {
             return nil
         }
