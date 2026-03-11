@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.12.0...v0.13.0) (2026-03-11)
+
+
+### Features
+
+* **attachments:** Add attachments handling ([#36](https://github.com/unicornops/nextcloud-deck-macos/issues/36)) ([55fb533](https://github.com/unicornops/nextcloud-deck-macos/commit/55fb533ac796a480efb4a2e99484abee3b8863a4))
+
 ## [0.12.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.11.0...v0.12.0) (2026-03-09)
 
 
