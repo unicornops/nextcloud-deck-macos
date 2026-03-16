@@ -13,6 +13,7 @@ final class AppState: ObservableObject {
     @Published var stacksError: String?
     @Published var showingLogin = false
     @Published var showingAbout = false
+    @Published var isDraggingStack = false
 
     private var deckAPI: DeckAPI?
     private var credentials: (serverURL: URL, username: String, appPassword: String)?
@@ -240,6 +241,39 @@ final class AppState: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             return false
+        }
+    }
+
+    /// Reorders stacks by moving the stack at `fromIndex` to `toIndex`, then
+    /// persists the new order values to the server.
+    func reorderStacks(boardId: Int, fromIndex: Int, toIndex: Int) async {
+        guard let api = deckAPI else { return }
+        guard fromIndex != toIndex,
+              fromIndex >= 0, fromIndex < stacks.count,
+              toIndex >= 0, toIndex <= stacks.count else { return }
+
+        // Move the stack in the local array
+        let moving = stacks.remove(at: fromIndex)
+        let insertAt = toIndex > fromIndex ? toIndex - 1 : toIndex
+        stacks.insert(moving, at: insertAt)
+
+        // Assign sequential order values and persist to server
+        for idx in stacks.indices {
+            let stack = stacks[idx]
+            let newOrder = idx
+            if stack.order != newOrder {
+                stacks[idx].order = newOrder
+                do {
+                    _ = try await api.updateStack(
+                        boardId: boardId,
+                        stackId: stack.id,
+                        title: stack.title,
+                        order: newOrder
+                    )
+                } catch {
+                    errorMessage = error.localizedDescription
+                }
+            }
         }
     }
 

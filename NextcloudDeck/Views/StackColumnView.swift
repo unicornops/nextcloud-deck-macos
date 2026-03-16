@@ -35,7 +35,8 @@ struct StackColumnView: View {
     @State private var isColumnDropTargeted = false
 
     private var isDropTargeted: Bool {
-        dragInsertIndex != nil || isColumnDropTargeted
+        guard !appState.isDraggingStack else { return false }
+        return dragInsertIndex != nil || isColumnDropTargeted
     }
 
     private let dropTypes = [
@@ -147,7 +148,7 @@ struct StackColumnView: View {
 
     @ViewBuilder
     private func insertionGap(at index: Int) -> some View {
-        let targeted = dragInsertIndex == index
+        let targeted = dragInsertIndex == index && !appState.isDraggingStack
         ZStack(alignment: .center) {
             Color.clear
                 .frame(height: targeted ? 20 : 8)
