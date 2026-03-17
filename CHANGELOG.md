@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.14.0...v0.14.1) (2026-03-17)
+
+
+### Chores
+
+* **deps:** bump actions/upload-artifact from 4.6.2 to 7.0.0 ([#43](https://github.com/unicornops/nextcloud-deck-macos/issues/43)) ([764570e](https://github.com/unicornops/nextcloud-deck-macos/commit/764570ed49cdd75487a904bcbb498dfe29466899))
+
 ## [0.14.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.13.2...v0.14.0) (2026-03-16)
 
 
