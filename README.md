@@ -105,11 +105,13 @@ On each published GitHub release, the **Build and Attach Release Assets** workfl
 
 ## API
 
-The app uses the [Nextcloud Deck REST API](https://deck.readthedocs.io/en/latest/API/) (v1.0):
+The app uses only the documented [Nextcloud Deck REST API](https://deck.readthedocs.io/en/latest/API/): v1.0 for boards, lists, cards and labels, and v1.1 for attachments (Deck 1.3 or later):
 
 - `GET /boards` – list boards
 - `GET /boards/{id}/stacks` – list stacks (columns) with cards
 - Create/update/delete for boards, stacks, and cards
+- `PUT /boards/{id}/stacks/{id}/cards/{id}/reorder` – move a card within or between lists
+- `/boards/{id}/stacks/{id}/cards/{id}/attachments[/{type}/{id}]` (v1.1) – list, download, upload and delete attachments
 
 Authentication uses Basic auth with the app password obtained from `GET /ocs/v2.php/core/getapppassword` (or your existing app password if you sign in with one).
 

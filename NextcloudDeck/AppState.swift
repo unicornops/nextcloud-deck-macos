@@ -429,10 +429,11 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Moves a card to position `order` in `toStackId`, which may be the stack it is already in.
     func reorderCard(boardId: Int, fromStackId: Int, cardId: Int, toStackId: Int, order: Int) async {
         guard let api = deckAPI else { return }
         do {
-            _ = try await api.reorderCard(
+            try await api.reorderCard(
                 boardId: boardId,
                 stackId: fromStackId,
                 cardId: cardId,
@@ -445,20 +446,9 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Moves a card into a different stack at position `order`.
     func moveCard(boardId: Int, cardId: Int, fromStackId: Int, toStackId: Int, order: Int) async {
         guard fromStackId != toStackId else { return }
-        guard let api = deckAPI else { return }
-
-        if let card = stacks.first(where: { $0.id == fromStackId })?.cards?.first(where: { $0.id == cardId }) {
-            do {
-                _ = try await api.moveCardToStack(card: card, toStackId: toStackId, order: order)
-                await loadStacks(boardId: boardId)
-                return
-            } catch {
-                // Fall through to the reorder endpoint; only its error is reported.
-            }
-        }
-
         await reorderCard(
             boardId: boardId,
             fromStackId: fromStackId,
