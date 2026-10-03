@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10000000000000000000001 /* NextcloudDeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* NextcloudDeckApp.swift */; };
+		A10000000000000000000001 /* ShuffleboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* ShuffleboardApp.swift */; };
 		A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* ContentView.swift */; };
 		A10000000000000000000003 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* AppState.swift */; };
 		A10000000000000000000004 /* Board.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* Board.swift */; };
@@ -44,13 +44,13 @@
 			containerPortal = A70000000000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A50000000000000000000001;
-			remoteInfo = NextcloudDeck;
+			remoteInfo = Shuffleboard;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		A20000000000000000000000 /* NextcloudDeck.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NextcloudDeck.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A20000000000000000000001 /* NextcloudDeckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextcloudDeckApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000000 /* Shuffleboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shuffleboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000001 /* ShuffleboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuffleboardApp.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A20000000000000000000003 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A20000000000000000000004 /* Board.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Board.swift; sourceTree = "<group>"; };
@@ -74,8 +74,8 @@
 		A20000000000000000000030 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
 		A20000000000000000000031 /* DeleteConfirmation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteConfirmation.swift; sourceTree = "<group>"; };
 		A20000000000000000000020 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A20000000000000000000021 /* NextcloudDeck.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NextcloudDeck.entitlements; sourceTree = "<group>"; };
-		B20000000000000000000000 /* NextcloudDeckTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NextcloudDeckTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000021 /* Shuffleboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Shuffleboard.entitlements; sourceTree = "<group>"; };
+		B20000000000000000000000 /* ShuffleboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShuffleboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B20000000000000000000001 /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* CardModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardModelTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000003 /* DeckAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckAPITests.swift; sourceTree = "<group>"; };
@@ -104,16 +104,16 @@
 		A40000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				A40000000000000000000002 /* NextcloudDeck */,
-				B40000000000000000000001 /* NextcloudDeckTests */,
+				A40000000000000000000002 /* Shuffleboard */,
+				B40000000000000000000001 /* ShuffleboardTests */,
 				A40000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		A40000000000000000000002 /* NextcloudDeck */ = {
+		A40000000000000000000002 /* Shuffleboard */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000001 /* NextcloudDeckApp.swift */,
+				A20000000000000000000001 /* ShuffleboardApp.swift */,
 				A20000000000000000000002 /* ContentView.swift */,
 				A20000000000000000000003 /* AppState.swift */,
 				A40000000000000000000004 /* Models */,
@@ -121,16 +121,16 @@
 				A40000000000000000000006 /* Views */,
 				A40000000000000000000007 /* Helpers */,
 				A20000000000000000000020 /* Assets.xcassets */,
-				A20000000000000000000021 /* NextcloudDeck.entitlements */,
+				A20000000000000000000021 /* Shuffleboard.entitlements */,
 			);
-			path = NextcloudDeck;
+			path = Shuffleboard;
 			sourceTree = "<group>";
 		};
 		A40000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000000 /* NextcloudDeck.app */,
-				B20000000000000000000000 /* NextcloudDeckTests.xctest */,
+				A20000000000000000000000 /* Shuffleboard.app */,
+				B20000000000000000000000 /* ShuffleboardTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -183,7 +183,7 @@
 			path = Helpers;
 			sourceTree = "<group>";
 		};
-		B40000000000000000000001 /* NextcloudDeckTests */ = {
+		B40000000000000000000001 /* ShuffleboardTests */ = {
 			isa = PBXGroup;
 			children = (
 				B20000000000000000000001 /* TestSupport.swift */,
@@ -192,15 +192,15 @@
 				B20000000000000000000004 /* AppStateTests.swift */,
 				B20000000000000000000005 /* LoginFlowTests.swift */,
 			);
-			path = NextcloudDeckTests;
+			path = ShuffleboardTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A50000000000000000000001 /* NextcloudDeck */ = {
+		A50000000000000000000001 /* Shuffleboard */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A60000000000000000000002 /* Build configuration list for PBXNativeTarget "NextcloudDeck" */;
+			buildConfigurationList = A60000000000000000000002 /* Build configuration list for PBXNativeTarget "Shuffleboard" */;
 			buildPhases = (
 				A50000000000000000000002 /* Sources */,
 				A30000000000000000000001 /* Frameworks */,
@@ -211,14 +211,14 @@
 			);
 			dependencies = (
 			);
-			name = NextcloudDeck;
-			productName = NextcloudDeck;
-			productReference = A20000000000000000000000 /* NextcloudDeck.app */;
+			name = Shuffleboard;
+			productName = Shuffleboard;
+			productReference = A20000000000000000000000 /* Shuffleboard.app */;
 			productType = "com.apple.product-type.application";
 		};
-		B50000000000000000000001 /* NextcloudDeckTests */ = {
+		B50000000000000000000001 /* ShuffleboardTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B60000000000000000000002 /* Build configuration list for PBXNativeTarget "NextcloudDeckTests" */;
+			buildConfigurationList = B60000000000000000000002 /* Build configuration list for PBXNativeTarget "ShuffleboardTests" */;
 			buildPhases = (
 				B50000000000000000000002 /* Sources */,
 				B30000000000000000000001 /* Frameworks */,
@@ -229,9 +229,9 @@
 			dependencies = (
 				B90000000000000000000002 /* PBXTargetDependency */,
 			);
-			name = NextcloudDeckTests;
-			productName = NextcloudDeckTests;
-			productReference = B20000000000000000000000 /* NextcloudDeckTests.xctest */;
+			name = ShuffleboardTests;
+			productName = ShuffleboardTests;
+			productReference = B20000000000000000000000 /* ShuffleboardTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -249,7 +249,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A60000000000000000000001 /* Build configuration list for PBXProject "NextcloudDeck" */;
+			buildConfigurationList = A60000000000000000000001 /* Build configuration list for PBXProject "Shuffleboard" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -262,8 +262,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A50000000000000000000001 /* NextcloudDeck */,
-				B50000000000000000000001 /* NextcloudDeckTests */,
+				A50000000000000000000001 /* Shuffleboard */,
+				B50000000000000000000001 /* ShuffleboardTests */,
 			);
 		};
 /* End PBXProject section */
@@ -313,7 +313,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000000000000000000001 /* NextcloudDeckApp.swift in Sources */,
+				A10000000000000000000001 /* ShuffleboardApp.swift in Sources */,
 				A10000000000000000000002 /* ContentView.swift in Sources */,
 				A10000000000000000000003 /* AppState.swift in Sources */,
 				A10000000000000000000004 /* Board.swift in Sources */,
@@ -356,7 +356,7 @@
 /* Begin PBXTargetDependency section */
 		B90000000000000000000002 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A50000000000000000000001 /* NextcloudDeck */;
+			target = A50000000000000000000001 /* Shuffleboard */;
 			targetProxy = B90000000000000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -481,7 +481,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				BUILD_DATE_UTC = local;
 				BUILD_REF = local;
-				CODE_SIGN_ENTITLEMENTS = NextcloudDeck/NextcloudDeck.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Shuffleboard/Shuffleboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -517,7 +517,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				BUILD_DATE_UTC = local;
 				BUILD_REF = local;
-				CODE_SIGN_ENTITLEMENTS = NextcloudDeck/NextcloudDeck.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Shuffleboard/Shuffleboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -559,7 +559,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NextcloudDeck.app/Contents/MacOS/NextcloudDeck";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shuffleboard.app/Contents/MacOS/Shuffleboard";
 			};
 			name = Debug;
 		};
@@ -576,14 +576,14 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NextcloudDeck.app/Contents/MacOS/NextcloudDeck";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shuffleboard.app/Contents/MacOS/Shuffleboard";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A60000000000000000000001 /* Build configuration list for PBXProject "NextcloudDeck" */ = {
+		A60000000000000000000001 /* Build configuration list for PBXProject "Shuffleboard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A80000000000000000000001 /* Debug */,
@@ -592,7 +592,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A60000000000000000000002 /* Build configuration list for PBXNativeTarget "NextcloudDeck" */ = {
+		A60000000000000000000002 /* Build configuration list for PBXNativeTarget "Shuffleboard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A80000000000000000000003 /* Debug */,
@@ -601,7 +601,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B60000000000000000000002 /* Build configuration list for PBXNativeTarget "NextcloudDeckTests" */ = {
+		B60000000000000000000002 /* Build configuration list for PBXNativeTarget "ShuffleboardTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B80000000000000000000003 /* Debug */,

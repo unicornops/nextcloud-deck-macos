@@ -4,7 +4,7 @@ set -e
 # create-dmg.sh - Creates a distributable DMG for macOS apps
 # Usage: ./create-dmg.sh <app_path> <dmg_name> <volume_name>
 #
-# Example: ./create-dmg.sh build/Release/NextcloudDeck.app NextcloudDeck-1.0.0.dmg 'Nextcloud Deck 1.0.0'
+# Example: ./create-dmg.sh build/Release/Shuffleboard.app Shuffleboard-1.0.0.dmg 'Shuffleboard 1.0.0'
 
 APP_PATH="$1"
 DMG_NAME="$2"
@@ -12,7 +12,7 @@ VOLUME_NAME="$3"
 
 if [ -z "$APP_PATH" ] || [ -z "$DMG_NAME" ] || [ -z "$VOLUME_NAME" ]; then
   echo "Usage: $0 <app_path> <dmg_name> <volume_name>"
-  echo "Example: $0 build/Release/NextcloudDeck.app NextcloudDeck-1.0.0.dmg 'Nextcloud Deck 1.0.0'"
+  echo "Example: $0 build/Release/Shuffleboard.app Shuffleboard-1.0.0.dmg 'Shuffleboard 1.0.0'"
   exit 1
 fi
 

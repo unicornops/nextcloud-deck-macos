@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A50000000000000000000001"
-               BuildableName = "NextcloudDeck.app"
-               BlueprintName = "NextcloudDeck"
-               ReferencedContainer = "container:NextcloudDeck.xcodeproj">
+               BuildableName = "Shuffleboard.app"
+               BlueprintName = "Shuffleboard"
+               ReferencedContainer = "container:Shuffleboard.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -34,9 +34,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "B50000000000000000000001"
-               BuildableName = "NextcloudDeckTests.xctest"
-               BlueprintName = "NextcloudDeckTests"
-               ReferencedContainer = "container:NextcloudDeck.xcodeproj">
+               BuildableName = "ShuffleboardTests.xctest"
+               BlueprintName = "ShuffleboardTests"
+               ReferencedContainer = "container:Shuffleboard.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -56,9 +56,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A50000000000000000000001"
-            BuildableName = "NextcloudDeck.app"
-            BlueprintName = "NextcloudDeck"
-            ReferencedContainer = "container:NextcloudDeck.xcodeproj">
+            BuildableName = "Shuffleboard.app"
+            BlueprintName = "Shuffleboard"
+            ReferencedContainer = "container:Shuffleboard.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -73,9 +73,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A50000000000000000000001"
-            BuildableName = "NextcloudDeck.app"
-            BlueprintName = "NextcloudDeck"
-            ReferencedContainer = "container:NextcloudDeck.xcodeproj">
+            BuildableName = "Shuffleboard.app"
+            BlueprintName = "Shuffleboard"
+            ReferencedContainer = "container:Shuffleboard.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

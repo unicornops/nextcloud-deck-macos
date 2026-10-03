@@ -1,5 +1,5 @@
 import Foundation
-@testable import NextcloudDeck
+@testable import Shuffleboard
 import XCTest
 
 // MARK: - Stub server

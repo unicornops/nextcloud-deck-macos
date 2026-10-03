@@ -1,5 +1,5 @@
 import Foundation
-@testable import NextcloudDeck
+@testable import Shuffleboard
 import XCTest
 
 /// Card decoding and the body sent when saving a card (#53).

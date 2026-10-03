@@ -1,4 +1,4 @@
-# SwiftFormat configuration for Nextcloud Deck macOS
+# SwiftFormat configuration for Shuffleboard
 # https://github.com/nicklockwood/SwiftFormat
 
 # ---------------------------------------------------------------------------
@@ -101,4 +101,4 @@
 # ---------------------------------------------------------------------------
 # Excluded paths
 # ---------------------------------------------------------------------------
---exclude build,DerivedData,.build,.swiftpm,NextcloudDeck.xcodeproj
+--exclude build,DerivedData,.build,.swiftpm,Shuffleboard.xcodeproj

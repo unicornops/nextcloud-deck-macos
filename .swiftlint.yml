@@ -1,18 +1,18 @@
-# SwiftLint configuration for Nextcloud Deck macOS
+# SwiftLint configuration for Shuffleboard
 # https://github.com/realm/SwiftLint
 
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
 included:
-  - NextcloudDeck
+  - Shuffleboard
 
 excluded:
   - build
   - DerivedData
   - .build
   - .swiftpm
-  - NextcloudDeck.xcodeproj
+  - Shuffleboard.xcodeproj
 
 # ---------------------------------------------------------------------------
 # Rules

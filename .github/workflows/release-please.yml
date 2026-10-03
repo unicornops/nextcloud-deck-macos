@@ -22,9 +22,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SCHEME: NextcloudDeck
-  PROJECT: NextcloudDeck.xcodeproj
-  APP_NAME: NextcloudDeck
+  SCHEME: Shuffleboard
+  PROJECT: Shuffleboard.xcodeproj
+  APP_NAME: Shuffleboard
 
 jobs:
   release-please:
@@ -254,7 +254,7 @@ jobs:
           APP_PATH="${{ steps.find-app.outputs.app_path }}"
           VERSION="${{ steps.version.outputs.version }}"
           DMG_NAME="${{ env.APP_NAME }}-${VERSION}.dmg"
-          VOLUME_NAME="Nextcloud Deck ${VERSION}"
+          VOLUME_NAME="Shuffleboard ${VERSION}"
 
           ./create-dmg.sh "$APP_PATH" "$DMG_NAME" "$VOLUME_NAME"
 

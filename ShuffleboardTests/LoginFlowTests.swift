@@ -1,5 +1,5 @@
 import Foundation
-@testable import NextcloudDeck
+@testable import Shuffleboard
 import XCTest
 
 /// Login Flow v2 polling in `NextcloudAuth` (#59), against `StubURLProtocol`.

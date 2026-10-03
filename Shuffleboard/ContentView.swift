@@ -30,7 +30,7 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button("About Nextcloud Deck", systemImage: "info.circle") {
+                    Button("About Shuffleboard", systemImage: "info.circle") {
                         appState.showingAbout = true
                     }
                     Divider()
@@ -61,7 +61,7 @@ private enum BuildMetadata {
         return info
     }()
 
-    static let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "Nextcloud Deck"
+    static let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "Shuffleboard"
     static let version = buildInfo["BuildVersion"] as? String
         ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         ?? "Unknown"
@@ -77,6 +77,10 @@ private enum BuildMetadata {
     static let buildDateUTC = buildInfo["BuildDateUTC"] as? String
         ?? Bundle.main.object(forInfoDictionaryKey: "BuildDateUTC") as? String
         ?? "unknown"
+
+    /// Nextcloud's trademark guidelines ask third-party clients to say they are not the official client.
+    static let unofficialNotice = "An unofficial client for Nextcloud Deck. "
+        + "Shuffleboard is an independent project and is not affiliated with or endorsed by Nextcloud."
 
     static var shortCommit: String {
         gitCommit == "unknown" ? gitCommit : String(gitCommit.prefix(7))
@@ -110,6 +114,12 @@ private struct AboutSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+
+            Text(BuildMetadata.unofficialNotice)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 16, verticalSpacing: 10) {
                 GridRow {

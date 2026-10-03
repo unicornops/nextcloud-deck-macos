@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct NextcloudDeckApp: App {
+struct ShuffleboardApp: App {
     @StateObject private var appState = AppState()
 
     var body: some Scene {
@@ -19,7 +19,7 @@ struct NextcloudDeckApp: App {
                 .keyboardShortcut("r", modifiers: .command)
             }
             CommandGroup(replacing: .appInfo) {
-                Button("About Nextcloud Deck") {
+                Button("About Shuffleboard") {
                     appState.showingAbout = true
                 }
             }

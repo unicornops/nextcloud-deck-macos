@@ -22,10 +22,10 @@ struct LoginView: View {
                     .foregroundStyle(.tint)
                     .symbolEffect(.variableColor.iterative)
 
-                Text("Nextcloud Deck")
+                Text("Shuffleboard")
                     .font(.title.weight(.semibold))
 
-                Text("Sign in with your Nextcloud server to view and manage your boards.")
+                Text("Sign in with your Nextcloud server to view and manage your Deck boards.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -88,7 +88,7 @@ struct LoginView: View {
 
             Spacer()
 
-            Text("Credentials are stored securely in the Keychain.")
+            Text("Credentials are stored securely in the Keychain.\nShuffleboard is an unofficial client, not affiliated with Nextcloud.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)

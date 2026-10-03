@@ -1,5 +1,5 @@
 import Foundation
-@testable import NextcloudDeck
+@testable import Shuffleboard
 import XCTest
 
 /// `AppState` behaviour against `StubURLProtocol`, with credentials kept in memory.

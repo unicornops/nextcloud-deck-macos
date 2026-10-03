@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  PMD ruleset for Nextcloud Deck macOS
+  PMD ruleset for Shuffleboard
   https://docs.pmd-code.org/latest/pmd_rules_swift.html
 
   ┌─────────────────────────────────────────────────────────────────────┐
@@ -24,7 +24,7 @@
   operates at the token level without requiring a full parse of every
   modern Swift construct. Run it via:
 
-    pmd cpd --minimum-tokens 50 --dir NextcloudDeck --language swift
+    pmd cpd --minimum-tokens 50 --dir Shuffleboard --language swift
 
   This file is kept so the ruleset reference is preserved for when PMD's
   Swift grammar is updated to support Swift 5.9+. Track progress at:
@@ -35,14 +35,14 @@
   For pmd check violations (once re-enabled), use:
     // NOPMD - <reason>
 -->
-<ruleset name="Nextcloud Deck macOS Swift Ruleset"
+<ruleset name="Shuffleboard Swift Ruleset"
          xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
                              https://pmd.sourceforge.net/ruleset_2_0_0.xsd">
 
     <description>
-        PMD configuration for the Nextcloud Deck macOS Swift codebase.
+        PMD configuration for the Shuffleboard Swift codebase.
 
         Static analysis rules are currently inactive because PMD's Swift grammar
         predates Swift 5.9 and cannot parse existential types, if/switch

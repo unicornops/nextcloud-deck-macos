@@ -1,5 +1,5 @@
 import Foundation
-@testable import NextcloudDeck
+@testable import Shuffleboard
 import XCTest
 
 /// Requests `DeckAPI` sends and how it maps responses, against `StubURLProtocol`.
