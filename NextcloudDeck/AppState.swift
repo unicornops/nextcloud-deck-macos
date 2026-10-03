@@ -460,22 +460,22 @@ final class AppState: ObservableObject {
     }
 
     /// Uploads a file as an attachment to a card. Refreshes stacks on success.
-    func uploadAttachment(boardId: Int, stackId: Int, cardId: Int, fileURL: URL) async -> Attachment? {
-        guard let api = deckAPI else { return nil }
-        let filename = fileURL.lastPathComponent
+    /// Returns `true` if the upload succeeded, `false` otherwise (and shows the error banner).
+    func uploadAttachment(boardId: Int, stackId: Int, cardId: Int, fileURL: URL) async -> Bool {
+        guard let api = deckAPI else { return false }
         do {
-            let attachment = try await api.uploadAttachment(
+            try await api.uploadAttachment(
                 boardId: boardId,
                 stackId: stackId,
                 cardId: cardId,
                 fileURL: fileURL,
-                filename: filename
+                filename: fileURL.lastPathComponent
             )
             await loadStacks(boardId: boardId)
-            return attachment
+            return true
         } catch {
             report(error)
-            return nil
+            return false
         }
     }
 

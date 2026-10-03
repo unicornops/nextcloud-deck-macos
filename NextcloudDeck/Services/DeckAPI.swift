@@ -14,7 +14,7 @@ final class DeckAPI {
 
     private static let apiPath = "/index.php/apps/deck/api/v1.0"
 
-    init(serverURL: URL, username: String, appPassword: String) {
+    init(serverURL: URL, username: String, appPassword: String, session: URLSession = .shared) {
         self.baseURL = serverURL
             .appendingPathComponent("index.php")
             .appendingPathComponent("apps")
@@ -34,7 +34,7 @@ final class DeckAPI {
             .appendingPathComponent("deck")
         self.username = username
         self.appPassword = appPassword
-        self.session = URLSession.shared
+        self.session = session
         self.decoder = JSONDecoder()
         self.encoder = JSONEncoder()
     }
@@ -127,6 +127,12 @@ final class DeckAPI {
         req.setValue(authHeader, forHTTPHeaderField: "Authorization")
         req.httpBody = body
         let (data, response) = try await session.data(for: req)
+        try validate(response: response, data: data)
+        return (data, response)
+    }
+
+    /// Maps a non-2xx response to a `DeckAPIError`.
+    private func validate(response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
         if http.statusCode == 304 { throw DeckAPIError.notModified }
         if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
@@ -136,7 +142,6 @@ final class DeckAPI {
         guard (200 ... 299).contains(http.statusCode) else {
             throw DeckAPIError.httpStatus(http.statusCode)
         }
-        return (data, response)
     }
 
     private struct OCSBoardsResponse: Decodable {
@@ -447,6 +452,11 @@ final class DeckAPI {
 
     // MARK: - Attachments
 
+    // Attachments use Deck's internal web routes first (what the Deck web UI uses: they handle both
+    // `file` and `deck_file` attachments) and fall back to REST API v1.0 only when the internal route
+    // does not exist on the server. Once a request has reached a route that exists, its result is final,
+    // so an upload is never sent twice and the real error is reported.
+
     private struct OCSAttachmentsWrapper: Decodable {
         let data: [Attachment]
     }
@@ -455,45 +465,40 @@ final class DeckAPI {
         let ocs: OCSAttachmentsWrapper
     }
 
-    /// Fetches the list of attachments for a card.
-    ///
-    /// Uses the internal Deck route (`/apps/deck/cards/{cardId}/attachments`)
-    /// which is what the Deck web UI uses. Falls back to the REST API v1.0
-    /// endpoint if the internal route fails.
-    func getAttachments(boardId: Int, stackId: Int, cardId: Int) async throws -> [Attachment] {
-        // 1. Internal Deck route (matches the web UI)
-        if let internalURL = deckAppURL(for: "cards/\(cardId)/attachments") {
-            do {
-                let (data, _) = try await performRequest(url: internalURL, method: "GET")
-                let result = decodeAttachments(from: data)
-                if !result.isEmpty {
-                    return result
-                }
-            } catch {
-                // Fall through to REST API fallback
-            }
+    /// Runs `internalRoute`, falling back to `restRoute` only when the internal route is missing (404/405).
+    private func withRESTFallback<T>(
+        _ internalRoute: () async throws -> T,
+        restRoute: () async throws -> T
+    ) async throws
+        -> T {
+        do {
+            return try await internalRoute()
+        } catch let error as DeckAPIError where error.isMissingRoute {
+            return try await restRoute()
         }
-
-        // 2. REST API v1.0 fallback
-        let apiPath = "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/attachments"
-        if let apiURL = url(for: apiPath) {
-            do {
-                let (data, _) = try await performRequest(url: apiURL, method: "GET")
-                let result = decodeAttachments(from: data)
-                if !result.isEmpty {
-                    return result
-                }
-            } catch {
-                // Both routes failed
-            }
-        }
-
-        return []
     }
 
-    /// Attempts to decode an attachment list from raw response data, trying
-    /// multiple common response envelopes.
-    private func decodeAttachments(from data: Data) -> [Attachment] {
+    /// Fetches the list of attachments for a card.
+    func getAttachments(boardId: Int, stackId: Int, cardId: Int) async throws -> [Attachment] {
+        try await withRESTFallback {
+            try await fetchAttachments(at: deckAppURL(for: "cards/\(cardId)/attachments"))
+        } restRoute: {
+            try await fetchAttachments(at: url(for: "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/attachments"))
+        }
+    }
+
+    private func fetchAttachments(at url: URL?) async throws -> [Attachment] {
+        guard let url else { throw DeckAPIError.invalidURL }
+        let (data, _) = try await performRequest(url: url, method: "GET")
+        guard let attachments = decodeAttachments(from: data) else {
+            throw DeckAPIError.badRequest("Could not decode attachments response")
+        }
+        return attachments
+    }
+
+    /// Decodes an attachment list from the response envelopes Deck uses, or returns `nil` if the
+    /// response is not an attachment list (as opposed to an empty one).
+    private func decodeAttachments(from data: Data) -> [Attachment]? {
         if let attachments = try? decoder.decode([Attachment].self, from: data) {
             return attachments
         }
@@ -503,35 +508,23 @@ final class DeckAPI {
         if let envelope = try? decoder.decode(OCSAttachmentsEnvelope.self, from: data) {
             return envelope.ocs.data
         }
-        // Fallback: extract from raw JSON
-        if let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            let arr: [[String: Any]]? = if let direct = parsed["data"] as? [[String: Any]] {
-                direct
-            } else if let ocs = parsed["ocs"] as? [String: Any], let ocsData = ocs["data"] as? [[String: Any]] {
-                ocsData
-            } else {
-                nil
-            }
-            if let arr {
-                return arr.compactMap { dict -> Attachment? in
-                    guard let jsonData = try? JSONSerialization.data(withJSONObject: dict) else { return nil }
-                    return try? decoder.decode(Attachment.self, from: jsonData)
-                }
-            }
+        // Lenient fallback: decode the entries that parse and skip any that don't.
+        let parsed = try? JSONSerialization.jsonObject(with: data)
+        let entries: [[String: Any]]? = if let array = parsed as? [[String: Any]] {
+            array
+        } else if let object = parsed as? [String: Any] {
+            (object["data"] as? [[String: Any]])
+                ?? ((object["ocs"] as? [String: Any])?["data"] as? [[String: Any]])
+        } else {
+            nil
         }
-        if let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-            return arr.compactMap { dict -> Attachment? in
-                guard let jsonData = try? JSONSerialization.data(withJSONObject: dict) else { return nil }
-                return try? decoder.decode(Attachment.self, from: jsonData)
-            }
+        return entries?.compactMap { dict -> Attachment? in
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: dict) else { return nil }
+            return try? decoder.decode(Attachment.self, from: jsonData)
         }
-        return []
     }
 
     /// Downloads the file content of an attachment. Returns raw binary data.
-    ///
-    /// Uses the internal Deck route (`/cards/{cardId}/attachment/{attachmentId}`)
-    /// as primary, falling back to REST API v1.0 if needed.
     func downloadAttachment(
         boardId: Int,
         stackId: Int,
@@ -540,30 +533,27 @@ final class DeckAPI {
         type: String? = nil
     ) async throws
         -> Data {
-        // The internal route parses attachmentId as "{type}:{id}" — default is deck_file.
+        // The internal route takes the attachment as "{type}:{id}".
         let typePrefix = type ?? "file"
-        // 1. Internal Deck route (singular "attachment")
-        if let internalURL = deckAppURL(for: "cards/\(cardId)/attachment/\(typePrefix):\(attachmentId)") {
-            do {
-                let (data, _) = try await performRequest(url: internalURL, method: "GET")
-                return data
-            } catch {
-                // Fall through to REST API fallback
+        return try await withRESTFallback {
+            guard let url = deckAppURL(for: "cards/\(cardId)/attachment/\(typePrefix):\(attachmentId)") else {
+                throw DeckAPIError.invalidURL
             }
+            return try await performRequest(url: url, method: "GET").0
+        } restRoute: {
+            guard let url = url(for: "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/attachments/\(attachmentId)")
+            else {
+                throw DeckAPIError.invalidURL
+            }
+            return try await performRequest(url: url, method: "GET").0
         }
-
-        // 2. REST API v1.0 fallback
-        guard let url = url(for: "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/attachments/\(attachmentId)") else {
-            throw DeckAPIError.invalidURL
-        }
-        let (data, _) = try await performRequest(url: url, method: "GET")
-        return data
     }
 
     /// Uploads a file as an attachment to a card.
     ///
-    /// Uses the internal Deck route (`/cards/{cardId}/attachment`, singular)
-    /// as primary, falling back to REST API v1.0 if needed.
+    /// Returns the created attachment, or `nil` if the server accepted the upload but its response
+    /// could not be decoded (the upload is not retried in that case, which would duplicate it).
+    @discardableResult
     func uploadAttachment(
         boardId: Int,
         stackId: Int,
@@ -571,79 +561,81 @@ final class DeckAPI {
         fileURL: URL,
         filename: String
     ) async throws
-        -> Attachment {
-        let boundary = UUID().uuidString
-        var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
-        try body.append(Data(contentsOf: fileURL))
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        -> Attachment? {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        let bodyFile = try Self.writeMultipartBody(fileURL: fileURL, filename: filename, boundary: boundary)
+        defer { try? FileManager.default.removeItem(at: bodyFile) }
 
-        let extraHeaders = [
-            "Content-Type": "multipart/form-data; boundary=\(boundary)",
-            "Content-Length": "\(body.count)",
-        ]
-
-        // 1. Internal Deck route (singular "attachment")
-        if let internalURL = deckAppURL(for: "cards/\(cardId)/attachment") {
-            do {
-                let data = try await performMultipartRequest(url: internalURL, body: body, extraHeaders: extraHeaders)
-                return try decoder.decode(Attachment.self, from: data)
-            } catch {
-                // Fall through to REST API fallback
+        let data = try await withRESTFallback {
+            guard let url = deckAppURL(for: "cards/\(cardId)/attachment") else { throw DeckAPIError.invalidURL }
+            return try await performMultipartUpload(url: url, bodyFile: bodyFile, boundary: boundary)
+        } restRoute: {
+            let path = "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/attachments"
+            guard let base = url(for: path),
+                  var components = URLComponents(url: base, resolvingAgainstBaseURL: false) else {
+                throw DeckAPIError.invalidURL
             }
+            components.queryItems = [URLQueryItem(name: "type", value: "file")]
+            guard let url = components.url else { throw DeckAPIError.invalidURL }
+            return try await performMultipartUpload(url: url, bodyFile: bodyFile, boundary: boundary)
         }
-
-        // 2. REST API v1.0 fallback
-        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
-            throw DeckAPIError.invalidURL
-        }
-        let path = (baseURL.path.hasSuffix("/") ? baseURL.path : baseURL.path + "/") + "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/attachments"
-        components.path = path
-        components.queryItems = [URLQueryItem(name: "type", value: "file")]
-        guard let url = components.url else { throw DeckAPIError.invalidURL }
-
-        let data = try await performMultipartRequest(url: url, body: body, extraHeaders: extraHeaders)
-        return try decoder.decode(Attachment.self, from: data)
+        return try? decoder.decode(Attachment.self, from: data)
     }
 
-    /// Executes a multipart POST request to `url`, applying standard Deck auth
-    /// headers plus any caller-supplied `extraHeaders` (e.g. Content-Type with
-    /// boundary, Content-Length). Validates the HTTP status and returns the
+    /// Writes a `multipart/form-data` body holding `fileURL` to a temporary file, streaming the file
+    /// in chunks so large attachments are not loaded into memory.
+    static func writeMultipartBody(fileURL: URL, filename: String, boundary: String) throws -> URL {
+        let bodyFile = FileManager.default.temporaryDirectory
+            .appendingPathComponent("deck-upload-\(UUID().uuidString)")
+        guard FileManager.default.createFile(atPath: bodyFile.path, contents: nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        do {
+            let output = try FileHandle(forWritingTo: bodyFile)
+            defer { try? output.close() }
+            let input = try FileHandle(forReadingFrom: fileURL)
+            defer { try? input.close() }
+
+            let header = "--\(boundary)\r\n"
+                + "Content-Disposition: form-data; name=\"file\"; filename=\"\(multipartQuoted(filename))\"\r\n"
+                + "Content-Type: application/octet-stream\r\n\r\n"
+            try output.write(contentsOf: Data(header.utf8))
+            while let chunk = try input.read(upToCount: 1 << 20), !chunk.isEmpty {
+                try output.write(contentsOf: chunk)
+            }
+            try output.write(contentsOf: Data("\r\n--\(boundary)--\r\n".utf8))
+        } catch {
+            try? FileManager.default.removeItem(at: bodyFile)
+            throw error
+        }
+        return bodyFile
+    }
+
+    /// Escapes a value for a quoted `Content-Disposition` parameter (RFC 7578 §4.2 / WHATWG form encoding):
+    /// `"`, CR and LF are percent-encoded so a filename cannot break out of the header.
+    static func multipartQuoted(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\"", with: "%22")
+            .replacingOccurrences(of: "\r", with: "%0D")
+            .replacingOccurrences(of: "\n", with: "%0A")
+    }
+
+    /// Uploads a prepared multipart body file to `url` with the standard Deck headers and returns the
     /// response body on success.
-    private func performMultipartRequest(
-        url: URL,
-        body: Data,
-        extraHeaders: [String: String]
-    ) async throws
-        -> Data {
+    private func performMultipartUpload(url: URL, bodyFile: URL, boundary: String) async throws -> Data {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         req.setValue(authHeader, forHTTPHeaderField: "Authorization")
-        for (key, value) in extraHeaders {
-            req.setValue(value, forHTTPHeaderField: key)
-        }
-        req.httpBody = body
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
-        let (data, response) = try await session.data(for: req)
-        guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
-        if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
-            throw DeckAPIError.badRequest(err.message)
-        }
-        if http.statusCode == 403 { throw DeckAPIError.permissionDenied }
-        guard (200 ... 299).contains(http.statusCode) else {
-            throw DeckAPIError.httpStatus(http.statusCode)
-        }
+        let (data, response) = try await session.upload(for: req, fromFile: bodyFile)
+        try validate(response: response, data: data)
         return data
     }
 
     /// Deletes an attachment from a card.
-    ///
-    /// Uses the internal Deck route (`/cards/{cardId}/attachment/{attachmentId}`)
-    /// as primary, falling back to REST API v1.0 if needed.
     func deleteAttachment(
         boardId: Int,
         stackId: Int,
@@ -652,21 +644,17 @@ final class DeckAPI {
         type: String? = nil
     ) async throws {
         let typePrefix = type ?? "file"
-        // 1. Internal Deck route (singular "attachment")
-        if let internalURL = deckAppURL(for: "cards/\(cardId)/attachment/\(typePrefix):\(attachmentId)") {
-            do {
-                _ = try await performRequest(url: internalURL, method: "DELETE")
-                return
-            } catch {
-                // Fall through to REST API fallback
+        try await withRESTFallback {
+            guard let url = deckAppURL(for: "cards/\(cardId)/attachment/\(typePrefix):\(attachmentId)") else {
+                throw DeckAPIError.invalidURL
             }
+            _ = try await performRequest(url: url, method: "DELETE")
+        } restRoute: {
+            try await requestNoContent(
+                "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/attachments/\(attachmentId)",
+                method: "DELETE"
+            )
         }
-
-        // 2. REST API v1.0 fallback
-        try await requestNoContent(
-            "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/attachments/\(attachmentId)",
-            method: "DELETE"
-        )
     }
 }
 
@@ -772,6 +760,14 @@ enum DeckAPIError: LocalizedError {
     case badRequest(String)
     case permissionDenied
     case httpStatus(Int)
+
+    /// The route does not exist on this server (as opposed to the request failing on a route that does).
+    var isMissingRoute: Bool {
+        switch self {
+        case .httpStatus(404), .httpStatus(405): true
+        default: false
+        }
+    }
 
     var errorDescription: String? {
         switch self {
