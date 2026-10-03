@@ -115,6 +115,17 @@ final class AppState: ObservableObject {
         return true
     }
 
+    /// Signs out at the user's request: ends the session locally straight away, then revokes the app
+    /// password on the server so it stops working and leaves the user's Nextcloud device list.
+    /// Revocation failures (offline, server unreachable) are ignored; the local sign-out has already happened.
+    func signOut() async {
+        let api = deckAPI
+        logout()
+        try? await api?.revokeAppPassword()
+    }
+
+    /// Ends the session locally: forgets the stored credentials and returns to the login screen.
+    /// Does not contact the server; see `signOut()`.
     func logout() {
         try? KeychainStorage.delete()
         credentials = nil

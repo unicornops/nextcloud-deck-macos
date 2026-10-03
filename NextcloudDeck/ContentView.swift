@@ -39,7 +39,7 @@ struct ContentView: View {
                     }
                     Divider()
                     Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") {
-                        appState.logout()
+                        Task { await appState.signOut() }
                     }
                 } label: {
                     Image(systemName: "person.circle")

@@ -6,6 +6,7 @@ final class DeckAPI {
     private let baseURL: URL
     private let ocsBaseURL: URL
     private let deckAppBaseURL: URL
+    private let appPasswordURL: URL
     private let username: String
     private let appPassword: String
     private let session: URLSession
@@ -32,6 +33,11 @@ final class DeckAPI {
             .appendingPathComponent("index.php")
             .appendingPathComponent("apps")
             .appendingPathComponent("deck")
+        self.appPasswordURL = serverURL
+            .appendingPathComponent("ocs")
+            .appendingPathComponent("v2.php")
+            .appendingPathComponent("core")
+            .appendingPathComponent("apppassword")
         self.username = username
         self.appPassword = appPassword
         self.session = session
@@ -91,6 +97,21 @@ final class DeckAPI {
         guard let requestURL = url(for: path) else { throw DeckAPIError.invalidURL }
         let encodedBody = try body.map { try encoder.encode($0) }
         _ = try await performRequest(url: requestURL, method: method, body: encodedBody)
+    }
+
+    // MARK: - Session
+
+    /// Revokes the app password this client signs in with, so it stops working and disappears from the
+    /// user's devices in Nextcloud's security settings (`DELETE /ocs/v2.php/core/apppassword`).
+    /// The server answers 403 if the credential is not an app password.
+    func revokeAppPassword(timeout: TimeInterval = 10) async throws {
+        var req = URLRequest(url: appPasswordURL, timeoutInterval: timeout)
+        req.httpMethod = "DELETE"
+        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: req)
+        try validate(response: response, data: data)
     }
 
     // MARK: - Boards
