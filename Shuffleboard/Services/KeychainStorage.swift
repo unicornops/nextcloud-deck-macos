@@ -33,18 +33,16 @@ struct KeychainCredentialStore: CredentialStore {
 /// the data protection keychain (`kSecUseDataProtectionKeychain`) would honour accessibility classes, but
 /// on macOS outside the App Store that needs a `keychain-access-groups` entitlement backed by a
 /// provisioning profile, which release builds don't embed yet.
+///
+/// Versions released as "Nextcloud Deck" (bundle ID `ie.unicornops.nextclouddeck`) stored credentials under
+/// other services. Shuffleboard is a different app identity, so it can't read those items without macOS
+/// asking the user for permission; rather than prompt at launch, it leaves them alone and the user signs in
+/// once (see "Upgrading" in the README).
 enum KeychainStorage {
-    /// Service for stored credentials, under the app's own bundle identifier namespace.
-    private static let service = "ie.unicornops.nextclouddeck"
-    /// Service used by earlier versions. It is Nextcloud's reverse-DNS namespace, not ours, so stored
-    /// credentials are moved from it to `service` on first launch.
-    private static let previousService = "com.nextcloud.deck.macos"
-    /// Single account key for all credentials (avoids three separate Keychain accesses at launch).
+    /// Service for stored credentials: the app's bundle identifier.
+    private static let service = "ie.unicornops.shuffleboard"
+    /// Single account key for all credentials (avoids several Keychain accesses at launch).
     private static let credentialsAccount = "credentials"
-    /// Legacy keys for migration from the previous three-item format.
-    private static let serverKey = "serverURL"
-    private static let userKey = "username"
-    private static let appPasswordKey = "appPassword"
 
     /// Ensures the URL uses HTTPS (required for security and App Store).
     private static func httpsURL(from url: URL) -> URL {
@@ -74,44 +72,14 @@ enum KeychainStorage {
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else { throw KeychainError.saveFailed(status) }
-        // Only once the new item is stored, so a failed save never loses the credentials it replaces.
-        deletePreviousItems()
         return urlToStore
     }
 
     static func load() -> (serverURL: URL, username: String, appPassword: String)? {
-        if let creds = loadFromSingleItem(service: service) {
-            return creds
-        }
-        guard let creds = loadFromSingleItem(service: previousService) ?? loadFromLegacyItems() else {
-            return nil
-        }
-        // Move credentials stored by an earlier version. If saving fails, keep using the old item and try
-        // again on the next launch; `save` removes the old items once the new one is stored.
-        let storedURL = try? save(serverURL: creds.serverURL, username: creds.username, appPassword: creds.appPassword)
-        return (storedURL ?? creds.serverURL, creds.username, creds.appPassword)
-    }
-
-    /// One Keychain read for all credentials — avoids multiple prompts at launch.
-    private static func loadFromSingleItem(service: String)
-        -> (serverURL: URL, username: String, appPassword: String)? {
         guard let data = readItem(service: service, account: credentialsAccount),
               let payload = try? JSONDecoder().decode(CredentialsPayload.self, from: data),
               let url = URL(string: payload.serverURL) else { return nil }
         return (url, payload.username, payload.appPassword)
-    }
-
-    /// Migration: read the oldest three-item format (one Keychain read per item).
-    private static func loadFromLegacyItems() -> (serverURL: URL, username: String, appPassword: String)? {
-        guard let server = readString(service: previousService, account: serverKey),
-              let username = readString(service: previousService, account: userKey),
-              let appPassword = readString(service: previousService, account: appPasswordKey),
-              let url = URL(string: server) else { return nil }
-        return (url, username, appPassword)
-    }
-
-    private static func readString(service: String, account: String) -> String? {
-        readItem(service: service, account: account).flatMap { String(data: $0, encoding: .utf8) }
     }
 
     private static func readItem(service: String, account: String) -> Data? {
@@ -130,14 +98,6 @@ enum KeychainStorage {
 
     static func delete() throws {
         try deleteItem(service: service, account: credentialsAccount)
-        deletePreviousItems()
-    }
-
-    /// Removes credentials left under `previousService` by earlier versions, in either format.
-    private static func deletePreviousItems() {
-        for account in [credentialsAccount, serverKey, userKey, appPasswordKey] {
-            try? deleteItem(service: previousService, account: account)
-        }
     }
 
     private static func deleteItem(service: String, account: String) throws {

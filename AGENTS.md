@@ -5,7 +5,7 @@ This document gives coding agents (e.g. Cursor, GitHub Copilot, Claude) shared c
 ## Project overview
 
 - **What it is:** Shuffleboard, an unofficial native macOS client for [Nextcloud Deck](https://github.com/nextcloud/deck) with a Trello-like board UI. It is an independent project, not affiliated with or endorsed by Nextcloud.
-- **Naming:** Follow the [Nextcloud trademark guidelines](https://nextcloud.com/trademarks/): never put "Nextcloud" in the app's name, never use the Nextcloud logo or its brand blue (`#0082c9`) in the app's branding, and always say the app is unofficial. Describing compatibility ("a client for Nextcloud Deck") is fine. The bundle ID `ie.unicornops.nextclouddeck` is kept so existing installs and Keychain items carry over.
+- **Naming:** Follow the [Nextcloud trademark guidelines](https://nextcloud.com/trademarks/): never put "Nextcloud" in the app's name, never use the Nextcloud logo or its brand blue (`#0082c9`) in the app's branding, and always say the app is unofficial. Describing compatibility ("a client for Nextcloud Deck") is fine. The bundle ID is `ie.unicornops.shuffleboard`; the Keychain service is the same string.
 - **Stack:** Swift, SwiftUI, macOS 14.0+. Built with Xcode; project is `Shuffleboard.xcodeproj`.
 - **Auth:** Nextcloud Login Flow v2 (browser sign-in); app password stored in system Keychain (see `KeychainStorage.swift`, `NextcloudAuth.swift`).
 - **Layout:** `Shuffleboard/` — Models (Board, Stack, Card, Label), Services (DeckAPI, NextcloudAuth, KeychainStorage), Views (Login, board list, board detail, cards, stacks), Helpers (e.g. Color+Hex).

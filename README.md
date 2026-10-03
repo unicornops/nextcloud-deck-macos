@@ -8,7 +8,17 @@
 
 ### Why "Shuffleboard"?
 
-It's a board where you shuffle cards around, and shuffleboard is the game played on a ship's deck. The name nods to Deck without borrowing it: [Nextcloud's trademark guidelines](https://nextcloud.com/trademarks/) ask third-party clients not to use "Nextcloud" in their name, and we'd rather respect the project that makes this app possible. Until October 2026 this app was called "Nextcloud Deck for macOS".
+It's a board where you shuffle cards around, and shuffleboard is the game played on a ship's deck. The name nods to Deck without borrowing it: [Nextcloud's trademark guidelines](https://nextcloud.com/trademarks/) ask third-party clients not to use "Nextcloud" in their name, and we'd rather respect the project that makes this app possible. Until October 2026 this app was called "Nextcloud Deck for macOS", which used Nextcloud's trademark in a way it shouldn't have.
+
+### Upgrading from "Nextcloud Deck for macOS"
+
+Shuffleboard has a new app identity (bundle ID `ie.unicornops.shuffleboard`), so macOS treats it as a new app:
+
+1. In the old app, choose **Sign Out** from the account menu. This revokes its app password on your server (in versions that support it). Otherwise, remove the old device under **Nextcloud → Settings → Security**.
+2. Delete the old `NextcloudDeck.app`.
+3. Open Shuffleboard and sign in once.
+
+Your boards live on your Nextcloud server, so nothing is lost. The old app's Keychain entry can be removed in Keychain Access (search for `nextclouddeck`).
 
 ## Features
 
@@ -145,4 +155,4 @@ Authentication uses Basic auth with the app password obtained through Login Flow
 
 Shuffleboard is free software, licensed under the [GNU General Public License v3.0](LICENSE). You may use, study, share and modify it; if you distribute it or a modified version, you must do so under the same licence and make the source code available.
 
-Nextcloud is a trademark of Nextcloud GmbH. Shuffleboard is an independent, unofficial client for the Deck app and is not affiliated with or endorsed by Nextcloud. The app's bundle identifier (`ie.unicornops.nextclouddeck`) dates from before the rename and is kept so existing installs, settings and Keychain items carry over.
+Nextcloud is a trademark of Nextcloud GmbH. Shuffleboard is an independent, unofficial client for the Deck app and is not affiliated with or endorsed by Nextcloud.
