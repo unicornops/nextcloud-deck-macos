@@ -67,6 +67,20 @@ struct LoginView: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(appState.isLoading || serverURL == nil)
                 .keyboardShortcut(.return, modifiers: .command)
+
+                if appState.isLoading {
+                    VStack(spacing: 8) {
+                        Text("Finish signing in in your browser, then come back here.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Cancel") {
+                            appState.cancelLogin()
+                        }
+                        .keyboardShortcut(.cancelAction)
+                    }
+                    .frame(maxWidth: 320)
+                }
             }
             .padding(40)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -89,7 +103,7 @@ struct LoginView: View {
 
     private func signIn() {
         guard let url = serverURL else { return }
-        Task { await appState.loginWithBrowser(serverURL: url) }
+        appState.startBrowserLogin(serverURL: url)
     }
 }
 

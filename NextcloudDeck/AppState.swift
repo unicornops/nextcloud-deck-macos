@@ -78,13 +78,40 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// The in-flight browser sign-in, if any; cancelled by `cancelLogin()`.
+    private var loginTask: Task<Void, Never>?
+    /// Identifies the current sign-in attempt, so a cancelled one can't change the state of a newer one.
+    private var loginAttempt = 0
+
+    /// Starts signing in via the browser (Login Flow v2). Supports 2FA: the user completes login and 2FA
+    /// in the browser while the app waits. `cancelLogin()` stops waiting.
+    func startBrowserLogin(serverURL: URL) {
+        loginTask?.cancel()
+        loginTask = Task { await loginWithBrowser(serverURL: serverURL) }
+    }
+
+    /// Stops waiting for a browser sign-in started with `startBrowserLogin(serverURL:)`.
+    func cancelLogin() {
+        loginTask?.cancel()
+        loginTask = nil
+        loginAttempt += 1
+        isLoading = false
+    }
+
     /// Sign in via browser (Login Flow v2). Supports 2FA — user completes login and 2FA in the browser.
     func loginWithBrowser(serverURL: URL) async {
+        loginAttempt += 1
+        let attempt = loginAttempt
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+        defer {
+            if attempt == loginAttempt {
+                isLoading = false
+            }
+        }
         do {
             let (url, loginName, appPassword) = try await NextcloudAuth.loginWithBrowser(serverURL: serverURL)
+            try Task.checkCancellation()
             let storedURL = try KeychainStorage.save(serverURL: url, username: loginName, appPassword: appPassword)
             credentials = (storedURL, loginName, appPassword)
             deckAPI = DeckAPI(serverURL: storedURL, username: loginName, appPassword: appPassword)
@@ -92,6 +119,8 @@ final class AppState: ObservableObject {
             showingLogin = false
             await loadBoards()
         } catch {
+            // Cancelled by the user: either `CancellationError` or a request torn down mid-flight.
+            guard !Task.isCancelled else { return }
             errorMessage = error.localizedDescription
         }
     }
