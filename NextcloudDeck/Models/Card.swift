@@ -16,6 +16,9 @@ struct Card: Identifiable, Codable {
     var order: Int
     var archived: Bool
     var duedate: String?
+    var startdate: String?
+    /// ISO-8601 date the card was marked done, or nil when not done.
+    var done: String?
     var deletedAt: Int?
     var commentsUnread: Int?
     var overdue: Int?
@@ -34,10 +37,14 @@ struct Card: Identifiable, Codable {
         self.assignedUsers = (try? c.decodeIfPresent([DeckUser].self, forKey: .assignedUsers)) ?? nil
         self.attachments = (try? c.decodeIfPresent([Attachment].self, forKey: .attachments)) ?? nil
         self.attachmentCount = (try? c.decodeIntOrStringIfPresent(forKey: .attachmentCount)) ?? nil
-        self.owner = (try? c.decodeIfPresent(String.self, forKey: .owner)) ?? nil
+        // Deck serialises the owner as a user object; older responses used the plain user id.
+        self.owner = (try? c.decodeIfPresent(String.self, forKey: .owner))
+            ?? (try? c.decodeIfPresent(DeckUser.self, forKey: .owner))?.uid
         self.order = (try? c.decodeIntOrStringIfPresent(forKey: .order)) ?? 999
         self.archived = (try? c.decodeIfPresent(Bool.self, forKey: .archived)) ?? false
         self.duedate = (try? c.decodeIfPresent(String.self, forKey: .duedate)) ?? nil
+        self.startdate = (try? c.decodeIfPresent(String.self, forKey: .startdate)) ?? nil
+        self.done = (try? c.decodeIfPresent(String.self, forKey: .done)) ?? nil
         self.deletedAt = (try? c.decodeIntOrStringIfPresent(forKey: .deletedAt)) ?? nil
         self.commentsUnread = (try? c.decodeIntOrStringIfPresent(forKey: .commentsUnread)) ?? nil
         self.overdue = (try? c.decodeIntOrStringIfPresent(forKey: .overdue)) ?? nil
@@ -47,7 +54,7 @@ struct Card: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, title, description, stackId, type, lastModified, createdAt
         case labels, assignedUsers, attachments, attachmentCount, owner, order
-        case archived, duedate, deletedAt, commentsUnread, overdue
+        case archived, duedate, startdate, done, deletedAt, commentsUnread, overdue
         case etag = "ETag"
     }
 
@@ -68,6 +75,8 @@ struct Card: Identifiable, Codable {
         try c.encode(order, forKey: .order)
         try c.encode(archived, forKey: .archived)
         try c.encodeIfPresent(duedate, forKey: .duedate)
+        try c.encodeIfPresent(startdate, forKey: .startdate)
+        try c.encodeIfPresent(done, forKey: .done)
         try c.encodeIfPresent(deletedAt, forKey: .deletedAt)
         try c.encode(commentsUnread ?? 0, forKey: .commentsUnread)
         try c.encodeIfPresent(overdue, forKey: .overdue)

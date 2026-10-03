@@ -288,21 +288,20 @@ final class AppState: ObservableObject {
         }
     }
 
-    func updateCard(boardId: Int, stackId: Int, card: Card, title: String?, description: String?) async {
-        guard let api = deckAPI else { return }
+    /// Saves a new title and description for `card`, keeping its other fields as they are.
+    /// Returns `true` if the card was saved, `false` otherwise (and sets `errorMessage`).
+    func updateCard(boardId: Int, stackId: Int, card: Card, title: String, description: String) async -> Bool {
+        guard let api = deckAPI else { return false }
+        var updated = card
+        updated.title = title
+        updated.description = description
         do {
-            _ = try await api.updateCard(
-                boardId: boardId,
-                stackId: stackId,
-                cardId: card.id,
-                title: title ?? card.title,
-                description: description ?? card.description,
-                order: nil,
-                duedate: nil
-            )
+            _ = try await api.updateCard(boardId: boardId, stackId: stackId, card: updated)
             await loadStacks(boardId: boardId)
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
