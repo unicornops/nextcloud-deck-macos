@@ -23,6 +23,7 @@ struct ContentView: View {
         } detail: {
             BoardDetailView()
         }
+        .actionErrorBanner(appState)
         .task {
             await appState.loadBoardsIfNeeded()
         }

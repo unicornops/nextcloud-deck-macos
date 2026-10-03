@@ -9,7 +9,10 @@ final class AppState: ObservableObject {
     @Published var stacks: [Stack] = []
     @Published var isLoading = false
     @Published var isLoadingStacks = false
+    /// Errors shown inline where they happen: the login screen, the empty sidebar and the create sheets.
     @Published var errorMessage: String?
+    /// Errors from actions that have no UI of their own (moving, deleting, labelling…), shown as a banner.
+    @Published var actionError: String?
     @Published var stacksError: String?
     @Published var showingLogin = false
     @Published var showingAbout = false
@@ -89,6 +92,11 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Shows `error` in the action error banner.
+    func report(_ error: Error) {
+        actionError = error.localizedDescription
+    }
+
     func logout() {
         try? KeychainStorage.delete()
         credentials = nil
@@ -97,6 +105,7 @@ final class AppState: ObservableObject {
         boards = []
         selectedBoardId = nil
         stacks = []
+        actionError = nil
         showingLogin = true
     }
 
@@ -116,6 +125,10 @@ final class AppState: ObservableObject {
             }
         } catch {
             errorMessage = error.localizedDescription
+            // The sidebar only shows `errorMessage` when there are no boards; a failed refresh needs the banner.
+            if !boards.isEmpty {
+                report(error)
+            }
         }
     }
 
@@ -154,7 +167,7 @@ final class AppState: ObservableObject {
             _ = try await api.createCard(boardId: boardId, stackId: stackId, title: title)
             await loadStacks(boardId: boardId)
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 
@@ -174,7 +187,7 @@ final class AppState: ObservableObject {
                 }
             }
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 
@@ -187,7 +200,7 @@ final class AppState: ObservableObject {
                 boards[idx].archived = false
             }
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 
@@ -197,7 +210,7 @@ final class AppState: ObservableObject {
             try await api.undoDeleteBoard(id: id)
             await loadBoards()
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 
@@ -214,7 +227,7 @@ final class AppState: ObservableObject {
                 }
             }
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 
@@ -271,7 +284,7 @@ final class AppState: ObservableObject {
                         order: newOrder
                     )
                 } catch {
-                    errorMessage = error.localizedDescription
+                    report(error)
                 }
             }
         }
@@ -284,7 +297,7 @@ final class AppState: ObservableObject {
             try await api.deleteStack(boardId: boardId, stackId: stackId)
             await loadStacks(boardId: boardId)
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 
@@ -305,13 +318,17 @@ final class AppState: ObservableObject {
         }
     }
 
-    func deleteCard(boardId: Int, stackId: Int, cardId: Int) async {
-        guard let api = deckAPI else { return }
+    /// Returns `true` if the card was deleted, `false` otherwise (and shows the error banner).
+    @discardableResult
+    func deleteCard(boardId: Int, stackId: Int, cardId: Int) async -> Bool {
+        guard let api = deckAPI else { return false }
         do {
             try await api.deleteCard(boardId: boardId, stackId: stackId, cardId: cardId)
             await loadStacks(boardId: boardId)
+            return true
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
+            return false
         }
     }
 
@@ -327,7 +344,7 @@ final class AppState: ObservableObject {
             )
             await loadStacks(boardId: boardId)
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 
@@ -341,7 +358,7 @@ final class AppState: ObservableObject {
                 await loadStacks(boardId: boardId)
                 return
             } catch {
-                errorMessage = error.localizedDescription
+                // Fall through to the reorder endpoint; only its error is reported.
             }
         }
 
@@ -360,7 +377,7 @@ final class AppState: ObservableObject {
             try await api.assignLabel(boardId: boardId, stackId: stackId, cardId: cardId, labelId: labelId)
             await loadStacks(boardId: boardId)
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 
@@ -370,7 +387,7 @@ final class AppState: ObservableObject {
             try await api.removeLabel(boardId: boardId, stackId: stackId, cardId: cardId, labelId: labelId)
             await loadStacks(boardId: boardId)
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 
@@ -387,7 +404,7 @@ final class AppState: ObservableObject {
             }
             return label.id
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
             return nil
         }
     }
@@ -400,7 +417,7 @@ final class AppState: ObservableObject {
         do {
             return try await api.getCard(boardId: boardId, stackId: stackId, cardId: cardId)
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
             return nil
         }
     }
@@ -411,7 +428,7 @@ final class AppState: ObservableObject {
         do {
             return try await api.getAttachments(boardId: boardId, stackId: stackId, cardId: cardId)
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
             return []
         }
     }
@@ -437,7 +454,7 @@ final class AppState: ObservableObject {
             try data.write(to: saveURL)
             return true
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
             return false
         }
     }
@@ -457,7 +474,7 @@ final class AppState: ObservableObject {
             await loadStacks(boardId: boardId)
             return attachment
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
             return nil
         }
     }
@@ -475,7 +492,7 @@ final class AppState: ObservableObject {
             )
             await loadStacks(boardId: boardId)
         } catch {
-            errorMessage = error.localizedDescription
+            report(error)
         }
     }
 }
