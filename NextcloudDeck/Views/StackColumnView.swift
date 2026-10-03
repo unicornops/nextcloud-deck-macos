@@ -74,7 +74,7 @@ struct StackColumnView: View {
                 pendingDelete = false
             }
         } message: {
-            Text("\u{201c}\(stack.title)\u{201d} and all its cards will be permanently deleted. This cannot be undone.")
+            Text(DeleteConfirmation.message("\u{201c}\(stack.title)\u{201d} and all its cards"))
         }
         .confirmationDialog("Delete card?", isPresented: Binding(
             get: { pendingCardDelete != nil },
@@ -92,7 +92,7 @@ struct StackColumnView: View {
             }
         } message: {
             if let card = pendingCardDelete {
-                Text("\u{201c}\(card.title)\u{201d} will be permanently deleted. This cannot be undone.")
+                Text(DeleteConfirmation.message("\u{201c}\(card.title)\u{201d}"))
             }
         }
     }
@@ -109,7 +109,7 @@ struct StackColumnView: View {
                 } label: {
                     Label("Delete list", systemImage: "trash")
                 }
-                .help("Permanently delete this list and its cards")
+                .help("Delete this list and its cards")
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.body)

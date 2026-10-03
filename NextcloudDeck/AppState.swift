@@ -359,7 +359,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Permanently deletes the stack and its cards from the board.
+    /// Deletes the stack and its cards. Deck keeps them restorable until the server clears deleted items.
     func deleteStack(boardId: Int, stackId: Int) async {
         guard let api = deckAPI else { return }
         do {

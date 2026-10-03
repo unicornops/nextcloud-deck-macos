@@ -139,7 +139,7 @@ struct BoardListView: View {
             if let boardId = pendingBoardDelete,
                let board = appState.boards.first(where: { $0.id == boardId }) {
                 Text(
-                    "\u{201c}\(board.title)\u{201d} and all its lists and cards will be permanently deleted. This cannot be undone."
+                    DeleteConfirmation.message("\u{201c}\(board.title)\u{201d} and all its lists and cards")
                 )
             }
         }
