@@ -68,7 +68,8 @@ All Deck server interaction must follow the official API. Reference it when addi
 
 Implementation details:
 
-- Base path: `/index.php/apps/deck/api/v1.0` (see `DeckAPI.swift`).
+- Base path: `/index.php/apps/deck/api/v1.0` (see `DeckAPI.swift`); attachments use `/index.php/apps/deck/api/v1.1`, because v1.0 only handles `deck_file` attachments.
+- Use documented endpoints only — not the internal routes the Deck web UI calls (`/index.php/apps/deck/cards/...`), which can change in any release.
 - Use `OCS-APIRequest: true` and `Content-Type` / `Accept: application/json` where specified by the API.
 - Authentication: Basic auth with username and app password (no account password in requests).
 - When adding or changing endpoints, DTOs, or error handling, check the upstream docs for paths, methods, query/body parameters, and response formats so the client stays in sync with the server.
