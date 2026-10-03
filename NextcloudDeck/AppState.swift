@@ -449,7 +449,13 @@ final class AppState: ObservableObject {
     /// Moves a card into a different stack at position `order`.
     func moveCard(boardId: Int, cardId: Int, fromStackId: Int, toStackId: Int, order: Int) async {
         guard fromStackId != toStackId else { return }
-        await reorderCard(boardId: boardId, fromStackId: fromStackId, cardId: cardId, toStackId: toStackId, order: order)
+        await reorderCard(
+            boardId: boardId,
+            fromStackId: fromStackId,
+            cardId: cardId,
+            toStackId: toStackId,
+            order: order
+        )
     }
 
     func assignLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async {
