@@ -4,7 +4,7 @@ A native macOS app for [Nextcloud Deck](https://github.com/nextcloud/deck) with 
 
 ## Features
 
-- **Sign in** with your Nextcloud server URL, username, and password. The app uses the [Nextcloud Login Flow / getapppassword](https://docs.nextcloud.com/server/latest/developer_manual/client_apis/LoginFlow/index.html) to obtain an app password and stores credentials securely in the system Keychain.
+- **Sign in** with your Nextcloud server URL: the app opens your browser to sign in (including two-factor authentication) using [Nextcloud Login Flow v2](https://docs.nextcloud.com/server/latest/developer_manual/client_apis/LoginFlow/index.html), receives an app password and stores it securely in the system Keychain. Signing out revokes the app password.
 - **Boards** listed in the sidebar; switch between them to focus on one board at a time.
 - **Trello-style board view**: stacks as columns, cards in each column. Create lists (stacks) and cards, open cards to edit title and description.
 - Built with **SwiftUI** and follows current macOS design (toolbars, sidebar, materials).
@@ -113,7 +113,7 @@ The app uses only the documented [Nextcloud Deck REST API](https://deck.readthed
 - `PUT /boards/{id}/stacks/{id}/cards/{id}/reorder` – move a card within or between lists
 - `/boards/{id}/stacks/{id}/cards/{id}/attachments[/{type}/{id}]` (v1.1) – list, download, upload and delete attachments
 
-Authentication uses Basic auth with the app password obtained from `GET /ocs/v2.php/core/getapppassword` (or your existing app password if you sign in with one).
+Authentication uses Basic auth with the app password obtained through Login Flow v2 (`POST /index.php/login/v2`, then polling). Sign-out revokes it with `DELETE /ocs/v2.php/core/apppassword`.
 
 ## Project structure
 
