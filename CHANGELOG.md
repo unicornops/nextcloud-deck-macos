@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.15.0](https://github.com/unicornops/shuffleboard/compare/v0.14.1...v0.15.0) (2026-10-03)
+
+
+### Features
+
+* rename the app to Shuffleboard ([#98](https://github.com/unicornops/shuffleboard/issues/98)) ([ecc5a92](https://github.com/unicornops/shuffleboard/commit/ecc5a922153bfe3cff8adc01b1dbfbe963855773)), closes [#66](https://github.com/unicornops/shuffleboard/issues/66)
+
+
+### Bug Fixes
+
+* **attachments:** only fall back when the internal route is missing ([#85](https://github.com/unicornops/shuffleboard/issues/85)) ([505ae35](https://github.com/unicornops/shuffleboard/commit/505ae35372251b3370156cf56b7f738cb27b3eaf)), closes [#55](https://github.com/unicornops/shuffleboard/issues/55)
+* **auth:** keep login polling through transient errors and allow cancel ([#89](https://github.com/unicornops/shuffleboard/issues/89)) ([cab2a45](https://github.com/unicornops/shuffleboard/commit/cab2a454c35973b96d4f0ee9c4a6cb4237a5d3e8)), closes [#59](https://github.com/unicornops/shuffleboard/issues/59)
+* **auth:** revoke the app password on sign out ([#88](https://github.com/unicornops/shuffleboard/issues/88)) ([c262739](https://github.com/unicornops/shuffleboard/commit/c26273956b0b4a96ca85d57c3dcc604456e36385)), closes [#58](https://github.com/unicornops/shuffleboard/issues/58)
+* **auth:** sign out when the app password is revoked or expires ([#87](https://github.com/unicornops/shuffleboard/issues/87)) ([844eb21](https://github.com/unicornops/shuffleboard/commit/844eb212dc3ca65e19a31742db107117b2845d7e)), closes [#57](https://github.com/unicornops/shuffleboard/issues/57)
+* **boards:** stop lists flashing empty and racing between boards ([#86](https://github.com/unicornops/shuffleboard/issues/86)) ([de22731](https://github.com/unicornops/shuffleboard/commit/de22731f6a9b43219acfbba58328927f5f7dcf46)), closes [#56](https://github.com/unicornops/shuffleboard/issues/56)
+* **cards:** send the full card when saving edits ([#82](https://github.com/unicornops/shuffleboard/issues/82)) ([05c1c3b](https://github.com/unicornops/shuffleboard/commit/05c1c3b5fff393daed5559f9bc39eebfac7203d7)), closes [#53](https://github.com/unicornops/shuffleboard/issues/53)
+* **keychain:** store credentials under the app's own service ([#91](https://github.com/unicornops/shuffleboard/issues/91)) ([fd81d9f](https://github.com/unicornops/shuffleboard/commit/fd81d9f283a7a19ea3b1c59e2b8ce8d0d939981e)), closes [#61](https://github.com/unicornops/shuffleboard/issues/61)
+* **stacks:** reload lists when a reorder can't be saved ([#90](https://github.com/unicornops/shuffleboard/issues/90)) ([1732215](https://github.com/unicornops/shuffleboard/commit/17322155b90de836ad103910413ebe6bef7123d5)), closes [#60](https://github.com/unicornops/shuffleboard/issues/60)
+* state the GPL-3.0 licence consistently ([#96](https://github.com/unicornops/shuffleboard/issues/96)) ([88eb794](https://github.com/unicornops/shuffleboard/commit/88eb794b51c5bbd5cb07fc1f81f230cc84ed8609)), closes [#65](https://github.com/unicornops/shuffleboard/issues/65)
+* **ui:** don't call soft-deleted items permanently deleted ([#95](https://github.com/unicornops/shuffleboard/issues/95)) ([c4bd4bf](https://github.com/unicornops/shuffleboard/commit/c4bd4bf32e455c2452802e3248f75ec5dfdad662)), closes [#64](https://github.com/unicornops/shuffleboard/issues/64)
+* **ui:** show errors from board and card actions ([#84](https://github.com/unicornops/shuffleboard/issues/84)) ([3e28df7](https://github.com/unicornops/shuffleboard/commit/3e28df7ee77bc9692a3cc3428924f6c4657db762)), closes [#54](https://github.com/unicornops/shuffleboard/issues/54)
+
+
+### Chores
+
+* **auth:** remove the unused password sign-in flow ([#94](https://github.com/unicornops/shuffleboard/issues/94)) ([08a1c5a](https://github.com/unicornops/shuffleboard/commit/08a1c5a1f151c0b6b49ea4fc6dc5c60ed5605b3c)), closes [#63](https://github.com/unicornops/shuffleboard/issues/63)
+
+
+### Refactoring
+
+* **api:** use only the documented Deck REST API ([#93](https://github.com/unicornops/shuffleboard/issues/93)) ([ba40e00](https://github.com/unicornops/shuffleboard/commit/ba40e008dc6e3fb6b9f7e500561521c98a2aecbb))
+
 ## [0.14.1](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.14.0...v0.14.1) (2026-03-17)
 
 
