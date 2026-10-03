@@ -71,6 +71,16 @@ xcodebuild -scheme NextcloudDeck -configuration Debug -destination 'platform=mac
 open ~/Library/Developer/Xcode/DerivedData/NextcloudDeck-*/Build/Products/Debug/NextcloudDeck.app
 ```
 
+### Running tests
+
+Unit tests live in `NextcloudDeckTests/` and run inside the app. Press **⌘U** in Xcode, or:
+
+```bash
+xcodebuild test -scheme NextcloudDeck -destination 'platform=macOS' CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=
+```
+
+They never touch the real Keychain or a real server: `AppState` takes an in-memory `CredentialStore` and a `URLSession` that talks to `StubURLProtocol`. They run on every pull request.
+
 ### Building a signed DMG for distribution
 
 From the repo root:
