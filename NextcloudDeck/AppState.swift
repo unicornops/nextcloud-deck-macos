@@ -343,13 +343,22 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// True while `reorderStacks` is saving, so a second drag can't interleave its updates with the first.
+    private var isReorderingStacks = false
+
     /// Reorders stacks by moving the stack at `fromIndex` to `toIndex`, then
     /// persists the new order values to the server.
+    ///
+    /// The Deck API has no bulk reorder, so each moved stack is updated in turn. If one update fails the
+    /// rest are not sent, the error is shown and the lists are reloaded so the screen matches the server.
     func reorderStacks(boardId: Int, fromIndex: Int, toIndex: Int) async {
-        guard let api = deckAPI else { return }
+        guard let api = deckAPI, !isReorderingStacks,
+              selectedBoardId == boardId, stacksBoardId == boardId else { return }
         guard fromIndex != toIndex,
               fromIndex >= 0, fromIndex < stacks.count,
               toIndex >= 0, toIndex <= stacks.count else { return }
+        isReorderingStacks = true
+        defer { isReorderingStacks = false }
 
         // Move the stack in the local array
         let moving = stacks.remove(at: fromIndex)
@@ -357,21 +366,22 @@ final class AppState: ObservableObject {
         stacks.insert(moving, at: insertAt)
 
         // Assign sequential order values and persist to server
-        for idx in stacks.indices {
-            let stack = stacks[idx]
-            let newOrder = idx
-            if stack.order != newOrder {
-                stacks[idx].order = newOrder
-                do {
-                    _ = try await api.updateStack(
-                        boardId: boardId,
-                        stackId: stack.id,
-                        title: stack.title,
-                        order: newOrder
-                    )
-                } catch {
-                    report(error)
-                }
+        let changes = stacks.enumerated().filter { $0.element.order != $0.offset }
+        for (idx, _) in changes {
+            stacks[idx].order = idx
+        }
+        for (newOrder, stack) in changes {
+            do {
+                _ = try await api.updateStack(
+                    boardId: boardId,
+                    stackId: stack.id,
+                    title: stack.title,
+                    order: newOrder
+                )
+            } catch {
+                report(error)
+                await loadStacks(boardId: boardId)
+                return
             }
         }
     }
