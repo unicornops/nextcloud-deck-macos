@@ -98,7 +98,21 @@ final class AppState: ObservableObject {
 
     /// Shows `error` in the action error banner.
     func report(_ error: Error) {
+        guard !endSessionIfUnauthorized(error) else { return }
         actionError = error.localizedDescription
+    }
+
+    /// If `error` means the app password was revoked or has expired, signs out and returns to the login
+    /// screen with an explanation. Returns `true` if it did, so the caller shows nothing further.
+    @discardableResult
+    func endSessionIfUnauthorized(_ error: Error) -> Bool {
+        guard case .unauthorized? = error as? DeckAPIError else { return false }
+        // Requests still in flight from the ended session may fail the same way; handle it once.
+        if isLoggedIn {
+            logout()
+            errorMessage = error.localizedDescription
+        }
+        return true
     }
 
     func logout() {
@@ -128,6 +142,7 @@ final class AppState: ObservableObject {
                 await loadStacks(boardId: bid)
             }
         } catch {
+            guard !endSessionIfUnauthorized(error) else { return }
             errorMessage = error.localizedDescription
             // The sidebar only shows `errorMessage` when there are no boards; a failed refresh needs the banner.
             if !boards.isEmpty {
@@ -172,6 +187,7 @@ final class AppState: ObservableObject {
         case let .success(loaded):
             stacks = loaded.sorted { ($0.order, $0.id) < ($1.order, $1.id) }
         case let .failure(error):
+            guard !endSessionIfUnauthorized(error) else { return }
             // A cancelled load (the board view went away) is not an error worth showing.
             if !(error is CancellationError), (error as? URLError)?.code != .cancelled {
                 stacksError = error.localizedDescription
@@ -267,6 +283,7 @@ final class AppState: ObservableObject {
             await loadBoards()
             return true
         } catch {
+            guard !endSessionIfUnauthorized(error) else { return false }
             errorMessage = error.localizedDescription
             return false
         }
@@ -280,6 +297,7 @@ final class AppState: ObservableObject {
             await loadStacks(boardId: boardId)
             return true
         } catch {
+            guard !endSessionIfUnauthorized(error) else { return false }
             errorMessage = error.localizedDescription
             return false
         }
@@ -341,6 +359,7 @@ final class AppState: ObservableObject {
             await loadStacks(boardId: boardId)
             return true
         } catch {
+            guard !endSessionIfUnauthorized(error) else { return false }
             errorMessage = error.localizedDescription
             return false
         }
