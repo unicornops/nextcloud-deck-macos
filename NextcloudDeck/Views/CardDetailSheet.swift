@@ -118,6 +118,7 @@ struct CardDetailSheet: View {
             .scrollContentBackground(.hidden)
         }
         .frame(width: 440, height: 520)
+        .actionErrorBanner(appState)
         .navigationTitle("Edit Card")
         .sheet(isPresented: $showCreateLabel) {
             createLabelSheet
@@ -135,10 +136,13 @@ struct CardDetailSheet: View {
         .confirmationDialog("Delete card?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 Task {
-                    await appState.deleteCard(boardId: boardId, stackId: card.stackId, cardId: card.id)
-                    await MainActor.run {
-                        dismiss()
-                        onDismiss()
+                    let deleted = await appState.deleteCard(boardId: boardId, stackId: card.stackId, cardId: card.id)
+                    // On failure stay open so the error banner is shown alongside the card.
+                    if deleted {
+                        await MainActor.run {
+                            dismiss()
+                            onDismiss()
+                        }
                     }
                 }
             }
@@ -280,7 +284,7 @@ struct CardDetailSheet: View {
                 )
                 if !success {
                     await MainActor.run {
-                        appState.errorMessage = "Could not download attachment"
+                        appState.actionError = appState.actionError ?? "Could not download attachment"
                     }
                 }
             }
