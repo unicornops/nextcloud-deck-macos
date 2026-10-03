@@ -309,26 +309,14 @@ final class DeckAPI {
         )
     }
 
-    func updateCard(
-        boardId: Int,
-        stackId: Int,
-        cardId: Int,
-        title: String?,
-        description: String?,
-        order: Int?,
-        duedate: String?
-    ) async throws
-        -> Card {
+    /// Saves `card`'s current state. Deck's update endpoint requires `owner` and overwrites every field
+    /// it is given or defaults (a missing `duedate`/`done` clears them, a missing `order` becomes 0),
+    /// so the whole card is always sent rather than just the edited fields.
+    func updateCard(boardId: Int, stackId: Int, card: Card) async throws -> Card {
         try await request(
-            "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)",
+            "boards/\(boardId)/stacks/\(stackId)/cards/\(card.id)",
             method: "PUT",
-            body: UpdateCardRequest(
-                title: title,
-                description: description,
-                type: "plain",
-                order: order,
-                duedate: duedate
-            )
+            body: UpdateCardRequest(card: card, fallbackOwner: username)
         )
     }
 
@@ -718,12 +706,49 @@ private struct CreateCardRequest: Encodable {
     let duedate: String?
 }
 
-private struct UpdateCardRequest: Encodable {
-    let title: String?
-    let description: String?
+/// Body for `PUT /boards/{boardId}/stacks/{stackId}/cards/{cardId}`.
+/// See https://github.com/nextcloud/deck/blob/main/docs/API.md (Update card details).
+struct UpdateCardRequest: Encodable {
+    let title: String
+    let description: String
     let type: String
-    let order: Int?
+    let owner: String
+    let order: Int
     let duedate: String?
+    let startdate: String?
+    let done: String?
+
+    /// `fallbackOwner` (the signed-in user) is used when the card was decoded without an owner,
+    /// because the server rejects an update with an empty one.
+    init(card: Card, fallbackOwner: String) {
+        self.title = card.title
+        self.description = card.description ?? ""
+        self.type = card.type ?? "plain"
+        self.owner = card.owner.flatMap { $0.isEmpty ? nil : $0 } ?? fallbackOwner
+        self.order = card.order
+        self.duedate = card.duedate
+        self.startdate = card.startdate
+        self.done = card.done
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case title, description, type, owner, order, duedate, startdate, done
+    }
+
+    /// Dates are always encoded, as `null` when unset, so the body states exactly what the card should be.
+    /// `archived` is deliberately omitted: the server leaves it unchanged, but rejects `true` for an
+    /// already-archived card.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(title, forKey: .title)
+        try c.encode(description, forKey: .description)
+        try c.encode(type, forKey: .type)
+        try c.encode(owner, forKey: .owner)
+        try c.encode(order, forKey: .order)
+        try c.encode(duedate, forKey: .duedate)
+        try c.encode(startdate, forKey: .startdate)
+        try c.encode(done, forKey: .done)
+    }
 }
 
 private struct ReorderCardRequest: Encodable {

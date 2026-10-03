@@ -22,6 +22,7 @@ struct CardDetailSheet: View {
     @State private var isUploadingAttachment = false
     @State private var showFileImporter = false
     @State private var attachmentError: String?
+    @State private var saveError: String?
 
     private var board: Board? {
         guard let b = appState.selectedBoard, b.id == boardId else { return nil }
@@ -87,6 +88,12 @@ struct CardDetailSheet: View {
             Divider()
 
             Form {
+                if let saveError {
+                    Section {
+                        Label("Could not save card: \(saveError)", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
                 Section("Title") {
                     TextField("Title", text: $title)
                 }
@@ -368,18 +375,24 @@ struct CardDetailSheet: View {
 
     private func save() {
         isSaving = true
+        saveError = nil
         Task {
-            await appState.updateCard(
+            // Start from the latest copy of the card so changes made since the sheet opened are kept.
+            let saved = await appState.updateCard(
                 boardId: boardId,
                 stackId: card.stackId,
-                card: card,
+                card: currentCard ?? card,
                 title: title,
                 description: description
             )
             await MainActor.run {
                 isSaving = false
-                dismiss()
-                onDismiss()
+                if saved {
+                    dismiss()
+                    onDismiss()
+                } else {
+                    saveError = appState.errorMessage ?? "Unknown error"
+                }
             }
         }
     }
