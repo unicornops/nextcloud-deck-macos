@@ -51,33 +51,6 @@ final class AppState: ObservableObject {
         }
     }
 
-    func login(serverURL: URL, username: String, password: String) async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
-        do {
-            let appPassword = try await NextcloudAuth.getAppPassword(
-                serverURL: serverURL,
-                username: username,
-                password: password
-            )
-            let storedURL = try KeychainStorage.save(serverURL: serverURL, username: username, appPassword: appPassword)
-            credentials = (storedURL, username, appPassword)
-            deckAPI = DeckAPI(serverURL: storedURL, username: username, appPassword: appPassword)
-            isLoggedIn = true
-            showingLogin = false
-            await loadBoards()
-        } catch {
-            let msg = error.localizedDescription
-            if msg.lowercased().contains("two-factor") || msg.lowercased().contains("2fa") || msg.lowercased()
-                .contains("second factor") {
-                errorMessage = "This account uses two-factor authentication. Use “Sign in with browser” above."
-            } else {
-                errorMessage = msg
-            }
-        }
-    }
-
     /// The in-flight browser sign-in, if any; cancelled by `cancelLogin()`.
     private var loginTask: Task<Void, Never>?
     /// Identifies the current sign-in attempt, so a cancelled one can't change the state of a newer one.

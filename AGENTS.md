@@ -6,7 +6,7 @@ This document gives coding agents (e.g. Cursor, GitHub Copilot, Claude) shared c
 
 - **What it is:** A native macOS app for [Nextcloud Deck](https://github.com/nextcloud/deck) with a Trello-like board UI.
 - **Stack:** Swift, SwiftUI, macOS 14.0+. Built with Xcode; project is `NextcloudDeck.xcodeproj`.
-- **Auth:** Nextcloud Login Flow / getapppassword; app password stored in system Keychain (see `KeychainStorage.swift`, `NextcloudAuth.swift`).
+- **Auth:** Nextcloud Login Flow v2 (browser sign-in); app password stored in system Keychain (see `KeychainStorage.swift`, `NextcloudAuth.swift`).
 - **Layout:** `NextcloudDeck/` — Models (Board, Stack, Card, Label), Services (DeckAPI, NextcloudAuth, KeychainStorage), Views (Login, board list, board detail, cards, stacks), Helpers (e.g. Color+Hex).
 
 ## Developer tooling
