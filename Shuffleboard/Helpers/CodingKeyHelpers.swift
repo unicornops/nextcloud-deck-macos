@@ -20,6 +20,7 @@ import Foundation
 /// at the bottom of `Board.swift`, `Card.swift`, `Stack.swift`, and `Label.swift`
 /// have been removed; those files now rely on this one.
 extension KeyedDecodingContainer {
+
     // MARK: - Required integer (Int or String-encoded Int)
 
     /// Decodes an `Int` for `key`, accepting either a JSON number or a JSON string
@@ -27,8 +28,12 @@ extension KeyedDecodingContainer {
     ///
     /// Throws `DecodingError.typeMismatch` if neither representation succeeds.
     func decodeIntOrString(forKey key: Key) throws -> Int {
-        if let i = try? decode(Int.self, forKey: key) { return i }
-        if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }
+        if let i = try? decode(Int.self, forKey: key) {
+            return i
+        }
+        if let s = try? decode(String.self, forKey: key), let i = Int(s) {
+            return i
+        }
         throw DecodingError.typeMismatch(
             Int.self,
             DecodingError.Context(
@@ -47,8 +52,12 @@ extension KeyedDecodingContainer {
     /// Returns `nil` when the key is missing, the value is `null`, or the
     /// value cannot be interpreted as an integer — never throws.
     func decodeIntOrStringIfPresent(forKey key: Key) throws -> Int? {
-        if let i = try? decode(Int.self, forKey: key) { return i }
-        if let s = try? decode(String.self, forKey: key), let i = Int(s) { return i }
+        if let i = try? decode(Int.self, forKey: key) {
+            return i
+        }
+        if let s = try? decode(String.self, forKey: key), let i = Int(s) {
+            return i
+        }
         return nil
     }
 }

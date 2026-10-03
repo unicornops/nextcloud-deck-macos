@@ -85,7 +85,8 @@ struct BoardPermissions: Codable, Hashable {
 
 struct BoardSettings: Codable, Hashable {
     var notifyDue: String?
-    var calendar: Bool?
+    /// Absent when the server has no per-board calendar setting.
+    var calendar: Bool? // swiftlint:disable:this discouraged_optional_boolean
 
     enum CodingKeys: String, CodingKey {
         case notifyDue = "notify-due"
@@ -101,7 +102,8 @@ struct ACLEntry: Codable, Hashable {
     var permissionEdit: Bool
     var permissionShare: Bool
     var permissionManage: Bool
-    var owner: Bool?
+    /// Absent in ACL entries from older Deck versions.
+    var owner: Bool? // swiftlint:disable:this discouraged_optional_boolean
 }
 
 struct DeckUser: Codable, Hashable {

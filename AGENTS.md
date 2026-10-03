@@ -12,7 +12,7 @@ This document gives coding agents (e.g. Cursor, GitHub Copilot, Claude) shared c
 
 ## Developer tooling
 
-The project uses the following tools to enforce code quality. All run automatically via pre-commit and in the `PMD Static Analysis` GitHub Actions job on every PR.
+The project uses the following tools to enforce code quality. They run via pre-commit, and on every PR: `swiftformat --lint` and `swiftlint lint --strict` in the `SwiftLint and SwiftFormat` job (pinned versions in `.github/workflows/pr-validation.yml`, so any warning fails the build), and PMD copy-paste detection in the `PMD Static Analysis` job. Run `swiftformat .` and `swiftlint lint --fix` before committing; the two configs are set up so they agree.
 
 | Tool | Purpose | Config |
 |------|---------|--------|

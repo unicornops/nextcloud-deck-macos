@@ -1,6 +1,6 @@
 import Foundation
-@testable import Shuffleboard
 import XCTest
+@testable import Shuffleboard
 
 /// Login Flow v2 polling in `NextcloudAuth` (#59), against `StubURLProtocol`.
 final class LoginFlowTests: XCTestCase {
@@ -48,7 +48,7 @@ final class LoginFlowTests: XCTestCase {
 
         XCTAssertEqual(result.loginName, "rob")
         XCTAssertEqual(result.appPassword, "secret")
-        XCTAssertEqual(opened, [URL(string: "https://cloud.example/login/v2/flow/abc")!])
+        XCTAssertEqual(opened, try [XCTUnwrap(URL(string: "https://cloud.example/login/v2/flow/abc"))])
         let poll = try XCTUnwrap(StubURLProtocol.requests.last { $0.path == "/login/v2/poll" })
         XCTAssertEqual(String(decoding: poll.body, as: UTF8.self), "token=a%2Bb%2Fc")
     }

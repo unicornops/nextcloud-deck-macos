@@ -41,7 +41,9 @@ struct CardDetailSheet: View {
 
     /// Attachments to display: from API load, or from card (stacks may include attachments).
     private var displayedAttachments: [Attachment] {
-        if !attachments.isEmpty { return attachments }
+        if !attachments.isEmpty {
+            return attachments
+        }
         return (currentCard ?? card).attachments ?? []
     }
 

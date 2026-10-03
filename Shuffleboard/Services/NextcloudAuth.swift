@@ -20,7 +20,9 @@ enum NextcloudAuth {
         openURL: (URL) -> Void = { _ = NSWorkspace.shared.open($0) }
     ) async throws
         -> (serverURL: URL, loginName: String, appPassword: String) {
-        let loginV2URL = serverURL.appendingPathComponent("index.php").appendingPathComponent("login")
+        let loginV2URL = serverURL
+            .appendingPathComponent("index.php")
+            .appendingPathComponent("login")
             .appendingPathComponent("v2")
         var request = URLRequest(url: loginV2URL)
         request.httpMethod = "POST"
@@ -43,7 +45,7 @@ enum NextcloudAuth {
         var pollRequest = URLRequest(url: pollURL)
         pollRequest.httpMethod = "POST"
         pollRequest.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        pollRequest.httpBody = "token=\(formEncoded(initResponse.poll.token))".data(using: .utf8)
+        pollRequest.httpBody = Data("token=\(formEncoded(initResponse.poll.token))".utf8)
 
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
@@ -64,8 +66,10 @@ enum NextcloudAuth {
                 let credentials = try decoder.decode(LoginV2PollResponse.self, from: pollData)
                 guard let serverURL = webURL(credentials.server) else { throw AuthError.invalidResponse }
                 return (serverURL, credentials.loginName, credentials.appPassword)
+
             case 404, 500 ... 599:
                 continue // 404: not signed in yet. 5xx: server hiccup.
+
             default:
                 if let err = try? decoder.decode(LoginV2PollError.self, from: pollData) {
                     throw AuthError.serverError(err.message)

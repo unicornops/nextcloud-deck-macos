@@ -1,6 +1,6 @@
 import Foundation
-@testable import Shuffleboard
 import XCTest
+@testable import Shuffleboard
 
 /// Requests `DeckAPI` sends and how it maps responses, against `StubURLProtocol`.
 final class DeckAPITests: XCTestCase {

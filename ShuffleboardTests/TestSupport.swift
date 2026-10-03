@@ -1,6 +1,6 @@
 import Foundation
-@testable import Shuffleboard
 import XCTest
+@testable import Shuffleboard
 
 // MARK: - Stub server
 
@@ -74,8 +74,13 @@ final class StubURLProtocol: URLProtocol {
         return URLSession(configuration: config)
     }
 
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override class func canInit(with request: URLRequest) -> Bool {
+        true
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
 
     override func startLoading() {
         let recorded = RecordedRequest(
@@ -95,8 +100,12 @@ final class StubURLProtocol: URLProtocol {
                 return
             }
             guard let url = request.url,
-                  let http = HTTPURLResponse(url: url, statusCode: response.status, httpVersion: nil, headerFields: nil)
-            else { return }
+                  let http = HTTPURLResponse(
+                      url: url,
+                      statusCode: response.status,
+                      httpVersion: nil,
+                      headerFields: nil
+                  ) else { return }
             client?.urlProtocol(self, didReceive: http, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: response.body)
             client?.urlProtocolDidFinishLoading(self)
@@ -113,7 +122,9 @@ final class StubURLProtocol: URLProtocol {
         var buffer = [UInt8](repeating: 0, count: 64 * 1024)
         while true {
             let count = stream.read(&buffer, maxLength: buffer.count)
-            if count <= 0 { break }
+            if count <= 0 {
+                break
+            }
             data.append(buffer, count: count)
         }
         return data

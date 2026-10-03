@@ -9,14 +9,14 @@ private struct DraggedCard: Codable {
         "\(id):\(stackId)"
     }
 
-    static func fromProviderString(_ value: String) -> DraggedCard? {
+    static func fromProviderString(_ value: String) -> Self? {
         let parts = value.split(separator: ":", omittingEmptySubsequences: false)
         guard parts.count == 2,
               let id = Int(parts[0]),
               let stackId = Int(parts[1]) else {
             return nil
         }
-        return DraggedCard(id: id, stackId: stackId)
+        return Self(id: id, stackId: stackId)
     }
 }
 
@@ -30,7 +30,7 @@ struct StackColumnView: View {
     @State private var isAddingCard = false
     @State private var pendingDelete = false
     @State private var pendingCardDelete: Card?
-    @State private var dragInsertIndex: Int? = nil
+    @State private var dragInsertIndex: Int?
     @State private var isColumnDropTargeted = false
 
     private var isDropTargeted: Bool {
@@ -78,7 +78,11 @@ struct StackColumnView: View {
         }
         .confirmationDialog("Delete card?", isPresented: Binding(
             get: { pendingCardDelete != nil },
-            set: { if !$0 { pendingCardDelete = nil } }
+            set: {
+                if !$0 {
+                    pendingCardDelete = nil
+                }
+            }
         )) {
             Button("Delete", role: .destructive) {
                 guard let card = pendingCardDelete else { return }
@@ -128,11 +132,11 @@ struct StackColumnView: View {
             LazyVStack(spacing: 0) {
                 insertionGap(at: 0)
                 ForEach(0 ..< currentCards.count, id: \.self) { index in
-                    CardRowView(card: currentCards[index], onDelete: {
-                        pendingCardDelete = currentCards[index]
-                    }) {
-                        onSelectCard(currentCards[index])
-                    }
+                    CardRowView(
+                        card: currentCards[index],
+                        onDelete: { pendingCardDelete = currentCards[index] },
+                        action: { onSelectCard(currentCards[index]) }
+                    )
                     .padding(.horizontal, 10)
                     insertionGap(at: index + 1)
                 }
@@ -281,7 +285,6 @@ struct StackColumnView: View {
 
     private func handleDropAtIndex(providers: [NSItemProvider], insertIndex: Int) -> Bool {
         loadDraggedCard(from: providers) { draggedCard in
-
             Task { @MainActor in
                 if draggedCard.stackId == stack.id {
                     // Reorder within the same stack
@@ -421,9 +424,9 @@ struct CardRowView: View {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = formatter.date(from: iso) ?? ISO8601DateFormatter().date(from: iso) {
-            let f = DateFormatter()
-            f.dateStyle = .short
-            return f.string(from: date)
+            let display = DateFormatter()
+            display.dateStyle = .short
+            return display.string(from: date)
         }
         return iso
     }

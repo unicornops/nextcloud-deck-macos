@@ -11,9 +11,9 @@ struct DeckLabel: Identifiable, Codable, Hashable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.id = (try? c.decodeIntOrString(forKey: .id)) ?? 0
         self.title = (try? c.decode(String.self, forKey: .title)) ?? ""
-        self.color = (try? c.decodeIfPresent(String.self, forKey: .color)) ?? nil
-        self.boardId = (try? c.decodeIntOrStringIfPresent(forKey: .boardId)) ?? nil
-        self.cardId = (try? c.decodeIntOrStringIfPresent(forKey: .cardId)) ?? nil
+        self.color = (try? c.decodeIfPresent(String.self, forKey: .color))
+        self.boardId = (try? c.decodeIntOrStringIfPresent(forKey: .boardId))
+        self.cardId = (try? c.decodeIntOrStringIfPresent(forKey: .cardId))
     }
 
     func encode(to encoder: Encoder) throws {

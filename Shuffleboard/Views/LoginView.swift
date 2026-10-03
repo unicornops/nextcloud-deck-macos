@@ -7,9 +7,13 @@ struct LoginView: View {
 
     private var serverURL: URL? {
         var s = serverInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !s.hasPrefix("http") { s = "https://" + s }
+        if !s.hasPrefix("http") {
+            s = "https://" + s
+        }
         // Require HTTPS for security (App Store and best practice).
-        if s.hasPrefix("http://") { s = "https://" + s.dropFirst(7) }
+        if s.hasPrefix("http://") {
+            s = "https://" + s.dropFirst(7)
+        }
         return URL(string: s)
     }
 
@@ -88,12 +92,15 @@ struct LoginView: View {
 
             Spacer()
 
-            Text("Credentials are stored securely in the Keychain.\nShuffleboard is an unofficial client, not affiliated with Nextcloud.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 360)
-                .padding(.bottom, 24)
+            Text(
+                "Credentials are stored securely in the Keychain.\n"
+                    + "Shuffleboard is an unofficial client, not affiliated with Nextcloud."
+            )
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: 360)
+            .padding(.bottom, 24)
         }
         .frame(minWidth: 480, minHeight: 480)
         .onAppear {

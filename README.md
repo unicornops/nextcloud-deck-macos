@@ -35,7 +35,7 @@ Your boards live on your Nextcloud server, so nothing is lost. The old app's Key
 
 ## Developer tooling
 
-The project uses several tools to enforce code quality. Install them all with Homebrew:
+The project uses several tools to enforce code quality. Every pull request runs `swiftformat --lint` and `swiftlint lint --strict` (any warning fails), using the versions pinned in `.github/workflows/pr-validation.yml` (SwiftFormat 0.63.1, SwiftLint 0.65.1). Install them all with Homebrew:
 
 ```bash
 brew install pre-commit swiftformat swiftlint pmd

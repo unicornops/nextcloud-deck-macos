@@ -9,7 +9,7 @@ private struct DraggedStack {
         "stack:\(id):\(index)"
     }
 
-    static func fromProviderString(_ value: String) -> DraggedStack? {
+    static func fromProviderString(_ value: String) -> Self? {
         let parts = value.split(separator: ":", omittingEmptySubsequences: false)
         guard parts.count == 3,
               parts[0] == "stack",
@@ -17,7 +17,7 @@ private struct DraggedStack {
               let index = Int(parts[2]) else {
             return nil
         }
-        return DraggedStack(id: id, index: index)
+        return Self(id: id, index: index)
     }
 }
 
@@ -118,57 +118,56 @@ struct BoardDetailView: View {
         UTType.text.identifier,
     ]
 
+    @ViewBuilder
     private func scrollableStacks(_ board: Board) -> some View {
-        Group {
-            if appState.isLoadingStacks && appState.stacks.isEmpty {
-                VStack(spacing: 12) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Text("Loading lists…")
-                        .foregroundStyle(.secondary)
+        if appState.isLoadingStacks && appState.stacks.isEmpty {
+            VStack(spacing: 12) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                Text("Loading lists…")
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let err = appState.stacksError, appState.stacks.isEmpty {
+            ContentUnavailableView {
+                Label("Could not load lists", systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(err)
+            } actions: {
+                Button("Try again") {
+                    Task { await appState.loadStacks(boardId: board.id) }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let err = appState.stacksError, appState.stacks.isEmpty {
-                ContentUnavailableView {
-                    Label("Could not load lists", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(err)
-                } actions: {
-                    Button("Try again") {
-                        Task { await appState.loadStacks(boardId: board.id) }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView(.horizontal, showsIndicators: true) {
-                    HStack(alignment: .top, spacing: 0) {
-                        stackInsertionGap(at: 0, boardId: board.id)
-                        ForEach(Array(appState.stacks.enumerated()), id: \.element.id) { index, stack in
-                            StackColumnView(
-                                board: board,
-                                stack: stack,
-                                onSelectCard: { selectedCard = $0 }
-                            )
-                            .environmentObject(appState)
-                            .onDrag {
-                                appState.isDraggingStack = true
-                                return NSItemProvider(
-                                    object: NSString(
-                                        string: DraggedStack(id: stack.id, index: index).providerString
-                                    )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollView(.horizontal, showsIndicators: true) {
+                HStack(alignment: .top, spacing: 0) {
+                    stackInsertionGap(at: 0, boardId: board.id)
+                    ForEach(Array(appState.stacks.enumerated()), id: \.element.id) { index, stack in
+                        StackColumnView(
+                            board: board,
+                            stack: stack,
+                            onSelectCard: { selectedCard = $0 }
+                        )
+                        .environmentObject(appState)
+                        .onDrag {
+                            appState.isDraggingStack = true
+                            return NSItemProvider(
+                                object: NSString(
+                                    string: DraggedStack(id: stack.id, index: index).providerString
                                 )
-                            }
-                            stackInsertionGap(at: index + 1, boardId: board.id)
+                            )
                         }
+                        stackInsertionGap(at: index + 1, boardId: board.id)
                     }
-                    .padding(20)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .onDrop(of: stackDropTypes, isTargeted: nil) { _ in
-                    // Catch-all: reset stack-dragging state for drops that miss a gap
-                    appState.isDraggingStack = false
-                    return false
-                }
+                .padding(20)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onDrop(of: stackDropTypes, isTargeted: nil) { _ in
+                // Catch-all: reset stack-dragging state for drops that miss a gap
+                appState.isDraggingStack = false
+                return false
             }
         }
     }

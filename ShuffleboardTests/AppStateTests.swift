@@ -1,6 +1,6 @@
 import Foundation
-@testable import Shuffleboard
 import XCTest
+@testable import Shuffleboard
 
 /// `AppState` behaviour against `StubURLProtocol`, with credentials kept in memory.
 @MainActor
@@ -41,7 +41,9 @@ final class AppStateTests: XCTestCase {
 
     func testSlowResponseForPreviousBoardDoesNotReplaceCurrentBoard() async {
         StubURLProtocol.handler = { request in
-            if request.path.hasSuffix("/boards") { return .json(self.boardsJSON) }
+            if request.path.hasSuffix("/boards") {
+                return .json(self.boardsJSON)
+            }
             guard let board = Self.boardId(fromStacksPath: request.path) else { return .status(404) }
             return .json(Self.stacksJSON([board * 10], board: board), delay: board == 1 ? 0.5 : 0.05)
         }
@@ -59,7 +61,9 @@ final class AppStateTests: XCTestCase {
 
     func testRefreshingSameBoardKeepsListsVisible() async {
         StubURLProtocol.handler = { request in
-            if request.path.hasSuffix("/boards") { return .json(self.boardsJSON) }
+            if request.path.hasSuffix("/boards") {
+                return .json(self.boardsJSON)
+            }
             return .json(Self.stacksJSON([10, 20], board: 1), delay: 0.3)
         }
         let app = await makeSignedInApp()
@@ -90,8 +94,12 @@ final class AppStateTests: XCTestCase {
 
     func testForbiddenShowsBannerAndStaysSignedIn() async {
         StubURLProtocol.handler = { request in
-            if request.path.hasSuffix("/boards") { return .json(self.boardsJSON) }
-            if request.method == "DELETE" { return .status(403) }
+            if request.path.hasSuffix("/boards") {
+                return .json(self.boardsJSON)
+            }
+            if request.method == "DELETE" {
+                return .status(403)
+            }
             return .json(Self.stacksJSON([10], board: 1))
         }
         let app = await makeSignedInApp()
@@ -106,7 +114,9 @@ final class AppStateTests: XCTestCase {
 
     func testSignOutRevokesAppPassword() async {
         StubURLProtocol.handler = { request in
-            if request.path.hasSuffix("/boards") { return .json(self.boardsJSON) }
+            if request.path.hasSuffix("/boards") {
+                return .json(self.boardsJSON)
+            }
             return .json(Self.stacksJSON([10], board: 1))
         }
         let app = await makeSignedInApp()
@@ -120,8 +130,12 @@ final class AppStateTests: XCTestCase {
 
     func testSignOutSucceedsOffline() async {
         StubURLProtocol.handler = { request in
-            if request.path.hasSuffix("/apppassword") { return StubResponse(error: URLError(.notConnectedToInternet)) }
-            if request.path.hasSuffix("/boards") { return .json(self.boardsJSON) }
+            if request.path.hasSuffix("/apppassword") {
+                return StubResponse(error: URLError(.notConnectedToInternet))
+            }
+            if request.path.hasSuffix("/boards") {
+                return .json(self.boardsJSON)
+            }
             return .json(Self.stacksJSON([10], board: 1))
         }
         let app = await makeSignedInApp()
@@ -139,7 +153,9 @@ final class AppStateTests: XCTestCase {
         let lock = NSLock()
         nonisolated(unsafe) var serverOrder = [10, 20, 30, 40]
         StubURLProtocol.handler = { request in
-            if request.path.hasSuffix("/boards") { return .json(self.boardsJSON) }
+            if request.path.hasSuffix("/boards") {
+                return .json(self.boardsJSON)
+            }
             if request.method == "PUT" {
                 guard let id = Int(request.path.split(separator: "/").last ?? ""), id != 10 else { return .status(500) }
                 let order = request.json?["order"] as? Int ?? 0

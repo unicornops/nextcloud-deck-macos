@@ -105,17 +105,22 @@ final class DeckAPI {
     // MARK: - Boards
 
     func getBoards(details: Bool = true) async throws -> [Board] {
-        var path = baseURL.path
-        if path.hasSuffix("/") { path.removeLast() }
-        path += "/boards"
-        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
-        components.path = path
+        guard let base = url(for: "boards"),
+              var components = URLComponents(url: base, resolvingAgainstBaseURL: false) else {
+            throw DeckAPIError.invalidURL
+        }
         components.queryItems = [URLQueryItem(name: "details", value: details ? "true" : "false")]
         guard let url = components.url else { throw DeckAPIError.invalidURL }
         let (data, _) = try await performRequest(url: url, method: "GET")
-        if let boards = try? decoder.decode([Board].self, from: data) { return boards }
-        if let wrapper = try? decoder.decode(OCSBoardsWrapper.self, from: data) { return wrapper.data }
-        if let ocs = try? decoder.decode(OCSEnvelope.self, from: data) { return ocs.ocs.data }
+        if let boards = try? decoder.decode([Board].self, from: data) {
+            return boards
+        }
+        if let wrapper = try? decoder.decode(OCSBoardsWrapper.self, from: data) {
+            return wrapper.data
+        }
+        if let ocs = try? decoder.decode(OCSEnvelope.self, from: data) {
+            return ocs.ocs.data
+        }
         throw DeckAPIError.badRequest("Could not decode boards response")
     }
 
@@ -143,12 +148,18 @@ final class DeckAPI {
     /// Maps a non-2xx response to a `DeckAPIError`.
     private func validate(response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { throw DeckAPIError.invalidResponse }
-        if http.statusCode == 304 { throw DeckAPIError.notModified }
+        if http.statusCode == 304 {
+            throw DeckAPIError.notModified
+        }
         if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
             throw DeckAPIError.badRequest(err.message)
         }
-        if http.statusCode == 401 { throw DeckAPIError.unauthorized }
-        if http.statusCode == 403 { throw DeckAPIError.permissionDenied }
+        if http.statusCode == 401 {
+            throw DeckAPIError.unauthorized
+        }
+        if http.statusCode == 403 {
+            throw DeckAPIError.permissionDenied
+        }
         guard (200 ... 299).contains(http.statusCode) else {
             throw DeckAPIError.httpStatus(http.statusCode)
         }
@@ -169,7 +180,14 @@ final class DeckAPI {
         return try decoder.decode(Board.self, from: data)
     }
 
-    func updateBoard(id: Int, title: String?, color: String?, archived: Bool?) async throws -> Board {
+    /// `nil` arguments leave that property unchanged on the server.
+    func updateBoard(
+        id: Int,
+        title: String?,
+        color: String?,
+        archived: Bool? // swiftlint:disable:this discouraged_optional_boolean
+    ) async throws
+        -> Board {
         try await request(
             "boards/\(id)",
             method: "PUT",
@@ -197,12 +215,16 @@ final class DeckAPI {
         switch error {
         case let .keyNotFound(key, context):
             return "missing key '\(key.stringValue)' at \(context.codingPath.map(\.stringValue).joined(separator: "."))"
+
         case let .typeMismatch(type, context):
             return "type mismatch for \(type) at \(context.codingPath.map(\.stringValue).joined(separator: "."))"
+
         case let .valueNotFound(type, context):
             return "nil value for \(type) at \(context.codingPath.map(\.stringValue).joined(separator: "."))"
+
         case let .dataCorrupted(context):
             return "data corrupted at \(context.codingPath.map(\.stringValue).joined(separator: "."))"
+
         @unknown default:
             return error.localizedDescription
         }
@@ -241,8 +263,12 @@ final class DeckAPI {
         do {
             return try decoder.decode([Stack].self, from: data)
         } catch let arrayError as DecodingError {
-            if let wrapper = try? decoder.decode(OCSStacksWrapper.self, from: data) { return wrapper.data }
-            if let ocs = try? decoder.decode(OCSStacksEnvelope.self, from: data) { return ocs.ocs.data }
+            if let wrapper = try? decoder.decode(OCSStacksWrapper.self, from: data) {
+                return wrapper.data
+            }
+            if let ocs = try? decoder.decode(OCSStacksEnvelope.self, from: data) {
+                return ocs.ocs.data
+            }
             let detail = decodingErrorDescription(arrayError)
             throw DeckAPIError.badRequest("Could not decode \(context): \(detail)")
         } catch {
@@ -367,8 +393,11 @@ final class DeckAPI {
             body: CreateLabelRequest(title: title, color: color)
         )
     }
+}
 
-    // MARK: - Attachments
+// MARK: - Attachments
+
+extension DeckAPI {
 
     // Attachments use REST API v1.1, which handles every attachment type: `file` (Deck 1.3+, stored in the
     // user's Files) as well as the older `deck_file`. Single attachments are addressed as `{type}/{id}`.
@@ -432,8 +461,13 @@ final class DeckAPI {
         type: String? = nil
     ) async throws
         -> Data {
-        guard let url = attachmentURL(boardId: boardId, stackId: stackId, cardId: cardId, id: attachmentId, type: type)
-        else {
+        guard let url = attachmentURL(
+            boardId: boardId,
+            stackId: stackId,
+            cardId: cardId,
+            id: attachmentId,
+            type: type
+        ) else {
             throw DeckAPIError.invalidURL
         }
         return try await performRequest(url: url, method: "GET").0
@@ -547,8 +581,13 @@ final class DeckAPI {
         attachmentId: Int,
         type: String? = nil
     ) async throws {
-        guard let url = attachmentURL(boardId: boardId, stackId: stackId, cardId: cardId, id: attachmentId, type: type)
-        else {
+        guard let url = attachmentURL(
+            boardId: boardId,
+            stackId: stackId,
+            cardId: cardId,
+            id: attachmentId,
+            type: type
+        ) else {
             throw DeckAPIError.invalidURL
         }
         _ = try await performRequest(url: url, method: "DELETE")
@@ -570,7 +609,8 @@ private struct CreateBoardRequest: Encodable {
 private struct UpdateBoardRequest: Encodable {
     let title: String?
     let color: String?
-    let archived: Bool?
+    /// Omitted when `nil`, which leaves the board's archived state unchanged.
+    let archived: Bool? // swiftlint:disable:this discouraged_optional_boolean
 }
 
 private struct CreateStackRequest: Encodable {
@@ -660,14 +700,16 @@ enum DeckAPIError: LocalizedError {
     case permissionDenied
     case httpStatus(Int)
 
+    private static let sessionEndedMessage =
+        "Your Nextcloud session has ended — the app password may have been revoked. Please sign in again."
+
     var errorDescription: String? {
         switch self {
         case .invalidURL: "Invalid URL"
         case .invalidResponse: "Invalid response"
         case .notModified: "Not modified"
         case let .badRequest(msg): msg
-        case .unauthorized:
-            "Your Nextcloud session has ended — the app password may have been revoked. Please sign in again."
+        case .unauthorized: Self.sessionEndedMessage
         case .permissionDenied: "Permission denied"
         case let .httpStatus(code): "HTTP \(code)"
         }
