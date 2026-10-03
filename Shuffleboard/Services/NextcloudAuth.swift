@@ -17,7 +17,7 @@ enum NextcloudAuth {
         session: URLSession = .shared,
         pollInterval: TimeInterval = 2,
         timeout: TimeInterval = 20 * 60,
-        openURL: (URL) -> Void = { _ = NSWorkspace.shared.open($0) }
+        openURL: @escaping @MainActor @Sendable (URL) -> Void = { url in _ = NSWorkspace.shared.open(url) }
     ) async throws
         -> (serverURL: URL, loginName: String, appPassword: String) {
         let loginV2URL = serverURL
@@ -40,7 +40,7 @@ enum NextcloudAuth {
               let pollURL = webURL(initResponse.poll.endpoint) else {
             throw AuthError.invalidResponse
         }
-        openURL(loginURL)
+        await openURL(loginURL)
 
         var pollRequest = URLRequest(url: pollURL)
         pollRequest.httpMethod = "POST"

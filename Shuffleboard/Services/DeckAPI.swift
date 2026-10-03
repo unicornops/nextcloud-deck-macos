@@ -4,7 +4,10 @@ import Foundation
 /// https://deck.readthedocs.io/en/latest/API/
 ///
 /// Uses only the documented REST API: v1.0 for boards, stacks, cards and labels, and v1.1 for attachments.
-final class DeckAPI {
+///
+/// `Sendable`: every stored property is an immutable, `Sendable` value, so `AppState` (on the main actor) can
+/// call its `async` methods without data races.
+final class DeckAPI: Sendable {
     private let baseURL: URL
     /// API v1.1 (Deck 1.3+), used for attachments: v1.0 only lists and addresses `deck_file` attachments,
     /// while files attached since Deck 1.3 have the type `file`.
@@ -13,8 +16,14 @@ final class DeckAPI {
     private let username: String
     private let appPassword: String
     private let session: URLSession
-    private let decoder: JSONDecoder
-    private let encoder: JSONEncoder
+    /// A new decoder per use keeps `DeckAPI` `Sendable` without relying on `JSONDecoder`'s thread-safety.
+    private var decoder: JSONDecoder {
+        JSONDecoder()
+    }
+
+    private var encoder: JSONEncoder {
+        JSONEncoder()
+    }
 
     init(serverURL: URL, username: String, appPassword: String, session: URLSession = .shared) {
         self.baseURL = serverURL
@@ -37,8 +46,6 @@ final class DeckAPI {
         self.username = username
         self.appPassword = appPassword
         self.session = session
-        self.decoder = JSONDecoder()
-        self.encoder = JSONEncoder()
     }
 
     private var authHeader: String {

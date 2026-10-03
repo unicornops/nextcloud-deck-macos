@@ -2,7 +2,14 @@ import Foundation
 import XCTest
 @testable import Shuffleboard
 
+/// URLs the sign-in flow asked to open in the browser.
+@MainActor
+private final class OpenedURLs {
+    var urls: [URL] = []
+}
+
 /// Login Flow v2 polling in `NextcloudAuth` (#59), against `StubURLProtocol`.
+@MainActor
 final class LoginFlowTests: XCTestCase {
     private static let success = StubResponse.json(
         #"{"server": "https://cloud.example", "loginName": "rob", "appPassword": "secret"}"#
@@ -18,19 +25,21 @@ final class LoginFlowTests: XCTestCase {
 
     /// Serves the flow's start request and answers polls from `polls` in order (404 once exhausted).
     private func serve(loginURL: String = "https://cloud.example/login/v2/flow/abc", polls: [StubResponse]) {
-        let lock = NSLock()
-        nonisolated(unsafe) var remaining = polls
+        let remaining = Locked(polls)
         StubURLProtocol.handler = { request in
             if request.path == "/index.php/login/v2" {
                 return .json("""
                 {"poll": {"token": "a+b/c", "endpoint": "https://cloud.example/login/v2/poll"}, "login": "\(loginURL)"}
                 """)
             }
-            return lock.withLock { remaining.isEmpty ? .status(404) : remaining.removeFirst() }
+            return remaining.withLock { $0.isEmpty ? .status(404) : $0.removeFirst() }
         }
     }
 
-    private func login(timeout: TimeInterval = 5, opened: @escaping (URL) -> Void = { _ in }) async throws
+    private func login(
+        timeout: TimeInterval = 5,
+        opened: @escaping @MainActor @Sendable (URL) -> Void = { _ in }
+    ) async throws
         -> (serverURL: URL, loginName: String, appPassword: String) {
         try await NextcloudAuth.loginWithBrowser(
             serverURL: testServer,
@@ -43,12 +52,13 @@ final class LoginFlowTests: XCTestCase {
 
     func testTransientFailuresAreRetriedUntilSignedIn() async throws {
         serve(polls: [StubResponse(error: URLError(.networkConnectionLost)), .status(503), .status(404), Self.success])
-        var opened: [URL] = []
-        let result = try await login { opened.append($0) }
+        let opened = OpenedURLs()
+        let result = try await login { opened.urls.append($0) }
 
         XCTAssertEqual(result.loginName, "rob")
         XCTAssertEqual(result.appPassword, "secret")
-        XCTAssertEqual(opened, try [XCTUnwrap(URL(string: "https://cloud.example/login/v2/flow/abc"))])
+        let openedURLs = opened.urls
+        XCTAssertEqual(openedURLs, try [XCTUnwrap(URL(string: "https://cloud.example/login/v2/flow/abc"))])
         let poll = try XCTUnwrap(StubURLProtocol.requests.last { $0.path == "/login/v2/poll" })
         XCTAssertEqual(String(decoding: poll.body, as: UTF8.self), "token=a%2Bb%2Fc")
     }
@@ -67,14 +77,15 @@ final class LoginFlowTests: XCTestCase {
     func testNonWebLoginURLIsNeverOpened() async {
         for url in ["file:///etc/passwd", "javascript:alert(1)", "x-custom://open"] {
             serve(loginURL: url, polls: [])
-            var opened: [URL] = []
+            let opened = OpenedURLs()
             do {
-                _ = try await login { opened.append($0) }
+                _ = try await login { opened.urls.append($0) }
                 XCTFail("\(url) should be refused")
             } catch {
                 guard case AuthError.invalidResponse = error else { return XCTFail("got \(error) for \(url)") }
             }
-            XCTAssertTrue(opened.isEmpty, url)
+            let openedURLs = opened.urls
+            XCTAssertTrue(openedURLs.isEmpty, url)
         }
     }
 
@@ -90,7 +101,15 @@ final class LoginFlowTests: XCTestCase {
 
     func testCancellingStopsPolling() async {
         serve(polls: [])
-        let task = Task { try await login() }
+        let session = StubURLProtocol.session()
+        let task = Task {
+            try await NextcloudAuth.loginWithBrowser(
+                serverURL: testServer,
+                session: session,
+                pollInterval: 0.02,
+                openURL: { _ in }
+            )
+        }
         await sleep(seconds: 0.1)
         task.cancel()
         do {
