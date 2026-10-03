@@ -125,4 +125,6 @@ Authentication uses Basic auth with the app password obtained through Login Flow
 
 ## License
 
-Use and modify as you like. Deck and Nextcloud are their respective projects’ trademarks.
+Nextcloud Deck for macOS is free software, licensed under the [GNU General Public License v3.0](LICENSE). You may use, study, share and modify it; if you distribute it or a modified version, you must do so under the same licence and make the source code available.
+
+Nextcloud is a trademark of Nextcloud GmbH. This is an independent client for the Deck app and is not affiliated with or endorsed by Nextcloud.
