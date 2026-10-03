@@ -138,6 +138,7 @@ final class DeckAPI {
         if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
             throw DeckAPIError.badRequest(err.message)
         }
+        if http.statusCode == 401 { throw DeckAPIError.unauthorized }
         if http.statusCode == 403 { throw DeckAPIError.permissionDenied }
         guard (200 ... 299).contains(http.statusCode) else {
             throw DeckAPIError.httpStatus(http.statusCode)
@@ -758,6 +759,8 @@ enum DeckAPIError: LocalizedError {
     case invalidResponse
     case notModified
     case badRequest(String)
+    /// The app password was rejected: revoked from Nextcloud's security settings, or expired.
+    case unauthorized
     case permissionDenied
     case httpStatus(Int)
 
@@ -775,6 +778,8 @@ enum DeckAPIError: LocalizedError {
         case .invalidResponse: "Invalid response"
         case .notModified: "Not modified"
         case let .badRequest(msg): msg
+        case .unauthorized:
+            "Your Nextcloud session has ended — the app password may have been revoked. Please sign in again."
         case .permissionDenied: "Permission denied"
         case let .httpStatus(code): "HTTP \(code)"
         }
