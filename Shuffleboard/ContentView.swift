@@ -1,0 +1,174 @@
+import SwiftUI
+
+struct ContentView: View {
+    @EnvironmentObject private var appState: AppState
+
+    var body: some View {
+        Group {
+            if appState.showingLogin {
+                LoginView()
+            } else {
+                mainInterface
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: appState.showingLogin)
+        .sheet(isPresented: $appState.showingAbout) {
+            AboutSheet()
+        }
+    }
+
+    private var mainInterface: some View {
+        NavigationSplitView {
+            BoardListView()
+        } detail: {
+            BoardDetailView()
+        }
+        .actionErrorBanner(appState)
+        .task {
+            await appState.loadBoardsIfNeeded()
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button("About Shuffleboard", systemImage: "info.circle") {
+                        appState.showingAbout = true
+                    }
+                    Divider()
+                    Button("Refresh", systemImage: "arrow.clockwise") {
+                        Task { await appState.refresh() }
+                    }
+                    Divider()
+                    Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") {
+                        Task { await appState.signOut() }
+                    }
+                } label: {
+                    Image(systemName: "person.circle")
+                }
+                .help("Account and actions")
+                .accessibilityLabel("Account menu")
+            }
+        }
+    }
+}
+
+private enum BuildMetadata {
+    private static let buildInfo: [String: Any] = {
+        guard let url = Bundle.main.url(forResource: "BuildInfo", withExtension: "plist"),
+              let data = try? Data(contentsOf: url),
+              let info = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else {
+            return [:]
+        }
+        return info
+    }()
+
+    static let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "Shuffleboard"
+    static let version = buildInfo["BuildVersion"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        ?? "Unknown"
+    static let buildNumber = buildInfo["BuildNumber"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        ?? "Unknown"
+    static let gitCommit = buildInfo["BuildGitCommit"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "BuildGitCommit") as? String
+        ?? "unknown"
+    static let buildRef = buildInfo["BuildRef"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "BuildRef") as? String
+        ?? "local"
+    static let buildDateUTC = buildInfo["BuildDateUTC"] as? String
+        ?? Bundle.main.object(forInfoDictionaryKey: "BuildDateUTC") as? String
+        ?? "unknown"
+
+    /// Nextcloud's trademark guidelines ask third-party clients to say they are not the official client.
+    static let unofficialNotice = "An unofficial client for Nextcloud Deck. "
+        + "Shuffleboard is an independent project and is not affiliated with or endorsed by Nextcloud."
+
+    static var shortCommit: String {
+        gitCommit == "unknown" ? gitCommit : String(gitCommit.prefix(7))
+    }
+
+    static var summary: String {
+        """
+        Version: \(version)
+        Build: \(buildNumber)
+        Ref: \(buildRef)
+        Commit: \(gitCommit)
+        Built: \(buildDateUTC)
+        """
+    }
+}
+
+private struct AboutSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 72, height: 72)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            VStack(spacing: 4) {
+                Text(BuildMetadata.appName)
+                    .font(.title2.weight(.semibold))
+                Text("Version \(BuildMetadata.version) (\(BuildMetadata.buildNumber))")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(BuildMetadata.unofficialNotice)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 16, verticalSpacing: 10) {
+                GridRow {
+                    metadataLabel("Ref")
+                    metadataValue(BuildMetadata.buildRef)
+                }
+                GridRow {
+                    metadataLabel("Commit")
+                    metadataValue(BuildMetadata.shortCommit)
+                }
+                GridRow {
+                    metadataLabel("Built")
+                    metadataValue(BuildMetadata.buildDateUTC)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            HStack {
+                Button("Copy Build Info") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(BuildMetadata.summary, forType: .string)
+                }
+                Spacer()
+                Button("Close") {
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(24)
+        .frame(width: 420)
+    }
+
+    private func metadataLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.headline)
+            .foregroundStyle(.secondary)
+    }
+
+    private func metadataValue(_ value: String) -> some View {
+        Text(value)
+            .textSelection(.enabled)
+    }
+}
+
+#Preview {
+    ContentView()
+        .environmentObject(AppState())
+}

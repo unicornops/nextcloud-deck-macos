@@ -32,7 +32,7 @@ jobs:
         run: |
           pmd cpd \
             --minimum-tokens 105 \
-            --dir NextcloudDeck \
+            --dir Shuffleboard \
             --language swift \
             --format text \
             --fail-on-violation \
@@ -86,7 +86,7 @@ jobs:
       - name: Validate project structure
         run: |
           echo "Checking project file..."
-          if [ ! -f "NextcloudDeck.xcodeproj/project.pbxproj" ]; then
+          if [ ! -f "Shuffleboard.xcodeproj/project.pbxproj" ]; then
             echo "❌ Project file not found"
             exit 1
           fi
@@ -95,7 +95,7 @@ jobs:
       - name: Check Swift syntax
         run: |
           echo "Checking Swift files for syntax errors..."
-          find NextcloudDeck -name "*.swift" -type f | while read file; do
+          find Shuffleboard -name "*.swift" -type f | while read file; do
             echo "Checking: $file"
             if ! swift -frontend -parse "$file" > /dev/null 2>&1; then
               echo "❌ Syntax error in: $file"
@@ -108,8 +108,8 @@ jobs:
       - name: Build (Debug)
         run: |
           xcodebuild \
-            -project NextcloudDeck.xcodeproj \
-            -scheme NextcloudDeck \
+            -project Shuffleboard.xcodeproj \
+            -scheme Shuffleboard \
             -configuration Debug \
             -derivedDataPath build/DerivedData \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
@@ -123,8 +123,8 @@ jobs:
       - name: Run unit tests
         run: |
           xcodebuild \
-            -project NextcloudDeck.xcodeproj \
-            -scheme NextcloudDeck \
+            -project Shuffleboard.xcodeproj \
+            -scheme Shuffleboard \
             -destination 'platform=macOS' \
             -derivedDataPath build/TestDerivedData \
             -resultBundlePath build/UnitTests.xcresult \
@@ -144,8 +144,8 @@ jobs:
       - name: Build (Release - Unsigned)
         run: |
           xcodebuild \
-            -project NextcloudDeck.xcodeproj \
-            -scheme NextcloudDeck \
+            -project Shuffleboard.xcodeproj \
+            -scheme Shuffleboard \
             -configuration Release \
             -derivedDataPath build/DerivedData \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
@@ -158,7 +158,7 @@ jobs:
       - name: Find built app
         id: find-app
         run: |
-          APP_PATH=$(find build/DerivedData/Build/Products -name "NextcloudDeck.app" -type d | head -n 1)
+          APP_PATH=$(find build/DerivedData/Build/Products -name "Shuffleboard.app" -type d | head -n 1)
           echo "app_path=$APP_PATH" >> $GITHUB_OUTPUT
           echo "Found app at: $APP_PATH"
 
@@ -173,7 +173,7 @@ jobs:
 
           echo "✓ App bundle exists"
 
-          if [ ! -f "$APP_PATH/Contents/MacOS/NextcloudDeck" ]; then
+          if [ ! -f "$APP_PATH/Contents/MacOS/Shuffleboard" ]; then
             echo "✗ Executable not found"
             exit 1
           fi

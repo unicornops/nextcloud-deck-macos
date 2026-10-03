@@ -9,7 +9,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR" && pwd)"
 SOURCE_SVG="$REPO_ROOT/icon_source.svg"
-ICONSET="$REPO_ROOT/NextcloudDeck/Assets.xcassets/AppIcon.appiconset"
+ICONSET="$REPO_ROOT/Shuffleboard/Assets.xcassets/AppIcon.appiconset"
 
 echo "Output: $ICONSET"
 mkdir -p "$ICONSET"
@@ -35,7 +35,7 @@ fi
 
 if [ -z "$TEMP_PNG" ] || [ ! -f "$TEMP_PNG" ]; then
   echo "Error: No 1024x1024 PNG source. Either:"
-  echo "  - Add NextcloudDeck/Assets.xcassets/AppIcon.appiconset/icon_1024.png, or"
+  echo "  - Add Shuffleboard/Assets.xcassets/AppIcon.appiconset/icon_1024.png, or"
   echo "  - Install librsvg: brew install librsvg (for rsvg-convert), or"
   echo "  - Ensure icon_source.svg exists and qlmanage can convert it."
   exit 1

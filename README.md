@@ -1,12 +1,30 @@
-# Nextcloud Deck for macOS
+<p align="center"><img src="icon_source.svg" width="128" height="128" alt="Shuffleboard icon: three lanes on wooden deck boards, with pucks as cards"></p>
 
-A native macOS app for [Nextcloud Deck](https://github.com/nextcloud/deck) with a Trello-like board interface.
+# Shuffleboard
+
+**An unofficial native macOS client for [Nextcloud Deck](https://github.com/nextcloud/deck).** Shuffle the cards on your Deck boards from a fast, native Mac app.
+
+> Shuffleboard is an independent project. It is not the official Nextcloud client and is not affiliated with or endorsed by Nextcloud GmbH. For official Nextcloud apps, see [nextcloud.com/install](https://nextcloud.com/install/).
+
+### Why "Shuffleboard"?
+
+It's a board where you shuffle cards around, and shuffleboard is the game played on a ship's deck. The name nods to Deck without borrowing it: [Nextcloud's trademark guidelines](https://nextcloud.com/trademarks/) ask third-party clients not to use "Nextcloud" in their name, and we'd rather respect the project that makes this app possible. Until October 2026 this app was called "Nextcloud Deck for macOS", which used Nextcloud's trademark in a way it shouldn't have.
+
+### Upgrading from "Nextcloud Deck for macOS"
+
+Shuffleboard has a new app identity (bundle ID `ie.unicornops.shuffleboard`), so macOS treats it as a new app:
+
+1. In the old app, choose **Sign Out** from the account menu. This revokes its app password on your server (in versions that support it). Otherwise, remove the old device under **Nextcloud → Settings → Security**.
+2. Delete the old `NextcloudDeck.app`.
+3. Open Shuffleboard and sign in once.
+
+Your boards live on your Nextcloud server, so nothing is lost. The old app's Keychain entry can be removed in Keychain Access (search for `nextclouddeck`).
 
 ## Features
 
 - **Sign in** with your Nextcloud server URL: the app opens your browser to sign in (including two-factor authentication) using [Nextcloud Login Flow v2](https://docs.nextcloud.com/server/latest/developer_manual/client_apis/LoginFlow/index.html), receives an app password and stores it securely in the system Keychain. Signing out revokes the app password.
 - **Boards** listed in the sidebar; switch between them to focus on one board at a time.
-- **Trello-style board view**: stacks as columns, cards in each column. Create lists (stacks) and cards, open cards to edit title and description.
+- **Kanban board view**: stacks as columns, cards in each column. Create lists (stacks) and cards, open cards to edit title and description.
 - Built with **SwiftUI** and follows current macOS design (toolbars, sidebar, materials).
 
 ## Requirements
@@ -52,31 +70,31 @@ Run PMD locally at any time:
 
 ```bash
 # Static analysis
-pmd check --rulesets pmd-ruleset.xml --dir NextcloudDeck --format text
+pmd check --rulesets pmd-ruleset.xml --dir Shuffleboard --format text
 
 # Copy-paste detection
-pmd cpd --minimum-tokens 105 --dir NextcloudDeck --language swift --format text
+pmd cpd --minimum-tokens 105 --dir Shuffleboard --language swift --format text
 ```
 
 ## Build and run
 
-1. Open `NextcloudDeck.xcodeproj` in Xcode.
-2. Select the **NextcloudDeck** scheme and a Mac destination.
+1. Open `Shuffleboard.xcodeproj` in Xcode.
+2. Select the **Shuffleboard** scheme and a Mac destination.
 3. Press **Run** (⌘R).
 
 Or from the terminal:
 
 ```bash
-xcodebuild -scheme NextcloudDeck -configuration Debug -destination 'platform=macOS' build
-open ~/Library/Developer/Xcode/DerivedData/NextcloudDeck-*/Build/Products/Debug/NextcloudDeck.app
+xcodebuild -scheme Shuffleboard -configuration Debug -destination 'platform=macOS' build
+open ~/Library/Developer/Xcode/DerivedData/Shuffleboard-*/Build/Products/Debug/Shuffleboard.app
 ```
 
 ### Running tests
 
-Unit tests live in `NextcloudDeckTests/` and run inside the app. Press **⌘U** in Xcode, or:
+Unit tests live in `ShuffleboardTests/` and run inside the app. Press **⌘U** in Xcode, or:
 
 ```bash
-xcodebuild test -scheme NextcloudDeck -destination 'platform=macOS' CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=
+xcodebuild test -scheme Shuffleboard -destination 'platform=macOS' CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=
 ```
 
 They never touch the real Keychain or a real server: `AppState` takes an in-memory `CredentialStore` and a `URLSession` that talks to `StubURLProtocol`. They run on every pull request.
@@ -85,7 +103,7 @@ They never touch the real Keychain or a real server: `AppState` takes an in-memo
 
 From the repo root:
 
-1. **Generate the app icon** (requires [librsvg](https://wiki.gnome.org/Projects/LibRsvg) for SVG→PNG, or place a 1024×1024 `icon_1024.png` in `NextcloudDeck/Assets.xcassets/AppIcon.appiconset/`):
+1. **Generate the app icon** (requires [librsvg](https://wiki.gnome.org/Projects/LibRsvg) for SVG→PNG, or place a 1024×1024 `icon_1024.png` in `Shuffleboard/Assets.xcassets/AppIcon.appiconset/`):
 
    ```bash
    ./generate-appicon.sh
@@ -94,14 +112,14 @@ From the repo root:
 2. **Build Release** (sign with your Developer ID before creating the DMG if you want a signed app):
 
    ```bash
-   xcodebuild -project NextcloudDeck.xcodeproj -scheme NextcloudDeck -configuration Release -derivedDataPath build/DerivedData build
+   xcodebuild -project Shuffleboard.xcodeproj -scheme Shuffleboard -configuration Release -derivedDataPath build/DerivedData build
    ```
 
 3. **Create the DMG**:
 
    ```bash
-   APP_PATH=$(find build/DerivedData/Build/Products -name "NextcloudDeck.app" -type d | head -n 1)
-   ./create-dmg.sh "$APP_PATH" NextcloudDeck-1.0.0.dmg "Nextcloud Deck 1.0.0"
+   APP_PATH=$(find build/DerivedData/Build/Products -name "Shuffleboard.app" -type d | head -n 1)
+   ./create-dmg.sh "$APP_PATH" Shuffleboard-1.0.0.dmg "Shuffleboard 1.0.0"
    ```
 
 The icon source is `icon_source.svg`; edit it and re-run `./generate-appicon.sh` to refresh the app icon.
@@ -127,7 +145,7 @@ Authentication uses Basic auth with the app password obtained through Login Flow
 
 ## Project structure
 
-- **NextcloudDeck/** – main app target
+- **Shuffleboard/** – main app target
   - **Models/** – `Board`, `Stack`, `Card`, `DeckLabel` (Deck API types)
   - **Services/** – `DeckAPI`, `NextcloudAuth`, `KeychainStorage`
   - **Views/** – Login, board list, board detail (columns + cards), card sheet, new stack sheet
@@ -135,6 +153,6 @@ Authentication uses Basic auth with the app password obtained through Login Flow
 
 ## License
 
-Nextcloud Deck for macOS is free software, licensed under the [GNU General Public License v3.0](LICENSE). You may use, study, share and modify it; if you distribute it or a modified version, you must do so under the same licence and make the source code available.
+Shuffleboard is free software, licensed under the [GNU General Public License v3.0](LICENSE). You may use, study, share and modify it; if you distribute it or a modified version, you must do so under the same licence and make the source code available.
 
-Nextcloud is a trademark of Nextcloud GmbH. This is an independent client for the Deck app and is not affiliated with or endorsed by Nextcloud.
+Nextcloud is a trademark of Nextcloud GmbH. Shuffleboard is an independent, unofficial client for the Deck app and is not affiliated with or endorsed by Nextcloud.

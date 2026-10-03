@@ -1,4 +1,4 @@
-# Pre-commit hook configuration for Nextcloud Deck macOS
+# Pre-commit hook configuration for Shuffleboard
 # Install: brew install pre-commit swiftformat swiftlint pmd
 # Setup:   pre-commit install && pre-commit install --hook-type commit-msg
 
@@ -85,7 +85,7 @@ repos:
           # refactored away; see Helpers/CodingKeyHelpers.swift,
           # Helpers/BoardColorPickerView.swift, and Helpers/CreateSheetFooter.swift.
           - --minimum-tokens=105
-          - --dir=NextcloudDeck
+          - --dir=Shuffleboard
           - --language=swift
           - --format=text
           - --fail-on-violation
