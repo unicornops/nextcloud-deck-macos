@@ -19,6 +19,12 @@ final class AppState: ObservableObject {
     @Published var isDraggingStack = false
 
     private var deckAPI: DeckAPI?
+    /// Where credentials are kept: the Keychain in the app, an in-memory store in tests.
+    private let credentialStore: CredentialStore
+    /// The URL session for all server requests; tests pass one that talks to a stub server.
+    private let session: URLSession
+    /// Opens the browser for sign-in.
+    private let openURL: (URL) -> Void
     /// The board `stacks` currently belongs to.
     private var stacksBoardId: Int?
     /// Incremented by every `loadStacks` call; a response is only applied if no newer load has started.
@@ -40,15 +46,26 @@ final class AppState: ObservableObject {
         boards.filter { $0.archived && ($0.deletedAt == nil || $0.deletedAt == 0) }
     }
 
-    init() {
-        if let creds = KeychainStorage.load() {
+    init(
+        credentialStore: CredentialStore = KeychainCredentialStore(),
+        session: URLSession = .shared,
+        openURL: @escaping (URL) -> Void = { _ = NSWorkspace.shared.open($0) }
+    ) {
+        self.credentialStore = credentialStore
+        self.session = session
+        self.openURL = openURL
+        if let creds = credentialStore.load() {
             self.credentials = creds
-            self.deckAPI = DeckAPI(serverURL: creds.serverURL, username: creds.username, appPassword: creds.appPassword)
+            self.deckAPI = makeAPI(creds)
             self.isLoggedIn = true
             Task { await loadBoards() }
         } else {
             self.showingLogin = true
         }
+    }
+
+    private func makeAPI(_ creds: (serverURL: URL, username: String, appPassword: String)) -> DeckAPI {
+        DeckAPI(serverURL: creds.serverURL, username: creds.username, appPassword: creds.appPassword, session: session)
     }
 
     /// The in-flight browser sign-in, if any; cancelled by `cancelLogin()`.
@@ -83,11 +100,15 @@ final class AppState: ObservableObject {
             }
         }
         do {
-            let (url, loginName, appPassword) = try await NextcloudAuth.loginWithBrowser(serverURL: serverURL)
+            let (url, loginName, appPassword) = try await NextcloudAuth.loginWithBrowser(
+                serverURL: serverURL,
+                session: session,
+                openURL: openURL
+            )
             try Task.checkCancellation()
-            let storedURL = try KeychainStorage.save(serverURL: url, username: loginName, appPassword: appPassword)
+            let storedURL = try credentialStore.save(serverURL: url, username: loginName, appPassword: appPassword)
             credentials = (storedURL, loginName, appPassword)
-            deckAPI = DeckAPI(serverURL: storedURL, username: loginName, appPassword: appPassword)
+            deckAPI = makeAPI((storedURL, loginName, appPassword))
             isLoggedIn = true
             showingLogin = false
             await loadBoards()
@@ -129,7 +150,7 @@ final class AppState: ObservableObject {
     /// Ends the session locally: forgets the stored credentials and returns to the login screen.
     /// Does not contact the server; see `signOut()`.
     func logout() {
-        try? KeychainStorage.delete()
+        try? credentialStore.delete()
         credentials = nil
         deckAPI = nil
         isLoggedIn = false

@@ -1,6 +1,29 @@
 import Foundation
 import Security
 
+/// Where `AppState` keeps the signed-in user's credentials.
+protocol CredentialStore {
+    func load() -> (serverURL: URL, username: String, appPassword: String)?
+    /// Saves credentials and returns the server URL as stored.
+    func save(serverURL: URL, username: String, appPassword: String) throws -> URL
+    func delete() throws
+}
+
+/// The app's credential store: the system Keychain, via `KeychainStorage`.
+struct KeychainCredentialStore: CredentialStore {
+    func load() -> (serverURL: URL, username: String, appPassword: String)? {
+        KeychainStorage.load()
+    }
+
+    func save(serverURL: URL, username: String, appPassword: String) throws -> URL {
+        try KeychainStorage.save(serverURL: serverURL, username: username, appPassword: appPassword)
+    }
+
+    func delete() throws {
+        try KeychainStorage.delete()
+    }
+}
+
 /// Stores and retrieves Nextcloud credentials in the system Keychain.
 ///
 /// Uses a single generic-password item so the user is not prompted multiple times at launch.

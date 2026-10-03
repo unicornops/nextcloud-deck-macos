@@ -119,6 +119,28 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             clean build
 
+      # Unit tests run inside the app (TEST_HOST), so the app is ad-hoc signed ("-") rather than unsigned.
+      - name: Run unit tests
+        run: |
+          xcodebuild \
+            -project NextcloudDeck.xcodeproj \
+            -scheme NextcloudDeck \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/TestDerivedData \
+            -resultBundlePath build/UnitTests.xcresult \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM= \
+            test
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: unit-test-results
+          path: build/UnitTests.xcresult
+          if-no-files-found: ignore
+
       - name: Build (Release - Unsigned)
         run: |
           xcodebuild \
@@ -170,6 +192,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Swift Syntax**: Validated" >> $GITHUB_STEP_SUMMARY
           echo "- **Build (Debug)**: Successful" >> $GITHUB_STEP_SUMMARY
+          echo "- **Unit tests**: Passed" >> $GITHUB_STEP_SUMMARY
           echo "- **Build (Release)**: Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Environment" >> $GITHUB_STEP_SUMMARY
