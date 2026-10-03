@@ -24,7 +24,6 @@ struct StackColumnView: View {
     let board: Board
     let stack: Stack
     var onSelectCard: (Card) -> Void
-    var onRefresh: () -> Void
     @EnvironmentObject private var appState: AppState
 
     @State private var newCardTitle = ""
@@ -69,7 +68,6 @@ struct StackColumnView: View {
             Button("Delete", role: .destructive) {
                 Task {
                     await appState.deleteStack(boardId: board.id, stackId: stack.id)
-                    onRefresh()
                 }
             }
             Button("Cancel", role: .cancel) {
@@ -87,7 +85,6 @@ struct StackColumnView: View {
                 pendingCardDelete = nil
                 Task {
                     await appState.deleteCard(boardId: board.id, stackId: stack.id, cardId: card.id)
-                    onRefresh()
                 }
             }
             Button("Cancel", role: .cancel) {
@@ -227,7 +224,6 @@ struct StackColumnView: View {
         isAddingCard = false
         Task {
             await appState.createCard(boardId: board.id, stackId: stack.id, title: title)
-            onRefresh()
         }
     }
 
@@ -451,8 +447,7 @@ struct CardRowView: View {
             settings: nil
         ),
         stack: Stack(id: 1, title: "To Do", boardId: 1, deletedAt: nil, lastModified: nil, cards: [], order: 0),
-        onSelectCard: { _ in },
-        onRefresh: {}
+        onSelectCard: { _ in }
     )
     .environmentObject(AppState())
 }

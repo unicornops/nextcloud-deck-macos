@@ -19,6 +19,10 @@ final class AppState: ObservableObject {
     @Published var isDraggingStack = false
 
     private var deckAPI: DeckAPI?
+    /// The board `stacks` currently belongs to.
+    private var stacksBoardId: Int?
+    /// Incremented by every `loadStacks` call; a response is only applied if no newer load has started.
+    private var stacksGeneration = 0
     private var credentials: (serverURL: URL, username: String, appPassword: String)?
 
     var selectedBoard: Board? {
@@ -104,7 +108,7 @@ final class AppState: ObservableObject {
         isLoggedIn = false
         boards = []
         selectedBoardId = nil
-        stacks = []
+        clearStacks()
         actionError = nil
         showingLogin = true
     }
@@ -118,9 +122,9 @@ final class AppState: ObservableObject {
             guard let api = deckAPI else { return }
             boards = try await api.getBoards(details: true)
             if selectedBoardId == nil, let first = boards.first {
+                // BoardDetailView's `.task(id: selectedBoardId)` loads the newly selected board's lists.
                 selectedBoardId = first.id
-            }
-            if let bid = selectedBoardId {
+            } else if let bid = selectedBoardId {
                 await loadStacks(boardId: bid)
             }
         } catch {
@@ -138,23 +142,55 @@ final class AppState: ObservableObject {
         await loadBoards()
     }
 
+    /// Loads the lists for `boardId` if it is the selected board.
+    ///
+    /// The current lists stay on screen while the same board is refreshed; they are only cleared when
+    /// switching boards. If loads overlap, only the most recent one's result is applied, so a slow
+    /// response for a previously selected board can never replace the current board's lists.
     func loadStacks(boardId: Int) async {
-        guard let api = deckAPI else { return }
-        stacks = []
+        guard let api = deckAPI, selectedBoardId == boardId else { return }
+        stacksGeneration += 1
+        let generation = stacksGeneration
+        if stacksBoardId != boardId {
+            stacks = []
+            stacksBoardId = boardId
+        }
         stacksError = nil
         isLoadingStacks = true
-        defer { isLoadingStacks = false }
+
+        let result: Result<[Stack], Error>
         do {
-            stacks = try await api.getStacks(boardId: boardId)
-            stacks.sort { ($0.order, $0.id) < ($1.order, $1.id) }
+            let loaded = try await api.getStacks(boardId: boardId)
+            result = .success(loaded)
         } catch {
-            stacksError = error.localizedDescription
+            result = .failure(error)
+        }
+
+        guard generation == stacksGeneration, selectedBoardId == boardId else { return }
+        isLoadingStacks = false
+        switch result {
+        case let .success(loaded):
+            stacks = loaded.sorted { ($0.order, $0.id) < ($1.order, $1.id) }
+        case let .failure(error):
+            // A cancelled load (the board view went away) is not an error worth showing.
+            if !(error is CancellationError), (error as? URLError)?.code != .cancelled {
+                stacksError = error.localizedDescription
+            }
         }
     }
 
+    /// Clears the lists when no board is selected.
+    func clearStacks() {
+        stacksGeneration += 1
+        stacks = []
+        stacksBoardId = nil
+        stacksError = nil
+        isLoadingStacks = false
+    }
+
     func selectBoard(_ board: Board) {
+        // BoardDetailView's `.task(id: selectedBoardId)` loads the lists.
         selectedBoardId = board.id
-        Task { await loadStacks(boardId: board.id) }
     }
 
     func refresh() async {
@@ -181,10 +217,6 @@ final class AppState: ObservableObject {
             }
             if selectedBoardId == id {
                 selectedBoardId = activeBoards.first?.id
-                stacks = []
-                if let bid = selectedBoardId {
-                    await loadStacks(boardId: bid)
-                }
             }
         } catch {
             report(error)
@@ -221,10 +253,6 @@ final class AppState: ObservableObject {
             boards.removeAll { $0.id == id }
             if selectedBoardId == id {
                 selectedBoardId = boards.first?.id
-                stacks = []
-                if let bid = selectedBoardId {
-                    await loadStacks(boardId: bid)
-                }
             }
         } catch {
             report(error)
@@ -398,10 +426,8 @@ final class AppState: ObservableObject {
         guard !trimmed.isEmpty else { return nil }
         do {
             let label = try await api.createLabel(boardId: boardId, title: trimmed, color: color)
+            // Reloads the board's labels and, for the selected board, its lists.
             await loadBoards()
-            if let bid = selectedBoardId, bid == boardId {
-                await loadStacks(boardId: boardId)
-            }
             return label.id
         } catch {
             report(error)

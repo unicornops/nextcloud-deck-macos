@@ -48,9 +48,9 @@ struct BoardDetailView: View {
         .navigationTitle(appState.selectedBoard?.title ?? "Deck")
         .sheet(item: $selectedCard) { card in
             if let board = appState.selectedBoard {
+                // Card actions reload the lists themselves; closing the sheet doesn't need to.
                 CardDetailSheet(card: card, boardId: board.id, onDismiss: {
                     selectedCard = nil
-                    Task { await appState.loadStacks(boardId: board.id) }
                 })
                 .environmentObject(appState)
             }
@@ -60,20 +60,16 @@ struct BoardDetailView: View {
                 NewStackSheet(boardId: board.id, onDismiss: {
                     showingNewStack = false
                     newStackTitle = ""
-                    Task { await appState.loadStacks(boardId: board.id) }
                 })
                 .environmentObject(appState)
             }
         }
-        .onChange(of: appState.selectedBoardId) { _, newId in
-            if let bid = newId {
-                Task { await appState.loadStacks(boardId: bid) }
-            } else {
-                appState.stacks = []
-            }
-        }
+        // The single place lists are loaded on board selection; changing board cancels the previous load.
         .task(id: appState.selectedBoardId) {
-            guard let bid = appState.selectedBoardId else { return }
+            guard let bid = appState.selectedBoardId else {
+                appState.clearStacks()
+                return
+            }
             await appState.loadStacks(boardId: bid)
         }
     }
@@ -86,6 +82,11 @@ struct BoardDetailView: View {
             Text(board.title)
                 .font(.title2.weight(.semibold))
             Spacer()
+            if appState.isLoadingStacks, !appState.stacks.isEmpty {
+                ProgressView()
+                    .controlSize(.small)
+                    .help("Refreshing lists")
+            }
             Button {
                 Task { await appState.loadStacks(boardId: board.id) }
             } label: {
@@ -146,8 +147,7 @@ struct BoardDetailView: View {
                             StackColumnView(
                                 board: board,
                                 stack: stack,
-                                onSelectCard: { selectedCard = $0 },
-                                onRefresh: { Task { await appState.loadStacks(boardId: board.id) } }
+                                onSelectCard: { selectedCard = $0 }
                             )
                             .environmentObject(appState)
                             .onDrag {
