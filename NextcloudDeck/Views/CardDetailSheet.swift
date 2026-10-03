@@ -150,7 +150,7 @@ struct CardDetailSheet: View {
                 showDeleteConfirmation = false
             }
         } message: {
-            Text("This card will be permanently deleted. This cannot be undone.")
+            Text(DeleteConfirmation.message("This card"))
         }
     }
 
