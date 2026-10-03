@@ -404,7 +404,7 @@
 				INFOPLIST_KEY_BuildGitCommit = "$(GIT_COMMIT_HASH)";
 				INFOPLIST_KEY_BuildRef = "$(BUILD_REF)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 UnicornOps. All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 UnicornOps. Licensed under the GNU GPL v3.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -440,7 +440,7 @@
 				INFOPLIST_KEY_BuildGitCommit = "$(GIT_COMMIT_HASH)";
 				INFOPLIST_KEY_BuildRef = "$(BUILD_REF)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 UnicornOps. All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 UnicornOps. Licensed under the GNU GPL v3.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
