@@ -1,6 +1,6 @@
 import Foundation
-@testable import Shuffleboard
 import XCTest
+@testable import Shuffleboard
 
 /// Card decoding and the body sent when saving a card (#53).
 final class CardModelTests: XCTestCase {
@@ -22,7 +22,8 @@ final class CardModelTests: XCTestCase {
     }
 
     func testOwnerDecodesFromString() throws {
-        let card = try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "owner": "alice"}"#)
+        let card =
+            try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "owner": "alice"}"#)
         XCTAssertEqual(card.owner, "alice")
     }
 
@@ -57,7 +58,8 @@ final class CardModelTests: XCTestCase {
     }
 
     func testUnsetDatesAreSentAsNull() throws {
-        let card = try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "owner": "a"}"#)
+        let card =
+            try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "owner": "a"}"#)
         let sent = try body(UpdateCardRequest(card: card, fallbackOwner: "me"))
         XCTAssertTrue(sent["duedate"] is NSNull)
         XCTAssertTrue(sent["done"] is NSNull)

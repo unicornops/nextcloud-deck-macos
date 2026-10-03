@@ -56,6 +56,46 @@ jobs:
           path: cpd-report.txt
           if-no-files-found: ignore
 
+  lint:
+    name: SwiftLint and SwiftFormat
+    runs-on: ubuntu-latest
+    env:
+      # Pinned so a new linter release can't start failing every PR; bump deliberately.
+      SWIFTLINT_VERSION: 0.65.1
+      SWIFTLINT_SHA256: caeed6f4a679c35539ffaf124f6c4ab4a8416917f7d8796279dc52b74026059d
+      SWIFTFORMAT_VERSION: 0.63.1
+      SWIFTFORMAT_SHA256: 9e10090e0213378c68cedb42adc2c6461916a9c8e457cf452b5585b84096c333
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install SwiftLint and SwiftFormat
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/bin"
+          mkdir -p "$bin"
+          cd "$RUNNER_TEMP"
+
+          curl -fsSL -o swiftlint.zip \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/swiftlint_linux_amd64.zip"
+          echo "${SWIFTLINT_SHA256}  swiftlint.zip" | sha256sum -c -
+          unzip -q swiftlint.zip -d swiftlint
+          install -m 755 swiftlint/swiftlint "$bin/swiftlint"
+
+          curl -fsSL -o swiftformat.zip \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat_linux.zip"
+          echo "${SWIFTFORMAT_SHA256}  swiftformat.zip" | sha256sum -c -
+          unzip -q swiftformat.zip -d swiftformat
+          install -m 755 swiftformat/swiftformat_linux "$bin/swiftformat"
+
+          echo "$bin" >> "$GITHUB_PATH"
+
+      - name: SwiftFormat
+        run: swiftformat --lint --config .swiftformat .
+
+      - name: SwiftLint
+        run: swiftlint lint --strict --config .swiftlint.yml --reporter github-actions-logging
+
   build:
     name: Build and Test
     runs-on: macos-latest

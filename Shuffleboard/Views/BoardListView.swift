@@ -125,7 +125,11 @@ struct BoardListView: View {
         }
         .confirmationDialog("Delete board?", isPresented: Binding(
             get: { pendingBoardDelete != nil },
-            set: { if !$0 { pendingBoardDelete = nil } }
+            set: {
+                if !$0 {
+                    pendingBoardDelete = nil
+                }
+            }
         )) {
             Button("Delete", role: .destructive) {
                 guard let boardId = pendingBoardDelete else { return }

@@ -220,6 +220,7 @@ final class AppState: ObservableObject {
         switch result {
         case let .success(loaded):
             stacks = loaded.sorted { ($0.order, $0.id) < ($1.order, $1.id) }
+
         case let .failure(error):
             guard !endSessionIfUnauthorized(error) else { return }
             // A cancelled load (the board view went away) is not an error worth showing.
@@ -487,8 +488,12 @@ final class AppState: ObservableObject {
             return nil
         }
     }
+}
 
-    // MARK: - Attachments
+// MARK: - Attachments
+
+@MainActor
+extension AppState {
 
     /// Fetches the full card (including attachments) from the API.
     func getFullCard(boardId: Int, stackId: Int, cardId: Int) async -> Card? {
