@@ -259,7 +259,7 @@ struct CardDetailSheet: View {
                     stackId: card.stackId,
                     cardId: card.id,
                     fileURL: url
-                ) != nil {
+                ) {
                     await loadAttachments()
                 }
             }
