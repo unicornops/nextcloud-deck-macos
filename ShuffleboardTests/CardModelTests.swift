@@ -148,4 +148,46 @@ final class CardModelTests: XCTestCase {
         XCTAssertTrue(cleared["duedate"] is NSNull, "removing the due date clears it on the server")
         XCTAssertTrue(cleared["done"] is NSNull)
     }
+
+    // MARK: - Assignments (#74)
+
+    func testAssignmentsDecodeFromParticipants() throws {
+        let card = try decodeCard("""
+        {"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false,
+         "assignedUsers": [
+           {"id": 3, "participant": {"primaryKey": "alice", "uid": "alice", "displayname": "Alice Smith"},
+            "cardId": 1, "type": 0},
+           {"id": "4", "participant": {"primaryKey": "staff", "uid": "staff", "displayname": "Staff"},
+            "cardId": 1, "type": 1}
+         ]}
+        """)
+        XCTAssertEqual(card.assignments.map(\.participant.uid), ["alice", "staff"])
+        XCTAssertEqual(card.assignments.map(\.id), [3, 4])
+        XCTAssertEqual(card.assignments.map(\.type), [0, 1])
+        XCTAssertEqual(card.assignments.first?.participant.displayName, "Alice Smith")
+    }
+
+    func testInitials() {
+        XCTAssertEqual(DeckUser(uid: "rob", displayname: "Rob Lazzurs").initials, "RL")
+        XCTAssertEqual(DeckUser(uid: "admin", displayname: "admin").initials, "A")
+        XCTAssertEqual(DeckUser(uid: "jane.doe", displayname: "").initials, "JD")
+        XCTAssertEqual(DeckUser(uid: "bob", displayname: nil).displayName, "bob")
+    }
+
+    func testAssignableUsersAreMembersOwnerAndSharedUsersOnce() throws {
+        let board = try JSONDecoder().decode(Board.self, from: Data("""
+        {"id": 1, "title": "B", "archived": false, "labels": [],
+         "owner": {"primaryKey": "rob", "uid": "rob", "displayname": "Rob"},
+         "users": [{"primaryKey": "alice", "uid": "alice", "displayname": "Alice"}],
+         "acl": [
+           {"id": 1, "participant": {"primaryKey": "bob", "uid": "bob", "displayname": "Bob"}, "type": 0,
+            "permissionEdit": true, "permissionShare": false, "permissionManage": false},
+           {"id": 2, "participant": {"primaryKey": "staff", "uid": "staff", "displayname": "Staff"}, "type": 1,
+            "permissionEdit": true, "permissionShare": false, "permissionManage": false},
+           {"id": 3, "participant": {"primaryKey": "alice", "uid": "alice", "displayname": "Alice"}, "type": 0,
+            "permissionEdit": true, "permissionShare": false, "permissionManage": false}
+         ]}
+        """.utf8))
+        XCTAssertEqual(board.assignableUsers.map(\.uid), ["alice", "bob", "rob"], "sorted, unique, no groups")
+    }
 }

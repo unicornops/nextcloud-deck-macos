@@ -113,6 +113,9 @@ struct CardDetailSheet: View {
                 Section("Due date") {
                     scheduleContent
                 }
+                Section("Assigned to") {
+                    assigneesContent
+                }
                 Section("Labels") {
                     labelsContent
                 }
@@ -128,7 +131,7 @@ struct CardDetailSheet: View {
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
         }
-        .frame(width: 440, height: 600)
+        .frame(width: 440, height: 660)
         .actionErrorBanner(appState)
         .navigationTitle("Edit Card")
         .sheet(isPresented: $showCreateLabel) {
@@ -162,6 +165,62 @@ struct CardDetailSheet: View {
             }
         } message: {
             Text(DeleteConfirmation.message("This card"))
+        }
+    }
+}
+
+// MARK: - Sections
+
+extension CardDetailSheet {
+
+    // MARK: - Assignees UI
+
+    private var cardAssignments: [CardAssignment] {
+        (currentCard ?? card).assignments
+    }
+
+    /// Board users not yet assigned to the card.
+    private var availableAssignees: [DeckUser] {
+        guard let board else { return [] }
+        let assigned = Set(
+            cardAssignments.filter { $0.type == CardAssignment.userType }.map(\.participant.uid)
+        )
+        return board.assignableUsers.filter { !assigned.contains($0.uid) }
+    }
+
+    private var assigneesContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(cardAssignments) { assignment in
+                HStack(spacing: 8) {
+                    AvatarBadge(user: assignment.participant)
+                    Text(assignment.participant.displayName)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button {
+                        let target = currentCard ?? card
+                        Task { await appState.unassign(assignment, boardId: boardId, card: target) }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .symbolRenderingMode(.hierarchical)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Unassign")
+                    .accessibilityLabel("Unassign \(assignment.participant.displayName)")
+                }
+            }
+            Menu {
+                ForEach(availableAssignees, id: \.uid) { user in
+                    Button(user.displayName) {
+                        let target = currentCard ?? card
+                        Task { await appState.assignUser(user, boardId: boardId, card: target) }
+                    }
+                }
+            } label: {
+                Text("Assign")
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .disabled(availableAssignees.isEmpty)
+            .help(availableAssignees.isEmpty ? "Everyone on this board is assigned" : "Assign someone to this card")
         }
     }
 
@@ -320,6 +379,11 @@ struct CardDetailSheet: View {
             }
         }
     }
+}
+
+// MARK: - Labels
+
+extension CardDetailSheet {
 
     // MARK: - Labels UI
 

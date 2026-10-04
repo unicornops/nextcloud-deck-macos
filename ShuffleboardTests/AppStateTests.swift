@@ -231,4 +231,24 @@ final class AppStateTests: XCTestCase {
         XCTAssertNotNil(DeckDate.parse(put.json?["done"] as? String))
         XCTAssertNil(app.actionError)
     }
+
+    // MARK: - Assignments (#74)
+
+    func testAssigningReportsErrorsInTheBanner() async throws {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.path.hasSuffix("/assignUser") {
+                return .json(#"{"status": 400, "message": "The user is not part of the board"}"#, status: 400)
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let card = try JSONDecoder().decode(Card.self, from: Data(Self.cardJSON.utf8))
+
+        await app.assignUser(DeckUser(uid: "mallory"), boardId: 1, card: card)
+
+        XCTAssertEqual(app.actionError, "The user is not part of the board")
+    }
 }

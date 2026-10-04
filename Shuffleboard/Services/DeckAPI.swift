@@ -374,6 +374,23 @@ final class DeckAPI: Sendable {
         )
     }
 
+    /// Assigns a user (type 0) or another participant type to a card.
+    func assignUser(boardId: Int, stackId: Int, cardId: Int, userId: String, type: Int = 0) async throws {
+        try await requestNoContent(
+            "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/assignUser",
+            method: "PUT",
+            body: AssignUserRequest(userId: userId, type: type)
+        )
+    }
+
+    func unassignUser(boardId: Int, stackId: Int, cardId: Int, userId: String, type: Int = 0) async throws {
+        try await requestNoContent(
+            "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/unassignUser",
+            method: "PUT",
+            body: AssignUserRequest(userId: userId, type: type)
+        )
+    }
+
     func assignLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async throws {
         try await requestNoContent(
             "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/assignLabel",
@@ -686,6 +703,11 @@ struct UpdateCardRequest: Encodable {
 private struct ReorderCardRequest: Encodable {
     let order: Int
     let stackId: Int
+}
+
+private struct AssignUserRequest: Encodable {
+    let userId: String
+    let type: Int
 }
 
 private struct LabelIdRequest: Encodable {

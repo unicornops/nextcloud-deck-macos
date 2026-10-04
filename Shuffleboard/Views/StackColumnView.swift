@@ -381,6 +381,19 @@ struct CardRowView: View {
                 }
                 .foregroundStyle(.secondary)
             }
+            if !card.assignments.isEmpty {
+                HStack(spacing: -4) {
+                    ForEach(card.assignments.prefix(3)) { assignment in
+                        AvatarBadge(user: assignment.participant, size: 20)
+                    }
+                    if card.assignments.count > 3 {
+                        Text("+\(card.assignments.count - 3)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .padding(.leading, 8)
+                    }
+                }
+            }
             if let labels = card.labels, !labels.isEmpty {
                 HStack(spacing: 4) {
                     ForEach(labels.prefix(3)) { label in
@@ -452,7 +465,37 @@ struct CardRowView: View {
         if let dueDate = card.dueDate {
             parts.append((card.isOverdue() ? "Overdue, was due " : "Due ") + Self.dueText(dueDate))
         }
+        if !card.assignments.isEmpty {
+            parts.append("Assigned to " + card.assignments.map(\.participant.displayName).joined(separator: ", "))
+        }
         return parts.joined(separator: ", ")
+    }
+}
+
+// MARK: - Avatar badge
+
+/// A user's initials in a circle, coloured consistently per user.
+struct AvatarBadge: View {
+    let user: DeckUser
+    var size: CGFloat = 22
+
+    private static let palette: [Color] = [.teal, .orange, .pink, .indigo, .green, .brown, .purple, .red]
+
+    private var color: Color {
+        // A stable hash (String.hashValue changes between launches).
+        let sum = user.uid.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0x7FFF_FFFF }
+        return Self.palette[sum % Self.palette.count]
+    }
+
+    var body: some View {
+        Text(user.initials)
+            .font(.system(size: size * 0.42, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(color, in: Circle())
+            .overlay(Circle().strokeBorder(Color(nsColor: .windowBackgroundColor), lineWidth: 1.5))
+            .help(user.displayName)
+            .accessibilityLabel(user.displayName)
     }
 }
 

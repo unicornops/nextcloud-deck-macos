@@ -127,4 +127,30 @@ struct DeckUser: Codable, Hashable {
     enum CodingKeys: String, CodingKey {
         case primaryKey, uid, displayname
     }
+
+    /// The display name, or the user id when there is none.
+    var displayName: String {
+        if let displayname, !displayname.isEmpty {
+            return displayname
+        }
+        return uid
+    }
+
+    /// Up to two initials for an avatar badge, e.g. "Rob Lazzurs" → "RL".
+    var initials: String {
+        let words = displayName.split(whereSeparator: { $0 == " " || $0 == "." || $0 == "_" || $0 == "-" })
+        let letters = words.prefix(2).compactMap(\.first).map(String.init)
+        return (letters.isEmpty ? String(displayName.prefix(1)) : letters.joined()).uppercased()
+    }
+}
+
+extension Board {
+    /// Users who can be assigned to cards on this board: its members, owner and users it is shared with.
+    var assignableUsers: [DeckUser] {
+        let shared = acl.filter { $0.type == CardAssignment.userType }.compactMap(\.participant)
+        var seen = Set<String>()
+        return (users + [owner].compactMap(\.self) + shared)
+            .filter { !$0.uid.isEmpty && seen.insert($0.uid).inserted }
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+    }
 }
