@@ -5,7 +5,7 @@ import XCTest
 // MARK: - Stub server
 
 /// A canned response from `StubURLProtocol`.
-struct StubResponse {
+struct StubResponse: Sendable {
     var status = 200
     var body = Data()
     /// Seconds to wait before answering.
@@ -23,7 +23,7 @@ struct StubResponse {
 }
 
 /// A request seen by `StubURLProtocol`.
-struct RecordedRequest {
+struct RecordedRequest: Sendable {
     let method: String
     let path: String
     let query: String?
@@ -48,10 +48,11 @@ struct RecordedRequest {
 /// reset in `reset()` (called from `setUp`) rather than being per-test.
 final class StubURLProtocol: URLProtocol {
     private static let lock = NSLock()
-    private nonisolated(unsafe) static var _handler: (RecordedRequest) -> StubResponse = { _ in .status(404) }
+    private nonisolated(unsafe) static var _handler: @Sendable (RecordedRequest) -> StubResponse = { _ in .status(404) }
     private nonisolated(unsafe) static var _requests: [RecordedRequest] = []
 
-    static var handler: (RecordedRequest) -> StubResponse {
+    /// Called on URLSession's threads, so it must be `@Sendable`: it can't touch main-actor test state.
+    static var handler: @Sendable (RecordedRequest) -> StubResponse {
         get { lock.withLock { _handler } }
         set { lock.withLock { _handler = newValue } }
     }
@@ -94,21 +95,25 @@ final class StubURLProtocol: URLProtocol {
             Self._requests.append(recorded)
             return Self._handler(recorded)
         }
-        DispatchQueue.global().asyncAfter(deadline: .now() + response.delay) { [self] in
+        // URLSession drives a protocol instance from its own threads and its `client` calls are thread-safe,
+        // so answering later from another queue is fine; the box only tells the compiler so.
+        let this = UncheckedSendable(value: self)
+        DispatchQueue.global().asyncAfter(deadline: .now() + response.delay) {
+            let stub = this.value
             if let error = response.error {
-                client?.urlProtocol(self, didFailWithError: error)
+                stub.client?.urlProtocol(stub, didFailWithError: error)
                 return
             }
-            guard let url = request.url,
+            guard let url = stub.request.url,
                   let http = HTTPURLResponse(
                       url: url,
                       statusCode: response.status,
                       httpVersion: nil,
                       headerFields: nil
                   ) else { return }
-            client?.urlProtocol(self, didReceive: http, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: response.body)
-            client?.urlProtocolDidFinishLoading(self)
+            stub.client?.urlProtocol(stub, didReceive: http, cacheStoragePolicy: .notAllowed)
+            stub.client?.urlProtocol(stub, didLoad: response.body)
+            stub.client?.urlProtocolDidFinishLoading(stub)
         }
     }
 
@@ -129,6 +134,25 @@ final class StubURLProtocol: URLProtocol {
         }
         return data
     }
+}
+
+/// Mutable state shared between a test and its stub handler, guarded by a lock.
+final class Locked<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Value
+
+    init(_ value: Value) {
+        self.value = value
+    }
+
+    func withLock<Result>(_ body: (inout Value) -> Result) -> Result {
+        lock.withLock { body(&value) }
+    }
+}
+
+/// Carries a value the compiler can't prove `Sendable` into a `@Sendable` closure.
+struct UncheckedSendable<Value>: @unchecked Sendable {
+    let value: Value
 }
 
 // MARK: - Credentials

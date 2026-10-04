@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class AppStateTests: XCTestCase {
     private var store: InMemoryCredentialStore!
-    private let boardsJSON = #"[{"id": 1, "title": "One", "archived": false}, {"id": 2, "title": "Two", "archived": false}]"#
+    private nonisolated static let boardsJSON = #"[{"id": 1, "title": "One", "archived": false}, {"id": 2, "title": "Two", "archived": false}]"#
 
     override func setUp() async throws {
         StubURLProtocol.reset()
@@ -17,13 +17,13 @@ final class AppStateTests: XCTestCase {
         StubURLProtocol.reset()
     }
 
-    private static func stacksJSON(_ ids: [Int], board: Int) -> String {
+    private nonisolated static func stacksJSON(_ ids: [Int], board: Int) -> String {
         "[" + ids.enumerated().map { index, id in
             #"{"id": \#(id), "title": "S\#(id)", "boardId": \#(board), "order": \#(index), "cards": []}"#
         }.joined(separator: ",") + "]"
     }
 
-    private static func boardId(fromStacksPath path: String) -> Int? {
+    private nonisolated static func boardId(fromStacksPath path: String) -> Int? {
         let parts = path.split(separator: "/")
         guard let index = parts.firstIndex(of: "boards"), parts.last == "stacks" else { return nil }
         return Int(parts[parts.index(after: index)])
@@ -42,7 +42,7 @@ final class AppStateTests: XCTestCase {
     func testSlowResponseForPreviousBoardDoesNotReplaceCurrentBoard() async {
         StubURLProtocol.handler = { request in
             if request.path.hasSuffix("/boards") {
-                return .json(self.boardsJSON)
+                return .json(Self.boardsJSON)
             }
             guard let board = Self.boardId(fromStacksPath: request.path) else { return .status(404) }
             return .json(Self.stacksJSON([board * 10], board: board), delay: board == 1 ? 0.5 : 0.05)
@@ -62,7 +62,7 @@ final class AppStateTests: XCTestCase {
     func testRefreshingSameBoardKeepsListsVisible() async {
         StubURLProtocol.handler = { request in
             if request.path.hasSuffix("/boards") {
-                return .json(self.boardsJSON)
+                return .json(Self.boardsJSON)
             }
             return .json(Self.stacksJSON([10, 20], board: 1), delay: 0.3)
         }
@@ -79,7 +79,7 @@ final class AppStateTests: XCTestCase {
 
     func testUnauthorizedSignsOutAndClearsCredentials() async {
         StubURLProtocol.handler = { request in
-            request.path.hasSuffix("/boards") ? .json(self.boardsJSON) : .status(401)
+            request.path.hasSuffix("/boards") ? .json(Self.boardsJSON) : .status(401)
         }
         let app = await makeSignedInApp()
 
@@ -95,7 +95,7 @@ final class AppStateTests: XCTestCase {
     func testForbiddenShowsBannerAndStaysSignedIn() async {
         StubURLProtocol.handler = { request in
             if request.path.hasSuffix("/boards") {
-                return .json(self.boardsJSON)
+                return .json(Self.boardsJSON)
             }
             if request.method == "DELETE" {
                 return .status(403)
@@ -115,7 +115,7 @@ final class AppStateTests: XCTestCase {
     func testSignOutRevokesAppPassword() async {
         StubURLProtocol.handler = { request in
             if request.path.hasSuffix("/boards") {
-                return .json(self.boardsJSON)
+                return .json(Self.boardsJSON)
             }
             return .json(Self.stacksJSON([10], board: 1))
         }
@@ -134,7 +134,7 @@ final class AppStateTests: XCTestCase {
                 return StubResponse(error: URLError(.notConnectedToInternet))
             }
             if request.path.hasSuffix("/boards") {
-                return .json(self.boardsJSON)
+                return .json(Self.boardsJSON)
             }
             return .json(Self.stacksJSON([10], board: 1))
         }
@@ -150,22 +150,21 @@ final class AppStateTests: XCTestCase {
     // MARK: - List reorder (#60)
 
     func testFailedReorderStopsAndReloads() async {
-        let lock = NSLock()
-        nonisolated(unsafe) var serverOrder = [10, 20, 30, 40]
+        let serverOrder = Locked([10, 20, 30, 40])
         StubURLProtocol.handler = { request in
             if request.path.hasSuffix("/boards") {
-                return .json(self.boardsJSON)
+                return .json(Self.boardsJSON)
             }
             if request.method == "PUT" {
                 guard let id = Int(request.path.split(separator: "/").last ?? ""), id != 10 else { return .status(500) }
                 let order = request.json?["order"] as? Int ?? 0
-                lock.withLock {
-                    serverOrder.removeAll { $0 == id }
-                    serverOrder.insert(id, at: min(order, serverOrder.count))
+                serverOrder.withLock { ids in
+                    ids.removeAll { $0 == id }
+                    ids.insert(id, at: min(order, ids.count))
                 }
                 return .json(#"{"id": \#(id), "title": "S", "boardId": 1, "order": \#(order)}"#)
             }
-            return .json(Self.stacksJSON(lock.withLock { serverOrder }, board: 1))
+            return .json(Self.stacksJSON(serverOrder.withLock { $0 }, board: 1))
         }
         let app = await makeSignedInApp()
         XCTAssertEqual(app.stacks.map(\.id), [10, 20, 30, 40])
@@ -176,6 +175,6 @@ final class AppStateTests: XCTestCase {
         let puts = StubURLProtocol.requests.filter { $0.method == "PUT" }.map { $0.path.split(separator: "/").last }
         XCTAssertEqual(puts, ["40", "10"], "stops after the failed update")
         XCTAssertNotNil(app.actionError)
-        XCTAssertEqual(app.stacks.map(\.id), lock.withLock { serverOrder }, "the board shows what the server saved")
+        XCTAssertEqual(app.stacks.map(\.id), serverOrder.withLock { $0 }, "the board shows what the server saved")
     }
 }

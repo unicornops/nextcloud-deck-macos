@@ -250,7 +250,7 @@ struct StackColumnView: View {
     /// found or the payload cannot be interpreted as a card.
     private func loadDraggedCard(
         from providers: [NSItemProvider],
-        completion: @escaping (DraggedCard) -> Void
+        completion: @escaping @Sendable (DraggedCard) -> Void
     )
         -> Bool {
         guard let provider = providers.first(where: { provider in

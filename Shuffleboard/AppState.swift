@@ -24,7 +24,7 @@ final class AppState: ObservableObject {
     /// The URL session for all server requests; tests pass one that talks to a stub server.
     private let session: URLSession
     /// Opens the browser for sign-in.
-    private let openURL: (URL) -> Void
+    private let openURL: @MainActor @Sendable (URL) -> Void
     /// The board `stacks` currently belongs to.
     private var stacksBoardId: Int?
     /// Incremented by every `loadStacks` call; a response is only applied if no newer load has started.
@@ -49,7 +49,7 @@ final class AppState: ObservableObject {
     init(
         credentialStore: CredentialStore = KeychainCredentialStore(),
         session: URLSession = .shared,
-        openURL: @escaping (URL) -> Void = { _ = NSWorkspace.shared.open($0) }
+        openURL: @escaping @MainActor @Sendable (URL) -> Void = { url in _ = NSWorkspace.shared.open(url) }
     ) {
         self.credentialStore = credentialStore
         self.session = session
