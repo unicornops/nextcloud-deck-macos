@@ -11,6 +11,9 @@ struct CardDetailSheet: View {
 
     @State private var title: String
     @State private var description: String
+    @State private var hasDueDate: Bool
+    @State private var dueDate: Date
+    @State private var isDone: Bool
     @State private var isSaving = false
     @State private var showDeleteConfirmation = false
     @State private var showCreateLabel = false
@@ -59,6 +62,9 @@ struct CardDetailSheet: View {
         self.onDismiss = onDismiss
         _title = State(initialValue: card.title)
         _description = State(initialValue: card.description ?? "")
+        _hasDueDate = State(initialValue: card.dueDate != nil)
+        _dueDate = State(initialValue: card.dueDate ?? Self.defaultDueDate())
+        _isDone = State(initialValue: card.isDone)
         _attachments = State(initialValue: card.attachments ?? [])
     }
 
@@ -104,6 +110,9 @@ struct CardDetailSheet: View {
                         .frame(minHeight: 120)
                         .font(.body)
                 }
+                Section("Due date") {
+                    scheduleContent
+                }
                 Section("Labels") {
                     labelsContent
                 }
@@ -119,7 +128,7 @@ struct CardDetailSheet: View {
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
         }
-        .frame(width: 440, height: 520)
+        .frame(width: 440, height: 600)
         .actionErrorBanner(appState)
         .navigationTitle("Edit Card")
         .sheet(isPresented: $showCreateLabel) {
@@ -154,6 +163,25 @@ struct CardDetailSheet: View {
         } message: {
             Text(DeleteConfirmation.message("This card"))
         }
+    }
+
+    // MARK: - Due date UI
+
+    private var scheduleContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle("Has a due date", isOn: $hasDueDate)
+            if hasDueDate {
+                DatePicker("Due", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
+            }
+            Toggle("Done", isOn: $isDone)
+        }
+    }
+
+    /// Tomorrow at 9:00, the starting point when adding a due date.
+    private static func defaultDueDate(now: Date = Date()) -> Date {
+        let calendar = Calendar.current
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+        return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) ?? tomorrow
     }
 
     // MARK: - Attachments UI
@@ -388,8 +416,12 @@ struct CardDetailSheet: View {
                 boardId: boardId,
                 stackId: card.stackId,
                 card: currentCard ?? card,
-                title: title,
-                description: description
+                edits: CardEdits(
+                    title: title,
+                    description: description,
+                    dueDate: hasDueDate ? dueDate : nil,
+                    isDone: isDone
+                )
             )
             await MainActor.run {
                 isSaving = false

@@ -177,4 +177,58 @@ final class AppStateTests: XCTestCase {
         XCTAssertNotNil(app.actionError)
         XCTAssertEqual(app.stacks.map(\.id), serverOrder.withLock { $0 }, "the board shows what the server saved")
     }
+
+    // MARK: - Due dates and done state (#73)
+
+    private nonisolated static let cardJSON = """
+    {"id": 5, "title": "Card", "stackId": 10, "order": 0, "archived": false, "owner": "rob"}
+    """
+
+    func testSavingTheSheetSendsDueDateAndDone() async throws {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.method == "PUT" {
+                return .json(Self.cardJSON)
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let card = try JSONDecoder().decode(Card.self, from: Data(Self.cardJSON.utf8))
+        let due = try XCTUnwrap(DeckDate.parse("2026-10-10T12:00:00+00:00"))
+
+        let saved = await app.updateCard(
+            boardId: 1,
+            stackId: 10,
+            card: card,
+            edits: CardEdits(title: "Card", description: "", dueDate: due, isDone: true)
+        )
+
+        XCTAssertTrue(saved)
+        let put = try XCTUnwrap(StubURLProtocol.requests.first { $0.method == "PUT" })
+        XCTAssertEqual(put.path, "/index.php/apps/deck/api/v1.0/boards/1/stacks/10/cards/5")
+        XCTAssertEqual(DeckDate.parse(put.json?["duedate"] as? String), due)
+        XCTAssertNotNil(DeckDate.parse(put.json?["done"] as? String))
+    }
+
+    func testMarkingDoneFromTheBoard() async throws {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.method == "PUT" {
+                return .json(Self.cardJSON)
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let card = try JSONDecoder().decode(Card.self, from: Data(Self.cardJSON.utf8))
+
+        await app.setCardDone(boardId: 1, card: card, done: true)
+
+        let put = try XCTUnwrap(StubURLProtocol.requests.first { $0.method == "PUT" })
+        XCTAssertNotNil(DeckDate.parse(put.json?["done"] as? String))
+        XCTAssertNil(app.actionError)
+    }
 }

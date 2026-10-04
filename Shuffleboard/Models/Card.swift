@@ -144,3 +144,55 @@ struct AttachmentInfo: Codable {
         case fileExtension = "extension"
     }
 }
+
+// MARK: - Dates
+
+/// Dates as the Deck API sends and accepts them: ISO-8601, e.g. `2026-10-10T12:00:00+00:00`.
+enum DeckDate {
+    /// Parses a Deck date, with or without fractional seconds. Returns nil for nil, empty or unparseable values.
+    static func parse(_ string: String?) -> Date? {
+        guard let string, !string.isEmpty else { return nil }
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: string) {
+            return date
+        }
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: string)
+    }
+
+    /// Formats a date for the Deck API, in UTC.
+    static func string(from date: Date) -> String {
+        ISO8601DateFormatter().string(from: date)
+    }
+}
+
+extension Card {
+    /// The due date, if the card has one.
+    var dueDate: Date? {
+        DeckDate.parse(duedate)
+    }
+
+    /// Whether the card is marked done.
+    var isDone: Bool {
+        DeckDate.parse(done) != nil
+    }
+
+    /// A card is overdue when its due date has passed and it isn't done.
+    func isOverdue(at now: Date = Date()) -> Bool {
+        guard let dueDate, !isDone else { return false }
+        return dueDate < now
+    }
+
+    /// A copy with the due date set (or cleared with nil) and the done state set. Marking an already-done card
+    /// done keeps its original done date; marking a card done stamps it with `now`.
+    func withSchedule(dueDate: Date?, isDone: Bool, now: Date = Date()) -> Card {
+        var card = self
+        card.duedate = dueDate.map(DeckDate.string(from:))
+        if !isDone {
+            card.done = nil
+        } else if !self.isDone {
+            card.done = DeckDate.string(from: now)
+        }
+        return card
+    }
+}

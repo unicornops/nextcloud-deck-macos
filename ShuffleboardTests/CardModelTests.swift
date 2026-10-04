@@ -71,4 +71,81 @@ final class CardModelTests: XCTestCase {
         let sent = try body(UpdateCardRequest(card: card, fallbackOwner: "me"))
         XCTAssertEqual(sent["owner"] as? String, "me")
     }
+
+    // MARK: - Due dates and done state (#73)
+
+    func testDeckDateParsesDeckFormats() throws {
+        let plain = try XCTUnwrap(DeckDate.parse("2026-10-10T12:00:00+00:00"))
+        let fractional = try XCTUnwrap(DeckDate.parse("2026-10-10T12:00:00.250Z"))
+        XCTAssertEqual(fractional.timeIntervalSince(plain), 0.25, accuracy: 0.001)
+        XCTAssertNil(DeckDate.parse(""))
+        XCTAssertNil(DeckDate.parse(nil))
+        XCTAssertNil(DeckDate.parse("not a date"))
+    }
+
+    func testDeckDateRoundTrips() {
+        let date = Date(timeIntervalSince1970: 1_791_201_600)
+        XCTAssertEqual(DeckDate.parse(DeckDate.string(from: date)), date)
+    }
+
+    func testOverdueAndDone() throws {
+        let now = try XCTUnwrap(DeckDate.parse("2026-10-04T12:00:00+00:00"))
+        let past =
+            try decodeCard(
+                #"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "duedate": "2026-10-01T09:00:00+00:00"}"#
+            )
+        XCTAssertTrue(past.isOverdue(at: now))
+        XCTAssertFalse(past.isDone)
+
+        let pastDone = try decodeCard("""
+        {"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false,
+         "duedate": "2026-10-01T09:00:00+00:00", "done": "2026-10-02T08:00:00+00:00"}
+        """)
+        XCTAssertTrue(pastDone.isDone)
+        XCTAssertFalse(pastDone.isOverdue(at: now), "a done card is never overdue")
+
+        let future =
+            try decodeCard(
+                #"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "duedate": "2026-11-01T09:00:00+00:00"}"#
+            )
+        XCTAssertFalse(future.isOverdue(at: now))
+        let undated = try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false}"#)
+        XCTAssertNil(undated.dueDate)
+        XCTAssertFalse(undated.isOverdue(at: now))
+    }
+
+    func testMarkingDoneStampsNowButKeepsAnExistingDoneDate() throws {
+        let now = try XCTUnwrap(DeckDate.parse("2026-10-04T12:00:00+00:00"))
+        let open = try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false}"#)
+        XCTAssertEqual(DeckDate.parse(open.withSchedule(dueDate: nil, isDone: true, now: now).done), now)
+
+        let done =
+            try decodeCard(
+                #"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "done": "2026-10-02T08:00:00+00:00"}"#
+            )
+        XCTAssertEqual(done.withSchedule(dueDate: nil, isDone: true, now: now).done, "2026-10-02T08:00:00+00:00")
+        XCTAssertNil(done.withSchedule(dueDate: nil, isDone: false, now: now).done)
+    }
+
+    func testScheduleIsSentInTheUpdateBody() throws {
+        let due = try XCTUnwrap(DeckDate.parse("2026-10-10T12:00:00+00:00"))
+        let card =
+            try decodeCard(
+                #"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "owner": "a", "duedate": "2026-01-01T00:00:00+00:00"}"#
+            )
+
+        let scheduled = try body(UpdateCardRequest(
+            card: card.withSchedule(dueDate: due, isDone: true),
+            fallbackOwner: "me"
+        ))
+        XCTAssertEqual(DeckDate.parse(scheduled["duedate"] as? String), due)
+        XCTAssertNotNil(DeckDate.parse(scheduled["done"] as? String))
+
+        let cleared = try body(UpdateCardRequest(
+            card: card.withSchedule(dueDate: nil, isDone: false),
+            fallbackOwner: "me"
+        ))
+        XCTAssertTrue(cleared["duedate"] is NSNull, "removing the due date clears it on the server")
+        XCTAssertTrue(cleared["done"] is NSNull)
+    }
 }

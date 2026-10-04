@@ -135,6 +135,10 @@ struct StackColumnView: View {
                     CardRowView(
                         card: currentCards[index],
                         onDelete: { pendingCardDelete = currentCards[index] },
+                        onToggleDone: {
+                            let card = currentCards[index]
+                            Task { await appState.setCardDone(boardId: board.id, card: card, done: !card.isDone) }
+                        },
                         action: { onSelectCard(currentCards[index]) }
                     )
                     .padding(.horizontal, 10)
@@ -337,6 +341,7 @@ struct StackColumnView: View {
 struct CardRowView: View {
     let card: Card
     var onDelete: (() -> Void)?
+    var onToggleDone: (() -> Void)?
     var action: () -> Void
     @State private var isHovering = false
 
@@ -346,18 +351,26 @@ struct CardRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(card.title)
-                .font(.system(.body, design: .default))
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-            if let due = card.duedate, !due.isEmpty {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if card.isDone {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+                Text(card.title)
+                    .font(.system(.body, design: .default))
+                    .foregroundStyle(card.isDone ? .secondary : .primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            if let dueDate = card.dueDate {
+                let overdue = card.isOverdue()
                 HStack(spacing: 4) {
-                    Image(systemName: "calendar")
+                    Image(systemName: overdue ? "exclamationmark.circle" : "calendar")
                         .font(.caption2)
-                    Text(formatDueDate(due))
+                    Text(Self.dueText(dueDate))
                         .font(.caption2)
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
             }
             if let count = card.attachmentCount, count > 0 {
                 HStack(spacing: 4) {
@@ -408,10 +421,15 @@ struct CardRowView: View {
                 (hovering ? NSCursor.pointingHand : NSCursor.arrow).set()
             }
         }
-        .accessibilityLabel(card.title)
+        .accessibilityLabel(accessibilityDescription)
         .accessibilityHint("Opens card details")
         .accessibilityAddTraits(.isButton)
         .contextMenu {
+            if let onToggleDone {
+                Button(card.isDone ? "Mark as Not Done" : "Mark as Done") {
+                    onToggleDone()
+                }
+            }
             if let onDelete {
                 Button("Delete card", role: .destructive) {
                     onDelete()
@@ -420,15 +438,21 @@ struct CardRowView: View {
         }
     }
 
-    private func formatDueDate(_ iso: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: iso) ?? ISO8601DateFormatter().date(from: iso) {
-            let display = DateFormatter()
-            display.dateStyle = .short
-            return display.string(from: date)
+    /// "Oct 10, 12:00"-style due date for the card row.
+    private static func dueText(_ date: Date) -> String {
+        date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+    }
+
+    /// What VoiceOver reads for the row: the title plus done/overdue/due state.
+    private var accessibilityDescription: String {
+        var parts = [card.title]
+        if card.isDone {
+            parts.append("Done")
         }
-        return iso
+        if let dueDate = card.dueDate {
+            parts.append((card.isOverdue() ? "Overdue, was due " : "Due ") + Self.dueText(dueDate))
+        }
+        return parts.joined(separator: ", ")
     }
 }
 

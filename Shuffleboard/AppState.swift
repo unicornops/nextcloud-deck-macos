@@ -392,13 +392,63 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Saves a new title and description for `card`, keeping its other fields as they are.
+    func assignLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.assignLabel(boardId: boardId, stackId: stackId, cardId: cardId, labelId: labelId)
+            await loadStacks(boardId: boardId)
+        } catch {
+            report(error)
+        }
+    }
+
+    func removeLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.removeLabel(boardId: boardId, stackId: stackId, cardId: cardId, labelId: labelId)
+            await loadStacks(boardId: boardId)
+        } catch {
+            report(error)
+        }
+    }
+
+    /// Creates a new label on the board and refreshes board/stacks. Returns the new label id if successful.
+    func createLabel(boardId: Int, title: String, color: String) async -> Int? {
+        guard let api = deckAPI else { return nil }
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        do {
+            let label = try await api.createLabel(boardId: boardId, title: trimmed, color: color)
+            // Reloads the board's labels and, for the selected board, its lists.
+            await loadBoards()
+            return label.id
+        } catch {
+            report(error)
+            return nil
+        }
+    }
+}
+
+// MARK: - Cards
+
+/// What the card sheet edits.
+struct CardEdits {
+    var title: String
+    var description: String
+    /// nil removes the due date.
+    var dueDate: Date?
+    var isDone: Bool
+}
+
+@MainActor
+extension AppState {
+    /// Saves the card sheet's edits to `card`, keeping its other fields as they are.
     /// Returns `true` if the card was saved, `false` otherwise (and sets `errorMessage`).
-    func updateCard(boardId: Int, stackId: Int, card: Card, title: String, description: String) async -> Bool {
+    func updateCard(boardId: Int, stackId: Int, card: Card, edits: CardEdits) async -> Bool {
         guard let api = deckAPI else { return false }
-        var updated = card
-        updated.title = title
-        updated.description = description
+        var updated = card.withSchedule(dueDate: edits.dueDate, isDone: edits.isDone)
+        updated.title = edits.title
+        updated.description = edits.description
         do {
             _ = try await api.updateCard(boardId: boardId, stackId: stackId, card: updated)
             await loadStacks(boardId: boardId)
@@ -407,6 +457,18 @@ final class AppState: ObservableObject {
             guard !endSessionIfUnauthorized(error) else { return false }
             errorMessage = error.localizedDescription
             return false
+        }
+    }
+
+    /// Marks a card done or not done from the board (errors go to the banner).
+    func setCardDone(boardId: Int, card: Card, done: Bool) async {
+        guard let api = deckAPI, card.isDone != done else { return }
+        do {
+            let updated = card.withSchedule(dueDate: card.dueDate, isDone: done)
+            _ = try await api.updateCard(boardId: boardId, stackId: card.stackId, card: updated)
+            await loadStacks(boardId: boardId)
+        } catch {
+            report(error)
         }
     }
 
@@ -451,42 +513,6 @@ final class AppState: ObservableObject {
             toStackId: toStackId,
             order: order
         )
-    }
-
-    func assignLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async {
-        guard let api = deckAPI else { return }
-        do {
-            try await api.assignLabel(boardId: boardId, stackId: stackId, cardId: cardId, labelId: labelId)
-            await loadStacks(boardId: boardId)
-        } catch {
-            report(error)
-        }
-    }
-
-    func removeLabel(boardId: Int, stackId: Int, cardId: Int, labelId: Int) async {
-        guard let api = deckAPI else { return }
-        do {
-            try await api.removeLabel(boardId: boardId, stackId: stackId, cardId: cardId, labelId: labelId)
-            await loadStacks(boardId: boardId)
-        } catch {
-            report(error)
-        }
-    }
-
-    /// Creates a new label on the board and refreshes board/stacks. Returns the new label id if successful.
-    func createLabel(boardId: Int, title: String, color: String) async -> Int? {
-        guard let api = deckAPI else { return nil }
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        do {
-            let label = try await api.createLabel(boardId: boardId, title: trimmed, color: color)
-            // Reloads the board's labels and, for the selected board, its lists.
-            await loadBoards()
-            return label.id
-        } catch {
-            report(error)
-            return nil
-        }
     }
 }
 
