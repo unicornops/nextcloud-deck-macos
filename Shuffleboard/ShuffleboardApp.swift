@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct ShuffleboardApp: App {
     @StateObject private var appState = AppState()
+    @StateObject private var updater = SoftwareUpdater()
 
     var body: some Scene {
         WindowGroup {
@@ -22,6 +23,7 @@ struct ShuffleboardApp: App {
                 Button("About Shuffleboard") {
                     appState.showingAbout = true
                 }
+                CheckForUpdatesButton(updater: updater)
             }
             CommandGroup(replacing: .help) {
                 Button("Deck API Reference") {

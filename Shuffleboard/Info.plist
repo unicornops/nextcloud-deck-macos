@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Merged with the keys Xcode generates (GENERATE_INFOPLIST_FILE = YES). -->
+	<!-- Sparkle: update feed attached to the latest GitHub release (drafts and pre-releases excluded). -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/unicornops/shuffleboard/releases/latest/download/appcast.xml</string>
+	<!-- Sparkle: EdDSA public key; updates must be signed with the matching private key. -->
+	<key>SUPublicEDKey</key>
+	<string>lRGJ6FPOWL1OLj+9By6ZbaPEA6LxuDw9BJGy2jpVu+I=</string>
+	<!-- Sparkle: install updates through the installer launcher XPC service (required when sandboxed). -->
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+</dict>
+</plist>

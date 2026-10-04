@@ -25,6 +25,7 @@ Your boards live on your Nextcloud server, so nothing is lost. The old app's Key
 - **Sign in** with your Nextcloud server URL: the app opens your browser to sign in (including two-factor authentication) using [Nextcloud Login Flow v2](https://docs.nextcloud.com/server/latest/developer_manual/client_apis/LoginFlow/index.html), receives an app password and stores it securely in the system Keychain. Signing out revokes the app password.
 - **Boards** listed in the sidebar; switch between them to focus on one board at a time.
 - **Kanban board view**: stacks as columns, cards in each column. Create lists (stacks) and cards, open cards to edit title and description.
+- **Automatic updates** with [Sparkle](https://sparkle-project.org): Shuffleboard checks for new releases and installs them, or use **Shuffleboard → Check for Updates…**. Every update is verified against the app's EdDSA public key.
 - Built with **SwiftUI** and follows current macOS design (toolbars, sidebar, materials).
 
 ## Requirements
@@ -130,6 +131,8 @@ On each published GitHub release, the **Build and Attach Release Assets** workfl
 
 - **Icon**: The workflow runs `./generate-appicon.sh` (using `librsvg` on the runner) so the built app and DMG use the icon from `icon_source.svg`.
 - **Signing and notarization**: The workflow signs and notarizes the app by default. Configure these repository secrets for the release job to succeed: `APPLE_CERTIFICATE_BASE64`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID`, `APPLE_DEVELOPER_ID`, `APPLE_APP_PASSWORD`.
+- **Updates**: the workflow signs the ZIP with the Sparkle EdDSA private key (repository secret `SPARKLE_ED_PRIVATE_KEY`, passed to Sparkle's `sign_update` on stdin) and attaches `appcast.xml` to the release. Installed copies check `releases/latest/download/appcast.xml` (`SUFeedURL` in `Shuffleboard/Info.plist`, next to the public key `SUPublicEDKey`). Losing the private key means existing installs can't be updated automatically, so keep a copy in a secret store.
+- **Dry runs**: run the workflow manually with `dry_run` checked to build, sign and notarize the selected branch without uploading anything.
 
 ## API
 

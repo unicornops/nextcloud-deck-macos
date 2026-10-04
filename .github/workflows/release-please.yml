@@ -10,6 +10,11 @@ on:
         description: "Release tag to build (e.g., v1.2.3) - skips release-please and runs build only"
         required: true
         type: string
+      dry_run:
+        description: "Build, sign and notarize from the selected branch without uploading anything (for testing release changes)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -60,7 +65,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ needs.release-please.outputs.tag_name || inputs.tag_name }}
+          # A dry run builds the branch it was started from; otherwise the release tag.
+          ref: ${{ inputs.dry_run && github.ref || needs.release-please.outputs.tag_name || inputs.tag_name }}
 
       - name: Set version
         id: version
@@ -202,6 +208,24 @@ jobs:
           fi
           echo "✓ App bundle verification successful"
 
+      # Sparkle's helpers (XPC services, Autoupdate, Updater.app) must carry our Developer ID signature with the
+      # hardened runtime and a timestamp for notarization. Sign inside-out, then re-sign the framework and the app,
+      # keeping the app's entitlements. See https://sparkle-project.org/documentation/sandboxing/
+      - name: Sign Sparkle for notarization
+        run: |
+          set -euo pipefail
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          APP_PATH="${{ steps.find-app.outputs.app_path }}"
+          FW="$APP_PATH/Contents/Frameworks/Sparkle.framework"
+          sign() { codesign -f -s "$SIGNING_IDENTITY" --keychain "$KEYCHAIN_NAME" --options runtime --timestamp "$@"; }
+          sign "$FW/Versions/B/XPCServices/Installer.xpc"
+          sign --preserve-metadata=entitlements "$FW/Versions/B/XPCServices/Downloader.xpc"
+          sign "$FW/Versions/B/Autoupdate"
+          sign "$FW/Versions/B/Updater.app"
+          sign "$FW"
+          sign --preserve-metadata=entitlements,requirements,flags "$APP_PATH"
+          echo "✅ Sparkle signed"
+
       - name: Verify code signature
         run: |
           APP_PATH="${{ steps.find-app.outputs.app_path }}"
@@ -287,6 +311,55 @@ jobs:
 
           echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
 
+      # The appcast at releases/latest/download/appcast.xml is what installed copies check (SUFeedURL).
+      - name: Generate Sparkle appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          SPARKLE_VERSION: 2.10.0
+          SPARKLE_SHA256: c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c
+        run: |
+          set -euo pipefail
+          if [ -z "$SPARKLE_ED_PRIVATE_KEY" ]; then
+            echo "Error: SPARKLE_ED_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          curl -fsSL -o sparkle.tar.xz \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          echo "${SPARKLE_SHA256}  sparkle.tar.xz" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/sparkle"
+          tar -xJf sparkle.tar.xz -C "$RUNNER_TEMP/sparkle" ./bin/sign_update
+          rm sparkle.tar.xz
+
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          BUILD="${{ steps.app-info.outputs.bundle_build }}"
+          ZIP_NAME="${{ steps.create-zip.outputs.zip_name }}"
+          # The key goes in on stdin and is never written to disk.
+          SIGNATURE=$(printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$RUNNER_TEMP/sparkle/bin/sign_update" --ed-key-file - "$ZIP_NAME")
+          REPO_URL="https://github.com/${{ github.repository }}"
+          PUB_DATE=$(LC_ALL=C date -u "+%a, %d %b %Y %H:%M:%S +0000")
+
+          cat > appcast.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Shuffleboard</title>
+              <link>${REPO_URL}</link>
+              <item>
+                <title>Shuffleboard ${VERSION}</title>
+                <pubDate>${PUB_DATE}</pubDate>
+                <sparkle:version>${BUILD}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                <sparkle:releaseNotesLink>${REPO_URL}/releases/tag/${TAG}</sparkle:releaseNotesLink>
+                <enclosure url="${REPO_URL}/releases/download/${TAG}/${ZIP_NAME}" ${SIGNATURE} type="application/octet-stream"/>
+              </item>
+            </channel>
+          </rss>
+          EOF
+          xmllint --noout appcast.xml
+          cat appcast.xml
+
       - name: Calculate checksums
         run: |
           DMG_NAME="${{ steps.create-dmg.outputs.dmg_name }}"
@@ -303,6 +376,7 @@ jobs:
           echo "Certificate cleanup complete"
 
       - name: Upload release assets
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -310,7 +384,7 @@ jobs:
           DMG_NAME="${{ steps.create-dmg.outputs.dmg_name }}"
           ZIP_NAME="${{ steps.create-zip.outputs.zip_name }}"
 
-          gh release upload "$TAG" "$DMG_NAME" "$ZIP_NAME" checksums.txt --clobber
+          gh release upload "$TAG" "$DMG_NAME" "$ZIP_NAME" checksums.txt appcast.xml --clobber
 
       - name: Release summary
         run: |

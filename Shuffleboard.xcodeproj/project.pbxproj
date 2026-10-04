@@ -36,6 +36,8 @@
 		B10000000000000000000003 /* DeckAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* DeckAPITests.swift */; };
 		B10000000000000000000004 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000004 /* AppStateTests.swift */; };
 		B10000000000000000000005 /* LoginFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* LoginFlowTests.swift */; };
+		C10000000000000000000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = C30000000000000000000001 /* Sparkle */; };
+		C10000000000000000000002 /* SoftwareUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40000000000000000000002 /* SoftwareUpdater.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +83,8 @@
 		B20000000000000000000003 /* DeckAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckAPITests.swift; sourceTree = "<group>"; };
 		B20000000000000000000004 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000005 /* LoginFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginFlowTests.swift; sourceTree = "<group>"; };
+		C40000000000000000000002 /* SoftwareUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoftwareUpdater.swift; sourceTree = "<group>"; };
+		C40000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +92,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C10000000000000000000001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,6 +127,7 @@
 				A40000000000000000000007 /* Helpers */,
 				A20000000000000000000020 /* Assets.xcassets */,
 				A20000000000000000000021 /* Shuffleboard.entitlements */,
+				C40000000000000000000003 /* Info.plist */,
 			);
 			path = Shuffleboard;
 			sourceTree = "<group>";
@@ -179,6 +185,7 @@
 				A20000000000000000000015 /* CreateSheetFooter.swift */,
 				A20000000000000000000030 /* ErrorBanner.swift */,
 				A20000000000000000000031 /* DeleteConfirmation.swift */,
+				C40000000000000000000002 /* SoftwareUpdater.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -212,6 +219,9 @@
 			dependencies = (
 			);
 			name = Shuffleboard;
+			packageProductDependencies = (
+				C30000000000000000000001 /* Sparkle */,
+			);
 			productName = Shuffleboard;
 			productReference = A20000000000000000000000 /* Shuffleboard.app */;
 			productType = "com.apple.product-type.application";
@@ -258,6 +268,9 @@
 				Base,
 			);
 			mainGroup = A40000000000000000000001;
+			packageReferences = (
+				C20000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = A40000000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -336,6 +349,7 @@
 				A10000000000000000000015 /* CreateSheetFooter.swift in Sources */,
 				A10000000000000000000030 /* ErrorBanner.swift in Sources */,
 				A10000000000000000000031 /* DeleteConfirmation.swift in Sources */,
+				C10000000000000000000002 /* SoftwareUpdater.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -493,6 +507,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				GIT_COMMIT_HASH = unknown;
+				INFOPLIST_FILE = Shuffleboard/Info.plist;
 				INFOPLIST_KEY_BuildDateUTC = "$(BUILD_DATE_UTC)";
 				INFOPLIST_KEY_BuildGitCommit = "$(GIT_COMMIT_HASH)";
 				INFOPLIST_KEY_BuildRef = "$(BUILD_REF)";
@@ -529,6 +544,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				GIT_COMMIT_HASH = unknown;
+				INFOPLIST_FILE = Shuffleboard/Info.plist;
 				INFOPLIST_KEY_BuildDateUTC = "$(BUILD_DATE_UTC)";
 				INFOPLIST_KEY_BuildGitCommit = "$(GIT_COMMIT_HASH)";
 				INFOPLIST_KEY_BuildRef = "$(BUILD_REF)";
@@ -611,6 +627,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C20000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C30000000000000000000001 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C20000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A70000000000000000000001 /* Project object */;
 }
