@@ -460,6 +460,34 @@ extension AppState {
         }
     }
 
+    /// Assigns `user` to the card (errors go to the banner).
+    func assignUser(_ user: DeckUser, boardId: Int, card: Card) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.assignUser(boardId: boardId, stackId: card.stackId, cardId: card.id, userId: user.uid)
+            await loadStacks(boardId: boardId)
+        } catch {
+            report(error)
+        }
+    }
+
+    /// Removes an assignment from the card (errors go to the banner).
+    func unassign(_ assignment: CardAssignment, boardId: Int, card: Card) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.unassignUser(
+                boardId: boardId,
+                stackId: card.stackId,
+                cardId: card.id,
+                userId: assignment.participant.uid,
+                type: assignment.type
+            )
+            await loadStacks(boardId: boardId)
+        } catch {
+            report(error)
+        }
+    }
+
     /// Marks a card done or not done from the board (errors go to the banner).
     func setCardDone(boardId: Int, card: Card, done: Bool) async {
         guard let api = deckAPI, card.isDone != done else { return }

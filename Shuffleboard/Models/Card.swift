@@ -9,7 +9,7 @@ struct Card: Identifiable, Codable {
     var lastModified: Int?
     var createdAt: Int?
     var labels: [DeckLabel]?
-    var assignedUsers: [DeckUser]?
+    var assignedUsers: [CardAssignment]?
     var attachments: [Attachment]?
     var attachmentCount: Int?
     var owner: String?
@@ -34,7 +34,7 @@ struct Card: Identifiable, Codable {
         self.lastModified = (try? c.decodeIntOrStringIfPresent(forKey: .lastModified))
         self.createdAt = (try? c.decodeIntOrStringIfPresent(forKey: .createdAt))
         self.labels = (try? c.decodeIfPresent([DeckLabel].self, forKey: .labels))
-        self.assignedUsers = (try? c.decodeIfPresent([DeckUser].self, forKey: .assignedUsers))
+        self.assignedUsers = (try? c.decodeIfPresent([CardAssignment].self, forKey: .assignedUsers))
         self.attachments = (try? c.decodeIfPresent([Attachment].self, forKey: .attachments))
         self.attachmentCount = (try? c.decodeIntOrStringIfPresent(forKey: .attachmentCount))
         // Deck serialises the owner as a user object; older responses used the plain user id.
@@ -194,5 +194,41 @@ extension Card {
             card.done = DeckDate.string(from: now)
         }
         return card
+    }
+}
+
+// MARK: - Assignments
+
+/// A user (or group) assigned to a card. Deck wraps the user in `participant`.
+struct CardAssignment: Codable, Hashable, Identifiable {
+    let id: Int
+    let participant: DeckUser
+    /// 0 for a user; other values are groups, circles or federated users.
+    let type: Int
+
+    init(id: Int, participant: DeckUser, type: Int = Self.userType) {
+        self.id = id
+        self.participant = participant
+        self.type = type
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decodeIntOrString(forKey: .id)
+        self.participant = try c.decode(DeckUser.self, forKey: .participant)
+        self.type = (try? c.decodeIntOrStringIfPresent(forKey: .type)) ?? Self.userType
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, participant, type
+    }
+
+    static let userType = 0
+}
+
+extension Card {
+    /// Who the card is assigned to.
+    var assignments: [CardAssignment] {
+        assignedUsers ?? []
     }
 }

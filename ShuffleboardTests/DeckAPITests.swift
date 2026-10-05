@@ -148,4 +148,21 @@ final class DeckAPITests: XCTestCase {
         XCTAssertEqual(request.header("OCS-APIRequest"), "true")
         XCTAssertEqual(request.header("Authorization"), "Basic " + Data("rob:pw".utf8).base64EncodedString())
     }
+
+    // MARK: - Assignments (#74)
+
+    func testAssignAndUnassignUser() async throws {
+        StubURLProtocol.handler = { _ in .json("{}") }
+        try await api.assignUser(boardId: 1, stackId: 2, cardId: 3, userId: "alice")
+        try await api.unassignUser(boardId: 1, stackId: 2, cardId: 3, userId: "staff", type: 1)
+        XCTAssertEqual(lines, [
+            "PUT /index.php/apps/deck/api/v1.0/boards/1/stacks/2/cards/3/assignUser",
+            "PUT /index.php/apps/deck/api/v1.0/boards/1/stacks/2/cards/3/unassignUser",
+        ])
+        let bodies = StubURLProtocol.requests.compactMap(\.json)
+        XCTAssertEqual(bodies.first?["userId"] as? String, "alice")
+        XCTAssertEqual(bodies.first?["type"] as? Int, 0)
+        XCTAssertEqual(bodies.last?["userId"] as? String, "staff")
+        XCTAssertEqual(bodies.last?["type"] as? Int, 1, "a group assignment is removed as a group")
+    }
 }
