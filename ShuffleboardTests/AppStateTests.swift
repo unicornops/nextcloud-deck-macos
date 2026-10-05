@@ -251,4 +251,103 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertEqual(app.actionError, "The user is not part of the board")
     }
+
+    // MARK: - Automatic refresh (#79)
+
+    /// A fake Deck server whose ETags change whenever its data does.
+    private final class FakeDeck: Sendable {
+        struct State {
+            var boardIds = [1, 2]
+            var stackIds = [10, 20]
+            var version = 1
+            var stacksStatus = 200
+        }
+
+        let state = Locked(State())
+
+        func handle(_ request: RecordedRequest) -> StubResponse {
+            let current = state.withLock { $0 }
+            let etag = "\"v\(current.version)\""
+            if request.path.hasSuffix("/boards") {
+                if request.header("If-None-Match") == etag {
+                    return .status(304)
+                }
+                let boards = current.boardIds.map { #"{"id": \#($0), "title": "B\#($0)", "archived": false}"# }
+                return StubResponse(body: Data("[\(boards.joined(separator: ","))]".utf8), headers: ["ETag": etag])
+            }
+            if current.stacksStatus != 200 {
+                return .status(current.stacksStatus)
+            }
+            if request.header("If-None-Match") == etag {
+                return .status(304)
+            }
+            return StubResponse(
+                body: Data(AppStateTests.stacksJSON(current.stackIds, board: 1).utf8),
+                headers: ["ETag": etag]
+            )
+        }
+    }
+
+    private func makeFakeDeckApp() async -> (AppState, FakeDeck) {
+        let deck = FakeDeck()
+        StubURLProtocol.handler = { deck.handle($0) }
+        return await (makeSignedInApp(), deck)
+    }
+
+    func testRefreshPicksUpChangesMadeElsewhere() async {
+        let (app, deck) = await makeFakeDeckApp()
+        XCTAssertEqual(app.stacks.map(\.id), [10, 20])
+
+        deck.state.withLock { $0.stackIds = [10, 20, 30]
+            $0.version = 2
+        }
+        await app.refreshIfChanged()
+
+        XCTAssertEqual(app.stacks.map(\.id), [10, 20, 30])
+        XCTAssertFalse(app.isLoadingStacks)
+    }
+
+    func testUnchangedRefreshIsAConditionalNoOp() async {
+        let (app, _) = await makeFakeDeckApp()
+        let before = StubURLProtocol.requests.count
+
+        await app.refreshIfChanged()
+
+        let refreshRequests = StubURLProtocol.requests.dropFirst(before)
+        XCTAssertEqual(refreshRequests.count, 2, "one conditional request for boards, one for lists")
+        XCTAssertTrue(refreshRequests.allSatisfy { $0.header("If-None-Match") == "\"v1\"" })
+        XCTAssertEqual(app.stacks.map(\.id), [10, 20])
+    }
+
+    func testRefreshErrorsAreSilent() async {
+        let (app, deck) = await makeFakeDeckApp()
+        deck.state.withLock { $0.stacksStatus = 500 }
+
+        await app.refreshIfChanged()
+
+        XCTAssertNil(app.actionError)
+        XCTAssertNil(app.stacksError)
+        XCTAssertEqual(app.stacks.map(\.id), [10, 20], "keeps the lists it has")
+    }
+
+    func testRefreshMovesOffABoardDeletedElsewhere() async {
+        let (app, deck) = await makeFakeDeckApp()
+        deck.state.withLock { $0.boardIds = [2]
+            $0.version = 2
+        }
+
+        await app.refreshIfChanged()
+
+        XCTAssertEqual(app.selectedBoardId, 2)
+    }
+
+    func testRefreshSignsOutWhenThePasswordIsRevoked() async {
+        let (app, _) = await makeFakeDeckApp()
+        StubURLProtocol.handler = { _ in .status(401) }
+
+        await app.refreshIfChanged()
+
+        XCTAssertFalse(app.isLoggedIn)
+        XCTAssertNil(store.credentials)
+    }
 }

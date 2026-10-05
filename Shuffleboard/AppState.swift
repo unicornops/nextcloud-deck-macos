@@ -29,6 +29,9 @@ final class AppState: ObservableObject {
     private var stacksBoardId: Int?
     /// Incremented by every `loadStacks` call; a response is only applied if no newer load has started.
     private var stacksGeneration = 0
+    /// ETags of the last board list and of the lists of the board in `stacksBoardId`, for `refreshIfChanged()`.
+    private var boardsETag: String?
+    private var stacksETag: String?
     private var credentials: (serverURL: URL, username: String, appPassword: String)?
 
     var selectedBoard: Board? {
@@ -156,6 +159,7 @@ final class AppState: ObservableObject {
         isLoggedIn = false
         boards = []
         selectedBoardId = nil
+        boardsETag = nil
         clearStacks()
         actionError = nil
         showingLogin = true
@@ -167,8 +171,9 @@ final class AppState: ObservableObject {
         errorMessage = nil
         defer { isLoading = false }
         do {
-            guard let api = deckAPI else { return }
-            boards = try await api.getBoards(details: true)
+            guard let api = deckAPI, let fetched = try await api.fetchBoards(ifNoneMatch: nil) else { return }
+            boards = fetched.value
+            boardsETag = fetched.etag
             if selectedBoardId == nil, let first = boards.first {
                 // BoardDetailView's `.task(id: selectedBoardId)` loads the newly selected board's lists.
                 selectedBoardId = first.id
@@ -207,9 +212,11 @@ final class AppState: ObservableObject {
         stacksError = nil
         isLoadingStacks = true
 
-        let result: Result<[Stack], Error>
+        let result: Result<Tagged<[Stack]>, Error>
         do {
-            let loaded = try await api.getStacks(boardId: boardId)
+            guard let loaded = try await api.fetchStacks(boardId: boardId, ifNoneMatch: nil) else {
+                throw DeckAPIError.invalidResponse
+            }
             result = .success(loaded)
         } catch {
             result = .failure(error)
@@ -219,7 +226,8 @@ final class AppState: ObservableObject {
         isLoadingStacks = false
         switch result {
         case let .success(loaded):
-            stacks = loaded.sorted { ($0.order, $0.id) < ($1.order, $1.id) }
+            stacks = Self.sorted(loaded.value)
+            stacksETag = loaded.etag
 
         case let .failure(error):
             guard !endSessionIfUnauthorized(error) else { return }
@@ -235,6 +243,7 @@ final class AppState: ObservableObject {
         stacksGeneration += 1
         stacks = []
         stacksBoardId = nil
+        stacksETag = nil
         stacksError = nil
         isLoadingStacks = false
     }
@@ -426,6 +435,51 @@ final class AppState: ObservableObject {
             report(error)
             return nil
         }
+    }
+}
+
+// MARK: - Background refresh
+
+@MainActor
+extension AppState {
+    /// Picks up changes made elsewhere (the web UI, other devices) without spinners or error messages.
+    ///
+    /// Uses ETags, so when nothing has changed each request is a 304 with no body. Skipped while boards are
+    /// loading, a list reorder is saving or a list is being dragged. A 401 still signs out; other failures are
+    /// ignored until the next refresh. A full `loadStacks` that starts meanwhile wins.
+    func refreshIfChanged() async {
+        guard let api = deckAPI, !isLoading, !isReorderingStacks, !isDraggingStack else { return }
+        do {
+            if let fetched = try await api.fetchBoards(ifNoneMatch: boardsETag) {
+                boards = fetched.value
+                boardsETag = fetched.etag
+                if let selected = selectedBoardId, !boards.contains(where: { $0.id == selected }) {
+                    // The selected board was deleted elsewhere; `.task(id: selectedBoardId)` loads the next one.
+                    selectedBoardId = activeBoards.first?.id
+                }
+            }
+        } catch {
+            endSessionIfUnauthorized(error)
+            return
+        }
+
+        guard let boardId = selectedBoardId, stacksBoardId == boardId, !isLoadingStacks else { return }
+        let generation = stacksGeneration
+        do {
+            guard let fetched = try await api.fetchStacks(boardId: boardId, ifNoneMatch: stacksETag) else { return }
+            guard generation == stacksGeneration, selectedBoardId == boardId,
+                  !isReorderingStacks, !isDraggingStack else { return }
+            stacks = Self.sorted(fetched.value)
+            stacksETag = fetched.etag
+            stacksError = nil
+        } catch {
+            endSessionIfUnauthorized(error)
+        }
+    }
+
+    /// Lists in board order.
+    nonisolated static func sorted(_ stacks: [Stack]) -> [Stack] {
+        stacks.sorted { ($0.order, $0.id) < ($1.order, $1.id) }
     }
 }
 
