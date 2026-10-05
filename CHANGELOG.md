@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.16.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.15.0...v0.16.0) (2026-10-05)
+
+
+### Features
+
+* **cards:** assign users ([#106](https://github.com/unicornops/nextcloud-deck-macos/issues/106)) ([b5014ec](https://github.com/unicornops/nextcloud-deck-macos/commit/b5014ec82762cd2f5146171e69abe3c6aa2d49a1)), closes [#74](https://github.com/unicornops/nextcloud-deck-macos/issues/74)
+* **cards:** due dates and done state ([#105](https://github.com/unicornops/nextcloud-deck-macos/issues/105)) ([16eab65](https://github.com/unicornops/nextcloud-deck-macos/commit/16eab658cfefa2956a4a2245ea0a938a38a9d8f5)), closes [#73](https://github.com/unicornops/nextcloud-deck-macos/issues/73)
+* in-app updates with Sparkle ([#103](https://github.com/unicornops/nextcloud-deck-macos/issues/103)) ([4c4ffb4](https://github.com/unicornops/nextcloud-deck-macos/commit/4c4ffb44f9251ee3fd014a8dbb4c2a72f8effe01)), closes [#71](https://github.com/unicornops/nextcloud-deck-macos/issues/71)
+
+
+### Chores
+
+* adopt the Swift 6 language mode ([#100](https://github.com/unicornops/nextcloud-deck-macos/issues/100)) ([349e87b](https://github.com/unicornops/nextcloud-deck-macos/commit/349e87b75ac7eb6cd29ba059a0c64928c46e1730)), closes [#69](https://github.com/unicornops/nextcloud-deck-macos/issues/69)
+* **deps:** update GitHub Actions to their latest releases ([#102](https://github.com/unicornops/nextcloud-deck-macos/issues/102)) ([76372c0](https://github.com/unicornops/nextcloud-deck-macos/commit/76372c078c03bc9f4d5f66857967db7b217c48cd)), closes [#70](https://github.com/unicornops/nextcloud-deck-macos/issues/70)
+
 ## [0.15.0](https://github.com/unicornops/shuffleboard/compare/v0.14.1...v0.15.0) (2026-10-03)
 
 
