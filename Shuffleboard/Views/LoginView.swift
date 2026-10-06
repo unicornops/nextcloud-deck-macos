@@ -26,14 +26,18 @@ struct LoginView: View {
                     .foregroundStyle(.tint)
                     .symbolEffect(.variableColor.iterative)
 
-                Text("Shuffleboard")
+                Text(appState.isLoggedIn ? "Add Account" : "Shuffleboard")
                     .font(.title.weight(.semibold))
 
-                Text("Sign in with your Nextcloud server to view and manage your Deck boards.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 320)
+                Text(
+                    appState.isLoggedIn
+                        ? "Sign in to another account. You can switch between accounts from the account menu."
+                        : "Sign in with your Nextcloud server to view and manage your Deck boards."
+                )
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 320)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Server URL")
@@ -71,6 +75,13 @@ struct LoginView: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(appState.isLoading || serverURL == nil)
                 .keyboardShortcut(.return, modifiers: .command)
+
+                if appState.isLoggedIn, !appState.isLoading {
+                    Button("Cancel") {
+                        appState.cancelAddingAccount()
+                    }
+                    .keyboardShortcut(.cancelAction)
+                }
 
                 if appState.isLoading {
                     VStack(spacing: 8) {

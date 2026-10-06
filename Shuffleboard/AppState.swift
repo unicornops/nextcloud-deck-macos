@@ -4,6 +4,8 @@ import SwiftUI
 @MainActor
 final class AppState: ObservableObject {
     @Published var isLoggedIn = false
+    /// Every signed-in account, in the order they were added; `activeAccount` is the one in use.
+    @Published private(set) var accounts: [Account] = []
     @Published var boards: [Board] = []
     @Published var selectedBoardId: Int?
     @Published var stacks: [Stack] = []
@@ -34,7 +36,14 @@ final class AppState: ObservableObject {
     /// ETags of the last board list and of the lists of the board in `stacksBoardId`, for `refreshIfChanged()`.
     private var boardsETag: String?
     private var stacksETag: String?
-    private var credentials: (serverURL: URL, username: String, appPassword: String)?
+    private var credentials: Credentials?
+    /// What `credentialStore` holds: every account and which one is active.
+    private var savedAccounts = SavedAccounts()
+
+    /// The account whose boards are shown.
+    var activeAccount: Account? {
+        credentials?.account
+    }
 
     var selectedBoard: Board? {
         guard let id = selectedBoardId else { return nil }
@@ -59,7 +68,9 @@ final class AppState: ObservableObject {
         self.credentialStore = credentialStore
         self.session = session
         self.openURL = openURL
-        if let creds = credentialStore.load() {
+        self.savedAccounts = credentialStore.load()
+        self.accounts = savedAccounts.accounts
+        if let creds = savedAccounts.active {
             self.credentials = creds
             self.deckAPI = makeAPI(creds)
             self.isLoggedIn = true
@@ -69,7 +80,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func makeAPI(_ creds: (serverURL: URL, username: String, appPassword: String)) -> DeckAPI {
+    private func makeAPI(_ creds: Credentials) -> DeckAPI {
         DeckAPI(serverURL: creds.serverURL, username: creds.username, appPassword: creds.appPassword, session: session)
     }
 
@@ -111,12 +122,7 @@ final class AppState: ObservableObject {
                 openURL: openURL
             )
             try Task.checkCancellation()
-            let storedURL = try credentialStore.save(serverURL: url, username: loginName, appPassword: appPassword)
-            credentials = (storedURL, loginName, appPassword)
-            deckAPI = makeAPI((storedURL, loginName, appPassword))
-            isLoggedIn = true
-            showingLogin = false
-            await loadBoards()
+            try await finishSignIn(Credentials(serverURL: url, username: loginName, appPassword: appPassword))
         } catch {
             // Cancelled by the user: either `CancellationError` or a request torn down mid-flight.
             guard !Task.isCancelled else { return }
@@ -130,21 +136,26 @@ final class AppState: ObservableObject {
         actionError = error.localizedDescription
     }
 
-    /// If `error` means the app password was revoked or has expired, signs out and returns to the login
-    /// screen with an explanation. Returns `true` if it did, so the caller shows nothing further.
+    /// If `error` means the app password was revoked or has expired, signs the active account out. With
+    /// other accounts signed in it switches to the next one and says why in the banner; otherwise it returns
+    /// to the login screen with an explanation. Returns `true` if it did, so the caller shows nothing further.
     @discardableResult
     func endSessionIfUnauthorized(_ error: Error) -> Bool {
         guard case .unauthorized? = error as? DeckAPIError else { return false }
         // Requests still in flight from the ended session may fail the same way; handle it once.
-        if isLoggedIn {
+        if isLoggedIn, let account = activeAccount {
             logout()
-            errorMessage = error.localizedDescription
+            if isLoggedIn {
+                actionError = "Signed out of \(account.id): \(error.localizedDescription)"
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
         return true
     }
 
-    /// Signs out at the user's request: ends the session locally straight away, then revokes the app
-    /// password on the server so it stops working and leaves the user's Nextcloud device list.
+    /// Signs the active account out at the user's request: ends its session locally straight away, then
+    /// revokes the app password on the server so it stops working and leaves the user's Nextcloud device list.
     /// Revocation failures (offline, server unreachable) are ignored; the local sign-out has already happened.
     func signOut() async {
         let api = deckAPI
@@ -152,28 +163,35 @@ final class AppState: ObservableObject {
         try? await api?.revokeAppPassword()
     }
 
-    /// Ends the session locally: forgets the stored credentials and returns to the login screen.
-    /// Does not contact the server; see `signOut()`.
+    /// Ends the active account's session locally and forgets its credentials. If another account is signed
+    /// in, switches to it; otherwise returns to the login screen. Does not contact the server; see `signOut()`.
     func logout() {
-        try? credentialStore.delete()
+        if let account = activeAccount {
+            savedAccounts.remove(account.id)
+            try? credentialStore.save(savedAccounts)
+        }
+        if let next = savedAccounts.active {
+            activate(next)
+            Task { await loadBoards() }
+            return
+        }
+        resetSession()
         credentials = nil
         deckAPI = nil
+        accounts = []
         isLoggedIn = false
-        boards = []
-        selectedBoardId = nil
-        boardsETag = nil
-        clearStacks()
-        actionError = nil
         showingLogin = true
     }
 
     func loadBoards() async {
-        guard deckAPI != nil else { return }
+        guard let api = deckAPI else { return }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         do {
-            guard let api = deckAPI, let fetched = try await api.fetchBoards(ifNoneMatch: nil) else { return }
+            let fetched = try await api.fetchBoards(ifNoneMatch: nil)
+            // Switched accounts meanwhile: these are another account's boards.
+            guard api === deckAPI, let fetched else { return }
             boards = fetched.value
             boardsETag = fetched.etag
             if selectedBoardId == nil, let first = boards.first {
@@ -183,7 +201,7 @@ final class AppState: ObservableObject {
                 await loadStacks(boardId: bid)
             }
         } catch {
-            guard !endSessionIfUnauthorized(error) else { return }
+            guard api === deckAPI, !endSessionIfUnauthorized(error) else { return }
             errorMessage = error.localizedDescription
             // The sidebar only shows `errorMessage` when there are no boards; a failed refresh needs the banner.
             if !boards.isEmpty {
@@ -452,7 +470,9 @@ extension AppState {
     func refreshIfChanged() async {
         guard let api = deckAPI, !isLoading, !isReorderingStacks, !isDraggingStack else { return }
         do {
-            if let fetched = try await api.fetchBoards(ifNoneMatch: boardsETag) {
+            let fetched = try await api.fetchBoards(ifNoneMatch: boardsETag)
+            guard api === deckAPI else { return }
+            if let fetched {
                 boards = fetched.value
                 boardsETag = fetched.etag
                 if let selected = selectedBoardId, !boards.contains(where: { $0.id == selected }) {
@@ -461,7 +481,9 @@ extension AppState {
                 }
             }
         } catch {
-            endSessionIfUnauthorized(error)
+            if api === deckAPI {
+                endSessionIfUnauthorized(error)
+            }
             return
         }
 
@@ -475,7 +497,9 @@ extension AppState {
             stacksETag = fetched.etag
             stacksError = nil
         } catch {
-            endSessionIfUnauthorized(error)
+            if api === deckAPI {
+                endSessionIfUnauthorized(error)
+            }
         }
     }
 
@@ -820,5 +844,68 @@ extension AppState {
         } catch {
             report(error)
         }
+    }
+}
+
+// MARK: - Accounts
+
+@MainActor
+extension AppState {
+    /// Shows the login screen to sign in to another account; `cancelAddingAccount()` goes back.
+    func addAccount() {
+        errorMessage = nil
+        showingLogin = true
+    }
+
+    /// Leaves the login screen opened by `addAccount()` without signing in.
+    func cancelAddingAccount() {
+        cancelLogin()
+        errorMessage = nil
+        showingLogin = !isLoggedIn
+    }
+
+    /// Saves `creds` as a signed-in account (replacing that account's earlier sign-in, whose app password is
+    /// then revoked), makes it active and loads its boards.
+    func finishSignIn(_ creds: Credentials) async throws {
+        var updated = savedAccounts
+        let replaced = updated.add(creds)
+        try credentialStore.save(updated)
+        savedAccounts = updated
+        activate(creds)
+        if let replaced, replaced.appPassword != creds.appPassword {
+            let oldAPI = makeAPI(replaced)
+            Task { try? await oldAPI.revokeAppPassword() }
+        }
+        await loadBoards()
+    }
+
+    /// Shows `account`'s boards instead of the current account's.
+    func switchAccount(to account: Account) async {
+        guard account.id != activeAccount?.id, let creds = savedAccounts.credentials(for: account.id) else { return }
+        savedAccounts.activate(account.id)
+        try? credentialStore.save(savedAccounts)
+        activate(creds)
+        await loadBoards()
+    }
+
+    /// Makes `creds` the account in use, starting from an empty board list.
+    private func activate(_ creds: Credentials) {
+        resetSession()
+        credentials = creds
+        deckAPI = makeAPI(creds)
+        accounts = savedAccounts.accounts
+        isLoggedIn = true
+        showingLogin = false
+    }
+
+    /// Forgets everything shown for the previous account.
+    private func resetSession() {
+        boards = []
+        selectedBoardId = nil
+        boardsETag = nil
+        clearStacks()
+        cardFilter = CardFilter()
+        actionError = nil
+        errorMessage = nil
     }
 }

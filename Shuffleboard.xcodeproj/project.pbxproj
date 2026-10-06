@@ -49,6 +49,8 @@
 		A10000000000000000000038 /* Sharing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000038 /* Sharing.swift */; };
 		A10000000000000000000039 /* BoardSharingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000039 /* BoardSharingSheet.swift */; };
 		B10000000000000000000008 /* SharingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000008 /* SharingTests.swift */; };
+		A10000000000000000000040 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000040 /* Account.swift */; };
+		B10000000000000000000009 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000009 /* AccountTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -107,6 +109,8 @@
 		A20000000000000000000038 /* Sharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sharing.swift; sourceTree = "<group>"; };
 		A20000000000000000000039 /* BoardSharingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardSharingSheet.swift; sourceTree = "<group>"; };
 		B20000000000000000000008 /* SharingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingTests.swift; sourceTree = "<group>"; };
+		A20000000000000000000040 /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
+		B20000000000000000000009 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -174,6 +178,7 @@
 				A20000000000000000000034 /* Markdown.swift */,
 				A20000000000000000000036 /* CardFilter.swift */,
 				A20000000000000000000038 /* Sharing.swift */,
+				A20000000000000000000040 /* Account.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -231,6 +236,7 @@
 				B20000000000000000000006 /* MarkdownTests.swift */,
 				B20000000000000000000007 /* CardFilterTests.swift */,
 				B20000000000000000000008 /* SharingTests.swift */,
+				B20000000000000000000009 /* AccountTests.swift */,
 			);
 			path = ShuffleboardTests;
 			sourceTree = "<group>";
@@ -370,6 +376,7 @@
 				A10000000000000000000034 /* Markdown.swift in Sources */,
 				A10000000000000000000036 /* CardFilter.swift in Sources */,
 				A10000000000000000000038 /* Sharing.swift in Sources */,
+				A10000000000000000000040 /* Account.swift in Sources */,
 				A10000000000000000000008 /* DeckAPI.swift in Sources */,
 				A10000000000000000000009 /* NextcloudAuth.swift in Sources */,
 				A1000000000000000000000A /* KeychainStorage.swift in Sources */,
@@ -406,6 +413,7 @@
 				B10000000000000000000006 /* MarkdownTests.swift in Sources */,
 				B10000000000000000000007 /* CardFilterTests.swift in Sources */,
 				B10000000000000000000008 /* SharingTests.swift in Sources */,
+				B10000000000000000000009 /* AccountTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

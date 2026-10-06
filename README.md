@@ -33,6 +33,7 @@ Your boards live on your Nextcloud server, so nothing is lost. The old app's Key
 ## Features
 
 - **Sign in** with your Nextcloud server URL: the app opens your browser to sign in (including two-factor authentication) using [Nextcloud Login Flow v2](https://docs.nextcloud.com/server/latest/developer_manual/client_apis/LoginFlow/index.html), receives an app password and stores it securely in the system Keychain. Signing out revokes the app password.
+- **Multiple accounts:** sign in to more than one account, on one server or several, with **Add Account…** in the account menu, and switch between them there. Each account's app password is kept in the Keychain; signing out of one revokes only its app password and switches to the next.
 - **Boards** listed in the sidebar; switch between them to focus on one board at a time.
 - **Kanban board view**: stacks as columns, cards in each column. Create lists (stacks) and cards, open cards to edit title and description.
 - **Automatic updates** with [Sparkle](https://sparkle-project.org): Shuffleboard checks for new releases and installs them, or use **Shuffleboard → Check for Updates…**. Every update is verified against the app's EdDSA public key.

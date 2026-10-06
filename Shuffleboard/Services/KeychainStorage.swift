@@ -1,32 +1,29 @@
 import Foundation
 import Security
 
-/// Where `AppState` keeps the signed-in user's credentials.
+/// Where `AppState` keeps the credentials of every signed-in account.
 protocol CredentialStore {
-    func load() -> (serverURL: URL, username: String, appPassword: String)?
-    /// Saves credentials and returns the server URL as stored.
-    func save(serverURL: URL, username: String, appPassword: String) throws -> URL
-    func delete() throws
+    /// The saved accounts; empty if there are none or they can't be read.
+    func load() -> SavedAccounts
+    /// Replaces the saved accounts; saving none removes them.
+    func save(_ accounts: SavedAccounts) throws
 }
 
 /// The app's credential store: the system Keychain, via `KeychainStorage`.
 struct KeychainCredentialStore: CredentialStore {
-    func load() -> (serverURL: URL, username: String, appPassword: String)? {
+    func load() -> SavedAccounts {
         KeychainStorage.load()
     }
 
-    func save(serverURL: URL, username: String, appPassword: String) throws -> URL {
-        try KeychainStorage.save(serverURL: serverURL, username: username, appPassword: appPassword)
-    }
-
-    func delete() throws {
-        try KeychainStorage.delete()
+    func save(_ accounts: SavedAccounts) throws {
+        try KeychainStorage.save(accounts)
     }
 }
 
 /// Stores and retrieves Nextcloud credentials in the system Keychain.
 ///
-/// Uses a single generic-password item so the user is not prompted multiple times at launch.
+/// Uses a single generic-password item holding every account (`SavedAccounts`), so the user is not prompted
+/// multiple times at launch. Each account in it is keyed by user and server (`Account.id`).
 ///
 /// The item lives in the login (file-based) keychain, which ignores `kSecAttrAccessible`; it is readable
 /// while the login keychain is unlocked and only by this app unless the user allows otherwise. Moving to
@@ -44,42 +41,32 @@ enum KeychainStorage {
     /// Single account key for all credentials (avoids several Keychain accesses at launch).
     private static let credentialsAccount = "credentials"
 
-    /// Ensures the URL uses HTTPS (required for security and App Store).
-    private static func httpsURL(from url: URL) -> URL {
-        guard url.scheme == "http",
-              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return url }
-        components.scheme = "https"
-        return components.url ?? url
-    }
-
-    /// Saves credentials and returns the server URL used for storage (always HTTPS).
-    static func save(serverURL: URL, username: String, appPassword: String) throws -> URL {
-        let urlToStore = Self.httpsURL(from: serverURL)
-        let payload = CredentialsPayload(
-            serverURL: urlToStore.absoluteString,
-            username: username,
-            appPassword: appPassword
-        )
-        guard let data = try? JSONEncoder().encode(payload) else {
+    /// Saves every account, replacing what was stored; with no accounts left, removes the item.
+    /// Updates the item in place, so a failed write never loses the accounts already saved.
+    static func save(_ accounts: SavedAccounts) throws {
+        guard !accounts.all.isEmpty else {
+            try deleteItem(service: service, account: credentialsAccount)
+            return
+        }
+        guard let data = try? JSONEncoder().encode(accounts) else {
             throw KeychainError.saveFailed(errSecParam)
         }
-        try deleteItem(service: service, account: credentialsAccount)
-        let query: [String: Any] = [
+        let item: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: credentialsAccount,
-            kSecValueData as String: data,
         ]
-        let status = SecItemAdd(query as CFDictionary, nil)
+        var status = SecItemUpdate(item as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if status == errSecItemNotFound {
+            status = SecItemAdd(item.merging([kSecValueData as String: data]) { $1 } as CFDictionary, nil)
+        }
         guard status == errSecSuccess else { throw KeychainError.saveFailed(status) }
-        return urlToStore
     }
 
-    static func load() -> (serverURL: URL, username: String, appPassword: String)? {
+    static func load() -> SavedAccounts {
         guard let data = readItem(service: service, account: credentialsAccount),
-              let payload = try? JSONDecoder().decode(CredentialsPayload.self, from: data),
-              let url = URL(string: payload.serverURL) else { return nil }
-        return (url, payload.username, payload.appPassword)
+              let accounts = try? JSONDecoder().decode(SavedAccounts.self, from: data) else { return SavedAccounts() }
+        return accounts
     }
 
     private static func readItem(service: String, account: String) -> Data? {
@@ -96,10 +83,6 @@ enum KeychainStorage {
         return result as? Data
     }
 
-    static func delete() throws {
-        try deleteItem(service: service, account: credentialsAccount)
-    }
-
     private static func deleteItem(service: String, account: String) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -111,16 +94,6 @@ enum KeychainStorage {
             throw KeychainError.deleteFailed(status)
         }
     }
-
-    static var isLoggedIn: Bool {
-        load() != nil
-    }
-}
-
-private struct CredentialsPayload: Codable {
-    let serverURL: String
-    let username: String
-    let appPassword: String
 }
 
 enum KeychainError: LocalizedError {
