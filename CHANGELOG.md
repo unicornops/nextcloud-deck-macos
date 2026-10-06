@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/unicornops/shuffleboard/compare/v0.16.0...v0.17.0) (2026-10-06)
+
+
+### Features
+
+* **accounts:** multiple accounts ([#114](https://github.com/unicornops/shuffleboard/issues/114)) ([c9856d0](https://github.com/unicornops/shuffleboard/commit/c9856d0ee2f791da3cf00d00964b18e95c454879)), closes [#81](https://github.com/unicornops/shuffleboard/issues/81)
+* **boards:** board sharing ([#113](https://github.com/unicornops/shuffleboard/issues/113)) ([70bf63e](https://github.com/unicornops/shuffleboard/commit/70bf63e597ab9149a853e3184f52dd8c1e62902a)), closes [#80](https://github.com/unicornops/shuffleboard/issues/80)
+* **cards:** archive cards and browse archived cards ([#112](https://github.com/unicornops/shuffleboard/issues/112)) ([92bc8ff](https://github.com/unicornops/shuffleboard/commit/92bc8ff1047b2fd3e8ebe67da426dc806f53d80c)), closes [#76](https://github.com/unicornops/shuffleboard/issues/76)
+* **cards:** comments ([#109](https://github.com/unicornops/shuffleboard/issues/109)) ([129c8f4](https://github.com/unicornops/shuffleboard/commit/129c8f4f2483f0c46e59110ce08283b365f80bca)), closes [#75](https://github.com/unicornops/shuffleboard/issues/75)
+* **cards:** render Markdown descriptions ([#110](https://github.com/unicornops/shuffleboard/issues/110)) ([305fc65](https://github.com/unicornops/shuffleboard/commit/305fc65dc6e73e5a3e28533abe8debb629c8e490))
+* refresh automatically when changes are made elsewhere ([#107](https://github.com/unicornops/shuffleboard/issues/107)) ([489397c](https://github.com/unicornops/shuffleboard/commit/489397c0e6f0c1cdd7369f119dba7d52dd657a60)), closes [#79](https://github.com/unicornops/shuffleboard/issues/79)
+* search and filter cards ([#111](https://github.com/unicornops/shuffleboard/issues/111)) ([eed648e](https://github.com/unicornops/shuffleboard/commit/eed648e5d84439a9b0ae123ca46fc1d3da58c496)), closes [#78](https://github.com/unicornops/shuffleboard/issues/78)
+
 ## [0.16.0](https://github.com/unicornops/nextcloud-deck-macos/compare/v0.15.0...v0.16.0) (2026-10-05)
 
 
