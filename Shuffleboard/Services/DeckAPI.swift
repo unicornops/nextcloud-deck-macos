@@ -112,21 +112,33 @@ final class DeckAPI: Sendable {
     // MARK: - Boards
 
     func getBoards(details: Bool = true) async throws -> [Board] {
+        guard let boards = try await fetchBoards(details: details, ifNoneMatch: nil) else {
+            throw DeckAPIError.invalidResponse
+        }
+        return boards.value
+    }
+
+    /// Fetches the boards with their ETag. With `ifNoneMatch` (a previous ETag), returns `nil` when nothing on
+    /// any board has changed: Deck propagates changes to cards, labels and stacks up to the board list's ETag.
+    func fetchBoards(details: Bool = true, ifNoneMatch etag: String?) async throws -> Tagged<[Board]>? {
         guard let base = url(for: "boards"),
               var components = URLComponents(url: base, resolvingAgainstBaseURL: false) else {
             throw DeckAPIError.invalidURL
         }
         components.queryItems = [URLQueryItem(name: "details", value: details ? "true" : "false")]
         guard let url = components.url else { throw DeckAPIError.invalidURL }
-        let (data, _) = try await performRequest(url: url, method: "GET")
+        guard let (data, response) = try await performConditionalGet(url: url, ifNoneMatch: etag) else {
+            return nil
+        }
+        let etag = Self.etag(of: response)
         if let boards = try? decoder.decode([Board].self, from: data) {
-            return boards
+            return Tagged(value: boards, etag: etag)
         }
         if let wrapper = try? decoder.decode(OCSBoardsWrapper.self, from: data) {
-            return wrapper.data
+            return Tagged(value: wrapper.data, etag: etag)
         }
         if let ocs = try? decoder.decode(OCSEnvelope.self, from: data) {
-            return ocs.ocs.data
+            return Tagged(value: ocs.ocs.data, etag: etag)
         }
         throw DeckAPIError.badRequest("Could not decode boards response")
     }
@@ -139,9 +151,33 @@ final class DeckAPI: Sendable {
         let ocs: OCSBoardsWrapper
     }
 
-    private func performRequest(url: URL, method: String, body: Data? = nil) async throws -> (Data, URLResponse) {
+    /// A GET that returns `nil` for 304 Not Modified. With an ETag it bypasses URLSession's cache, so the
+    /// server's 304 reaches us instead of being answered from a cached copy.
+    private func performConditionalGet(url: URL, ifNoneMatch etag: String?) async throws -> (Data, URLResponse)? {
+        do {
+            return try await performRequest(url: url, method: "GET", ifNoneMatch: etag)
+        } catch DeckAPIError.notModified {
+            return nil
+        }
+    }
+
+    private static func etag(of response: URLResponse) -> String? {
+        (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "ETag")
+    }
+
+    private func performRequest(
+        url: URL,
+        method: String,
+        body: Data? = nil,
+        ifNoneMatch etag: String? = nil
+    ) async throws
+        -> (Data, URLResponse) {
         var req = URLRequest(url: url)
         req.httpMethod = method
+        if let etag {
+            req.setValue(etag, forHTTPHeaderField: "If-None-Match")
+            req.cachePolicy = .reloadIgnoringLocalCacheData
+        }
         req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -213,9 +249,19 @@ final class DeckAPI: Sendable {
     // MARK: - Stacks
 
     func getStacks(boardId: Int) async throws -> [Stack] {
+        guard let stacks = try await fetchStacks(boardId: boardId, ifNoneMatch: nil) else {
+            throw DeckAPIError.invalidResponse
+        }
+        return stacks.value
+    }
+
+    /// Fetches a board's stacks (with their cards) and the ETag; `nil` when unchanged since `ifNoneMatch`.
+    func fetchStacks(boardId: Int, ifNoneMatch etag: String?) async throws -> Tagged<[Stack]>? {
         guard let url = url(for: "boards/\(boardId)/stacks") else { throw DeckAPIError.invalidURL }
-        let (data, _) = try await performRequest(url: url, method: "GET")
-        return try decodeStacks(from: data, context: "stacks")
+        guard let (data, response) = try await performConditionalGet(url: url, ifNoneMatch: etag) else {
+            return nil
+        }
+        return try Tagged(value: decodeStacks(from: data, context: "stacks"), etag: Self.etag(of: response))
     }
 
     private func decodingErrorDescription(_ error: DecodingError) -> String {
@@ -616,6 +662,14 @@ extension DeckAPI {
         }
         _ = try await performRequest(url: url, method: "DELETE")
     }
+}
+
+// MARK: - Tagged
+
+/// A value fetched from Deck with the ETag the server sent for it.
+struct Tagged<Value: Sendable>: Sendable {
+    let value: Value
+    let etag: String?
 }
 
 // MARK: - Request DTOs

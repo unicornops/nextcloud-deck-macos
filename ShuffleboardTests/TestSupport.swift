@@ -12,6 +12,7 @@ struct StubResponse: Sendable {
     var delay: TimeInterval = 0
     /// Fail the request with this error instead of answering.
     var error: URLError?
+    var headers: [String: String] = [:]
 
     static func json(_ string: String, status: Int = 200, delay: TimeInterval = 0) -> StubResponse {
         StubResponse(status: status, body: Data(string.utf8), delay: delay)
@@ -109,7 +110,7 @@ final class StubURLProtocol: URLProtocol {
                       url: url,
                       statusCode: response.status,
                       httpVersion: nil,
-                      headerFields: nil
+                      headerFields: response.headers
                   ) else { return }
             stub.client?.urlProtocol(stub, didReceive: http, cacheStoragePolicy: .notAllowed)
             stub.client?.urlProtocol(stub, didLoad: response.body)

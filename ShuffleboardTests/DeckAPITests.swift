@@ -165,4 +165,30 @@ final class DeckAPITests: XCTestCase {
         XCTAssertEqual(bodies.last?["userId"] as? String, "staff")
         XCTAssertEqual(bodies.last?["type"] as? Int, 1, "a group assignment is removed as a group")
     }
+
+    // MARK: - Conditional fetches (#79)
+
+    func testFetchStacksReturnsTheETag() async throws {
+        StubURLProtocol.handler = { _ in StubResponse(status: 200, body: Data("[]".utf8), headers: ["ETag": "\"v1\""]) }
+        let fetched = try await api.fetchStacks(boardId: 1, ifNoneMatch: nil)
+        XCTAssertEqual(fetched?.etag, "\"v1\"")
+        XCTAssertNil(StubURLProtocol.requests.first?.header("If-None-Match"), "no condition on a full load")
+    }
+
+    func testFetchStacksIsNilWhenNotModified() async throws {
+        StubURLProtocol.handler = { request in
+            request.header("If-None-Match") == "\"v1\"" ? .status(304) : .json("[]")
+        }
+        let fetched = try await api.fetchStacks(boardId: 1, ifNoneMatch: "\"v1\"")
+        XCTAssertNil(fetched, "304 means unchanged")
+        XCTAssertEqual(StubURLProtocol.requests.first?.header("If-None-Match"), "\"v1\"")
+    }
+
+    func testFetchBoardsIsNilWhenNotModified() async throws {
+        StubURLProtocol.handler = { request in
+            request.header("If-None-Match") == "\"b1\"" ? .status(304) : .json("[]")
+        }
+        let fetched = try await api.fetchBoards(ifNoneMatch: "\"b1\"")
+        XCTAssertNil(fetched)
+    }
 }
