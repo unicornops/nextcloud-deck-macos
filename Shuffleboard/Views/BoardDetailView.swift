@@ -33,6 +33,9 @@ struct BoardDetailView: View {
             if let board = appState.selectedBoard {
                 VStack(spacing: 0) {
                     boardHeader(board)
+                    if appState.cardFilter.isActive {
+                        filterStatus
+                    }
                     Divider()
                     scrollableStacks(board)
                 }
@@ -46,6 +49,7 @@ struct BoardDetailView: View {
             }
         }
         .navigationTitle(appState.selectedBoard?.title ?? "Deck")
+        .searchable(text: $appState.cardFilter.text, placement: .toolbar, prompt: "Filter cards")
         .sheet(item: $selectedCard) { card in
             if let board = appState.selectedBoard {
                 // Card actions reload the lists themselves; closing the sheet doesn't need to.
@@ -66,6 +70,8 @@ struct BoardDetailView: View {
         }
         // The single place lists are loaded on board selection; changing board cancels the previous load.
         .task(id: appState.selectedBoardId) {
+            // Labels and people differ per board, so a new board starts unfiltered.
+            appState.cardFilter = CardFilter()
             guard let bid = appState.selectedBoardId else {
                 appState.clearStacks()
                 return
@@ -82,6 +88,7 @@ struct BoardDetailView: View {
             Text(board.title)
                 .font(.title2.weight(.semibold))
             Spacer()
+            filterMenu(board)
             if appState.isLoadingStacks, !appState.stacks.isEmpty {
                 ProgressView()
                     .controlSize(.small)
@@ -105,6 +112,84 @@ struct BoardDetailView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+    }
+
+    // MARK: - Filter
+
+    private func filterMenu(_ board: Board) -> some View {
+        Menu {
+            Picker("Due", selection: $appState.cardFilter.due) {
+                ForEach(CardFilter.Due.allCases) { due in
+                    Text(due.title).tag(due)
+                }
+            }
+            .pickerStyle(.inline)
+            Toggle("Hide done cards", isOn: $appState.cardFilter.hideDone)
+            if !board.labels.isEmpty {
+                Section("Labels") {
+                    ForEach(board.labels) { label in
+                        Toggle(label.title, isOn: membership(of: label.id, in: \.labelIds))
+                    }
+                }
+            }
+            if !board.assignableUsers.isEmpty {
+                Section("Assigned to") {
+                    ForEach(board.assignableUsers, id: \.uid) { user in
+                        Toggle(user.displayName, isOn: membership(of: user.uid, in: \.assigneeIds))
+                    }
+                }
+            }
+            Divider()
+            Button("Clear Filters") {
+                appState.cardFilter = CardFilter(text: appState.cardFilter.text)
+            }
+        } label: {
+            SwiftUI.Label(
+                "Filter",
+                systemImage: appState.cardFilter.isActive
+                    ? "line.3.horizontal.decrease.circle.fill"
+                    : "line.3.horizontal.decrease.circle"
+            )
+        }
+        .fixedSize()
+        .help("Filter cards by label, person or due date")
+    }
+
+    /// A toggle binding for whether `value` is in one of the filter's sets.
+    private func membership<Value: Hashable>(
+        of value: Value,
+        in keyPath: WritableKeyPath<CardFilter, Set<Value>>
+    )
+        -> Binding<Bool> {
+        Binding(
+            get: { appState.cardFilter[keyPath: keyPath].contains(value) },
+            set: { isOn in
+                if isOn {
+                    appState.cardFilter[keyPath: keyPath].insert(value)
+                } else {
+                    appState.cardFilter[keyPath: keyPath].remove(value)
+                }
+            }
+        )
+    }
+
+    private var filterStatus: some View {
+        let all = appState.stacks.flatMap { $0.cards ?? [] }
+        let shown = all.filter { appState.cardFilter.matches($0) }.count
+        return HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                .foregroundStyle(.tint)
+            Text("Showing \(shown) of \(all.count) cards. Drag and drop is paused while filtering.")
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Clear") {
+                appState.cardFilter = CardFilter()
+            }
+            .buttonStyle(.link)
+        }
+        .font(.callout)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
     }
 
     private func boardColor(_ board: Board) -> Color {
