@@ -43,24 +43,55 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
+                    accountSection
+                    Divider()
                     Button("About Shuffleboard", systemImage: "info.circle") {
                         appState.showingAbout = true
                     }
-                    Divider()
                     Button("Refresh", systemImage: "arrow.clockwise") {
                         Task { await appState.refresh() }
-                    }
-                    Divider()
-                    Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") {
-                        Task { await appState.signOut() }
                     }
                 } label: {
                     Image(systemName: "person.circle")
                 }
-                .help("Account and actions")
+                .help(appState.activeAccount.map { "Signed in as \($0.id)" } ?? "Account and actions")
                 .accessibilityLabel("Account menu")
             }
         }
+    }
+}
+
+// MARK: - Accounts
+
+private extension ContentView {
+    /// The signed-in accounts, with the active one ticked, plus adding and signing out of accounts.
+    @ViewBuilder
+    var accountSection: some View {
+        Picker("Account", selection: activeAccountId) {
+            ForEach(appState.accounts) { account in
+                Text(account.id)
+                    .tag(Optional(account.id))
+            }
+        }
+        .pickerStyle(.inline)
+        Button("Add Account…", systemImage: "person.badge.plus") {
+            appState.addAccount()
+        }
+        if let account = appState.activeAccount {
+            Button("Sign Out of \(account.id)", systemImage: "rectangle.portrait.and.arrow.right") {
+                Task { await appState.signOut() }
+            }
+        }
+    }
+
+    var activeAccountId: Binding<Account.ID?> {
+        Binding(
+            get: { appState.activeAccount?.id },
+            set: { id in
+                guard let account = appState.accounts.first(where: { $0.id == id }) else { return }
+                Task { await appState.switchAccount(to: account) }
+            }
+        )
     }
 }
 

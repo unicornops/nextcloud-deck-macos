@@ -124,7 +124,7 @@ final class AppStateTests: XCTestCase {
         await app.signOut()
 
         XCTAssertFalse(app.isLoggedIn)
-        XCTAssertEqual(store.deleteCount, 1)
+        XCTAssertNil(store.credentials)
         XCTAssertTrue(StubURLProtocol.requests.contains { $0.line == "DELETE /ocs/v2.php/core/apppassword" })
     }
 

@@ -160,31 +160,36 @@ struct UncheckedSendable<Value>: @unchecked Sendable {
 
 /// Keeps credentials in memory so tests never touch the real Keychain.
 final class InMemoryCredentialStore: CredentialStore {
-    var credentials: (serverURL: URL, username: String, appPassword: String)?
-    private(set) var deleteCount = 0
+    var saved: SavedAccounts
     private(set) var saveCount = 0
 
-    init(credentials: (serverURL: URL, username: String, appPassword: String)? = nil) {
-        self.credentials = credentials
+    init(_ saved: SavedAccounts = SavedAccounts()) {
+        self.saved = saved
     }
 
-    static func signedIn() -> InMemoryCredentialStore {
-        InMemoryCredentialStore(credentials: (URL(string: "https://cloud.example")!, "rob", "app-password"))
+    /// The active account's credentials, if any.
+    var credentials: Credentials? {
+        saved.active
     }
 
-    func load() -> (serverURL: URL, username: String, appPassword: String)? {
-        credentials
+    static func signedIn(_ usernames: String...) -> InMemoryCredentialStore {
+        var saved = SavedAccounts()
+        for username in usernames.isEmpty ? ["rob"] : usernames {
+            saved.add(Credentials(serverURL: testServer, username: username, appPassword: "\(username)-app-password"))
+        }
+        if let first = saved.accounts.first {
+            saved.activate(first.id)
+        }
+        return InMemoryCredentialStore(saved)
     }
 
-    func save(serverURL: URL, username: String, appPassword: String) throws -> URL {
+    func load() -> SavedAccounts {
+        saved
+    }
+
+    func save(_ accounts: SavedAccounts) throws {
         saveCount += 1
-        credentials = (serverURL, username, appPassword)
-        return serverURL
-    }
-
-    func delete() throws {
-        deleteCount += 1
-        credentials = nil
+        saved = accounts
     }
 }
 
