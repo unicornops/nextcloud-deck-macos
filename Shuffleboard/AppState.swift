@@ -17,6 +17,8 @@ final class AppState: ObservableObject {
     @Published var showingLogin = false
     @Published var showingAbout = false
     @Published var isDraggingStack = false
+    /// Which cards the open board shows; reset when switching boards.
+    @Published var cardFilter = CardFilter()
 
     private var deckAPI: DeckAPI?
     /// Where credentials are kept: the Keychain in the app, an in-memory store in tests.

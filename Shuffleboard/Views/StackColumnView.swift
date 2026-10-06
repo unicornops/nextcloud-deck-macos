@@ -44,8 +44,14 @@ struct StackColumnView: View {
         UTType.text.identifier,
     ]
 
+    /// The stack's cards that match the board's filter, in order.
     private var cards: [Card] {
-        (stack.cards ?? []).sorted { $0.order < $1.order }
+        (stack.cards ?? []).sorted { $0.order < $1.order }.filter { appState.cardFilter.matches($0) }
+    }
+
+    /// Drag and drop places cards by position among all of a stack's cards, so it is off while some are hidden.
+    private var isFiltering: Bool {
+        appState.cardFilter.isActive
     }
 
     var body: some View {
@@ -131,6 +137,12 @@ struct StackColumnView: View {
         return ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 0) {
                 insertionGap(at: 0)
+                if currentCards.isEmpty, isFiltering {
+                    Text("No matching cards")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 8)
+                }
                 ForEach(0 ..< currentCards.count, id: \.self) { index in
                     CardRowView(
                         card: currentCards[index],
@@ -139,6 +151,7 @@ struct StackColumnView: View {
                             let card = currentCards[index]
                             Task { await appState.setCardDone(boardId: board.id, card: card, done: !card.isDone) }
                         },
+                        isDraggable: !isFiltering,
                         action: { onSelectCard(currentCards[index]) }
                     )
                     .padding(.horizontal, 10)
@@ -342,6 +355,7 @@ struct CardRowView: View {
     let card: Card
     var onDelete: (() -> Void)?
     var onToggleDone: (() -> Void)?
+    var isDraggable = true
     var action: () -> Void
     @State private var isHovering = false
 
@@ -445,9 +459,7 @@ struct CardRowView: View {
         .shadow(color: .black.opacity(isHovering ? 0.08 : 0.05), radius: isHovering ? 4 : 2, y: 2)
         .contentShape(Rectangle())
         .onTapGesture(perform: action)
-        .onDrag {
-            NSItemProvider(object: NSString(string: DraggedCard(id: card.id, stackId: card.stackId).providerString))
-        }
+        .draggableCard(card, enabled: isDraggable)
         .onHover { hovering in
             isHovering = hovering
             DispatchQueue.main.async {
@@ -489,6 +501,22 @@ struct CardRowView: View {
             parts.append("Assigned to " + card.assignments.map(\.participant.displayName).joined(separator: ", "))
         }
         return parts.joined(separator: ", ")
+    }
+}
+
+// MARK: - Card dragging
+
+private extension View {
+    /// Lets the card be dragged to another position or list, unless `enabled` is false (while filtering).
+    @ViewBuilder
+    func draggableCard(_ card: Card, enabled: Bool) -> some View {
+        if enabled {
+            onDrag {
+                NSItemProvider(object: NSString(string: DraggedCard(id: card.id, stackId: card.stackId).providerString))
+            }
+        } else {
+            self
+        }
     }
 }
 
