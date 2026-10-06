@@ -116,13 +116,13 @@ enum Markdown {
         whitespace.reduce(0) { $0 + ($1 == "\t" ? 2 : 1) } / 2
     }
 
-    private nonisolated(unsafe) static let taskPattern = /^\s*[-*+]\s+\[([ xX])\]\s+/
-    private nonisolated(unsafe) static let headingPattern = /^(#{1,6})\s+(.*?)\s*#*$/
-    private nonisolated(unsafe) static let taskLinePattern = /^(\s*)[-*+]\s+\[([ xX])\]\s+(.*)$/
-    private nonisolated(unsafe) static let bulletPattern = /^(\s*)[-*+]\s+(.*)$/
-    private nonisolated(unsafe) static let numberedPattern = /^(\s*)(\d+)[.)]\s+(.*)$/
-    private nonisolated(unsafe) static let quotePattern = /^\s*>\s?(.*)$/
-    private nonisolated(unsafe) static let rulePattern = /^\s*([-*_])(\s*\1){2,}\s*$/
+    private nonisolated(unsafe) static let taskPattern = #/^\s*[-*+]\s+\[([ xX])\]\s+/#
+    private nonisolated(unsafe) static let headingPattern = #/^(#{1,6})\s+(.*?)\s*#*$/#
+    private nonisolated(unsafe) static let taskLinePattern = #/^(\s*)[-*+]\s+\[([ xX])\]\s+(.*)$/#
+    private nonisolated(unsafe) static let bulletPattern = #/^(\s*)[-*+]\s+(.*)$/#
+    private nonisolated(unsafe) static let numberedPattern = #/^(\s*)(\d+)[.)]\s+(.*)$/#
+    private nonisolated(unsafe) static let quotePattern = #/^\s*>\s?(.*)$/#
+    private nonisolated(unsafe) static let rulePattern = #/^\s*([-*_])(\s*\1){2,}\s*$/#
 
     private static func block(for line: String, at index: Int) -> MarkdownBlock? {
         if line.wholeMatch(of: rulePattern) != nil {
