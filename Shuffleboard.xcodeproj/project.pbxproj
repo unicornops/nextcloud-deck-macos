@@ -40,6 +40,9 @@
 		C10000000000000000000002 /* SoftwareUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40000000000000000000002 /* SoftwareUpdater.swift */; };
 		A10000000000000000000032 /* Comment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000032 /* Comment.swift */; };
 		A10000000000000000000033 /* CardCommentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000033 /* CardCommentsView.swift */; };
+		A10000000000000000000034 /* Markdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000034 /* Markdown.swift */; };
+		A10000000000000000000035 /* MarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000035 /* MarkdownView.swift */; };
+		B10000000000000000000006 /* MarkdownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* MarkdownTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +92,9 @@
 		C40000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000000000000000000032 /* Comment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Comment.swift; sourceTree = "<group>"; };
 		A20000000000000000000033 /* CardCommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardCommentsView.swift; sourceTree = "<group>"; };
+		A20000000000000000000034 /* Markdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Markdown.swift; sourceTree = "<group>"; };
+		A20000000000000000000035 /* MarkdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownView.swift; sourceTree = "<group>"; };
+		B20000000000000000000006 /* MarkdownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -153,6 +159,7 @@
 				A20000000000000000000006 /* Card.swift */,
 				A20000000000000000000007 /* Label.swift */,
 				A20000000000000000000032 /* Comment.swift */,
+				A20000000000000000000034 /* Markdown.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -176,6 +183,7 @@
 				A2000000000000000000000E /* StackColumnView.swift */,
 				A2000000000000000000000F /* CardDetailSheet.swift */,
 				A20000000000000000000033 /* CardCommentsView.swift */,
+				A20000000000000000000035 /* MarkdownView.swift */,
 				A20000000000000000000010 /* NewStackSheet.swift */,
 				A20000000000000000000012 /* NewBoardSheet.swift */,
 			);
@@ -204,6 +212,7 @@
 				B20000000000000000000003 /* DeckAPITests.swift */,
 				B20000000000000000000004 /* AppStateTests.swift */,
 				B20000000000000000000005 /* LoginFlowTests.swift */,
+				B20000000000000000000006 /* MarkdownTests.swift */,
 			);
 			path = ShuffleboardTests;
 			sourceTree = "<group>";
@@ -340,6 +349,7 @@
 				A10000000000000000000006 /* Card.swift in Sources */,
 				A10000000000000000000007 /* Label.swift in Sources */,
 				A10000000000000000000032 /* Comment.swift in Sources */,
+				A10000000000000000000034 /* Markdown.swift in Sources */,
 				A10000000000000000000008 /* DeckAPI.swift in Sources */,
 				A10000000000000000000009 /* NextcloudAuth.swift in Sources */,
 				A1000000000000000000000A /* KeychainStorage.swift in Sources */,
@@ -349,6 +359,7 @@
 				A1000000000000000000000E /* StackColumnView.swift in Sources */,
 				A1000000000000000000000F /* CardDetailSheet.swift in Sources */,
 				A10000000000000000000033 /* CardCommentsView.swift in Sources */,
+				A10000000000000000000035 /* MarkdownView.swift in Sources */,
 				A10000000000000000000010 /* NewStackSheet.swift in Sources */,
 				A10000000000000000000012 /* NewBoardSheet.swift in Sources */,
 				A10000000000000000000011 /* Color+Hex.swift in Sources */,
@@ -370,6 +381,7 @@
 				B10000000000000000000003 /* DeckAPITests.swift in Sources */,
 				B10000000000000000000004 /* AppStateTests.swift in Sources */,
 				B10000000000000000000005 /* LoginFlowTests.swift in Sources */,
+				B10000000000000000000006 /* MarkdownTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

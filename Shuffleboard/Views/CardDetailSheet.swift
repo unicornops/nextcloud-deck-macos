@@ -11,6 +11,8 @@ struct CardDetailSheet: View {
 
     @State private var title: String
     @State private var description: String
+    /// Showing the plain-text editor rather than the rendered Markdown.
+    @State private var isEditingDescription: Bool
     @State private var hasDueDate: Bool
     @State private var dueDate: Date
     @State private var isDone: Bool
@@ -62,6 +64,7 @@ struct CardDetailSheet: View {
         self.onDismiss = onDismiss
         _title = State(initialValue: card.title)
         _description = State(initialValue: card.description ?? "")
+        _isEditingDescription = State(initialValue: (card.description ?? "").isEmpty)
         _hasDueDate = State(initialValue: card.dueDate != nil)
         _dueDate = State(initialValue: card.dueDate ?? Self.defaultDueDate())
         _isDone = State(initialValue: card.isDone)
@@ -105,10 +108,17 @@ struct CardDetailSheet: View {
                 Section("Title") {
                     TextField("Title", text: $title)
                 }
-                Section("Description") {
-                    TextEditor(text: $description)
-                        .frame(minHeight: 120)
-                        .font(.body)
+                Section {
+                    descriptionContent
+                } header: {
+                    HStack {
+                        Text("Description")
+                        Spacer()
+                        Button(isEditingDescription ? "Preview" : "Edit") {
+                            isEditingDescription.toggle()
+                        }
+                        .buttonStyle(.link)
+                    }
                 }
                 Section("Due date") {
                     scheduleContent
@@ -224,6 +234,25 @@ extension CardDetailSheet {
             .fixedSize()
             .disabled(availableAssignees.isEmpty)
             .help(availableAssignees.isEmpty ? "Everyone on this board is assigned" : "Assign someone to this card")
+        }
+    }
+
+    // MARK: - Description UI
+
+    @ViewBuilder
+    private var descriptionContent: some View {
+        if isEditingDescription {
+            TextEditor(text: $description)
+                .frame(minHeight: 120)
+                .font(.body)
+        } else if description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Text("No description")
+                .foregroundStyle(.secondary)
+        } else {
+            // Ticking a checklist item edits the draft; it's saved with the card.
+            MarkdownView(text: description) { line in
+                description = Markdown.togglingTask(atLine: line, in: description)
+            }
         }
     }
 
