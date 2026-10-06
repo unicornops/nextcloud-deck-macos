@@ -553,6 +553,42 @@ extension AppState {
         }
     }
 
+    /// Archives the card and reloads the lists (errors go to the banner).
+    func archiveCard(_ card: Card, boardId: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.archiveCard(boardId: boardId, stackId: card.stackId, cardId: card.id)
+            await loadStacks(boardId: boardId)
+        } catch {
+            report(error)
+        }
+    }
+
+    /// Returns `true` if the card was unarchived; reloads the lists so it reappears.
+    @discardableResult
+    func unarchiveCard(_ card: Card, boardId: Int) async -> Bool {
+        guard let api = deckAPI else { return false }
+        do {
+            try await api.unarchiveCard(boardId: boardId, stackId: card.stackId, cardId: card.id)
+            await loadStacks(boardId: boardId)
+            return true
+        } catch {
+            report(error)
+            return false
+        }
+    }
+
+    /// The board's lists holding their archived cards; nil (and the banner) on failure.
+    func archivedStacks(boardId: Int) async -> [Stack]? {
+        guard let api = deckAPI else { return nil }
+        do {
+            return try await Self.sorted(api.getArchivedStacks(boardId: boardId))
+        } catch {
+            report(error)
+            return nil
+        }
+    }
+
     /// Assigns `user` to the card (errors go to the banner).
     func assignUser(_ user: DeckUser, boardId: Int, card: Card) async {
         guard let api = deckAPI else { return }

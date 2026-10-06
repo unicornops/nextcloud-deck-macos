@@ -46,7 +46,7 @@ struct StackColumnView: View {
 
     /// The stack's cards that match the board's filter, in order.
     private var cards: [Card] {
-        (stack.cards ?? []).sorted { $0.order < $1.order }.filter { appState.cardFilter.matches($0) }
+        stack.activeCards.filter { appState.cardFilter.matches($0) }
     }
 
     /// Drag and drop places cards by position among all of a stack's cards, so it is off while some are hidden.
@@ -150,6 +150,10 @@ struct StackColumnView: View {
                         onToggleDone: {
                             let card = currentCards[index]
                             Task { await appState.setCardDone(boardId: board.id, card: card, done: !card.isDone) }
+                        },
+                        onArchive: {
+                            let card = currentCards[index]
+                            Task { await appState.archiveCard(card, boardId: board.id) }
                         },
                         isDraggable: !isFiltering,
                         action: { onSelectCard(currentCards[index]) }
@@ -355,6 +359,7 @@ struct CardRowView: View {
     let card: Card
     var onDelete: (() -> Void)?
     var onToggleDone: (() -> Void)?
+    var onArchive: (() -> Void)?
     var isDraggable = true
     var action: () -> Void
     @State private var isHovering = false
@@ -473,6 +478,11 @@ struct CardRowView: View {
             if let onToggleDone {
                 Button(card.isDone ? "Mark as Not Done" : "Mark as Done") {
                     onToggleDone()
+                }
+            }
+            if let onArchive {
+                Button("Archive Card") {
+                    onArchive()
                 }
             }
             if let onDelete {

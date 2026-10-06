@@ -45,6 +45,7 @@
 		B10000000000000000000006 /* MarkdownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* MarkdownTests.swift */; };
 		A10000000000000000000036 /* CardFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036 /* CardFilter.swift */; };
 		B10000000000000000000007 /* CardFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* CardFilterTests.swift */; };
+		A10000000000000000000037 /* ArchivedCardsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000037 /* ArchivedCardsSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,6 +100,7 @@
 		B20000000000000000000006 /* MarkdownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000036 /* CardFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardFilter.swift; sourceTree = "<group>"; };
 		B20000000000000000000007 /* CardFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardFilterTests.swift; sourceTree = "<group>"; };
+		A20000000000000000000037 /* ArchivedCardsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchivedCardsSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -189,6 +191,7 @@
 				A2000000000000000000000F /* CardDetailSheet.swift */,
 				A20000000000000000000033 /* CardCommentsView.swift */,
 				A20000000000000000000035 /* MarkdownView.swift */,
+				A20000000000000000000037 /* ArchivedCardsSheet.swift */,
 				A20000000000000000000010 /* NewStackSheet.swift */,
 				A20000000000000000000012 /* NewBoardSheet.swift */,
 			);
@@ -367,6 +370,7 @@
 				A1000000000000000000000F /* CardDetailSheet.swift in Sources */,
 				A10000000000000000000033 /* CardCommentsView.swift in Sources */,
 				A10000000000000000000035 /* MarkdownView.swift in Sources */,
+				A10000000000000000000037 /* ArchivedCardsSheet.swift in Sources */,
 				A10000000000000000000010 /* NewStackSheet.swift in Sources */,
 				A10000000000000000000012 /* NewBoardSheet.swift in Sources */,
 				A10000000000000000000011 /* Color+Hex.swift in Sources */,

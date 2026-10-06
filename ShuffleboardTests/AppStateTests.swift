@@ -372,4 +372,47 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(app.actionError, "Comment too long")
         XCTAssertEqual(app.currentUserId, "rob", "edit/delete are offered on the signed-in user's own comments")
     }
+
+    // MARK: - Archive (#76)
+
+    func testArchivingReloadsTheBoard() async throws {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.method == "PUT" {
+                return .json("{}")
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let card = try JSONDecoder().decode(Card.self, from: Data(Self.cardJSON.utf8))
+        let before = StubURLProtocol.requests.count
+
+        await app.archiveCard(card, boardId: 1)
+
+        let after = StubURLProtocol.requests.dropFirst(before).map(\.line)
+        XCTAssertEqual(after.first, "PUT /index.php/apps/deck/api/v1.0/boards/1/stacks/10/cards/5/archive")
+        XCTAssertEqual(after.last, "GET /index.php/apps/deck/api/v1.0/boards/1/stacks")
+        XCTAssertNil(app.actionError)
+    }
+
+    func testUnarchiveFailureIsReported() async throws {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.path.hasSuffix("/unarchive") {
+                return .status(403)
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let card = try JSONDecoder().decode(Card.self, from: Data(Self.cardJSON.utf8))
+
+        let restored = await app.unarchiveCard(card, boardId: 1)
+
+        XCTAssertFalse(restored)
+        XCTAssertEqual(app.actionError, DeckAPIError.permissionDenied.localizedDescription)
+    }
 }
