@@ -372,6 +372,16 @@ struct CardRowView: View {
                 }
                 .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
             }
+            if let progress = card.checklistProgress {
+                HStack(spacing: 4) {
+                    Image(systemName: progress.isComplete ? "checklist.checked" : "checklist")
+                        .font(.caption2)
+                    Text("\(progress.done)/\(progress.total)")
+                        .font(.caption2)
+                }
+                .foregroundStyle(progress.isComplete ? AnyShapeStyle(.green) : AnyShapeStyle(.secondary))
+                .accessibilityLabel("Checklist \(progress.done) of \(progress.total) done")
+            }
             if let count = card.commentsCount, count > 0 {
                 HStack(spacing: 4) {
                     Image(systemName: "text.bubble")
