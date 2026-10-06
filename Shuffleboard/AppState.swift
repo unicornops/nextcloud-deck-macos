@@ -483,6 +483,43 @@ extension AppState {
     }
 }
 
+// MARK: - Comments
+
+@MainActor
+extension AppState {
+    /// The signed-in user's id; only a comment's author can edit or delete it.
+    var currentUserId: String? {
+        credentials?.username
+    }
+
+    /// A page of the card's comments, newest first; nil (and the banner) on failure.
+    func comments(for card: Card, offset: Int) async -> [CardComment]? {
+        await commentAction { try await $0.getComments(cardId: card.id, offset: offset) }
+    }
+
+    func addComment(_ message: String, to card: Card) async -> CardComment? {
+        await commentAction { try await $0.addComment(cardId: card.id, message: message) }
+    }
+
+    func updateComment(_ comment: CardComment, message: String, on card: Card) async -> CardComment? {
+        await commentAction { try await $0.updateComment(cardId: card.id, commentId: comment.id, message: message) }
+    }
+
+    func deleteComment(_ comment: CardComment, from card: Card) async -> Bool {
+        await commentAction { try await $0.deleteComment(cardId: card.id, commentId: comment.id) } != nil
+    }
+
+    private func commentAction<Result: Sendable>(_ action: (DeckAPI) async throws -> Result) async -> Result? {
+        guard let api = deckAPI else { return nil }
+        do {
+            return try await action(api)
+        } catch {
+            report(error)
+            return nil
+        }
+    }
+}
+
 // MARK: - Cards
 
 /// What the card sheet edits.

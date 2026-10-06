@@ -350,4 +350,26 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(app.isLoggedIn)
         XCTAssertNil(store.credentials)
     }
+
+    // MARK: - Comments (#75)
+
+    func testCommentFailuresGoToTheBanner() async throws {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.path.contains("/comments") {
+                return .json(#"{"ocs": {"meta": {"message": "Comment too long"}, "data": []}}"#, status: 400)
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let card = try JSONDecoder().decode(Card.self, from: Data(Self.cardJSON.utf8))
+
+        let comment = await app.addComment("x", to: card)
+
+        XCTAssertNil(comment)
+        XCTAssertEqual(app.actionError, "Comment too long")
+        XCTAssertEqual(app.currentUserId, "rob", "edit/delete are offered on the signed-in user's own comments")
+    }
 }
