@@ -14,6 +14,8 @@ final class DeckAPI: Sendable {
     private let attachmentsBaseURL: URL
     /// The OCS API, used for comments.
     private let ocsBaseURL: URL
+    /// Nextcloud's core OCS API, used to search for people and groups to share with.
+    private let coreOCSBaseURL: URL
     private let appPasswordURL: URL
     private let username: String
     private let appPassword: String
@@ -34,6 +36,10 @@ final class DeckAPI: Sendable {
             .appendingPathComponent("deck")
             .appendingPathComponent("api")
             .appendingPathComponent("v1.0")
+        self.coreOCSBaseURL = serverURL
+            .appendingPathComponent("ocs")
+            .appendingPathComponent("v2.php")
+            .appendingPathComponent("core")
         self.ocsBaseURL = serverURL
             .appendingPathComponent("ocs")
             .appendingPathComponent("v2.php")
@@ -489,6 +495,57 @@ final class DeckAPI: Sendable {
     }
 }
 
+// MARK: - Sharing
+
+extension DeckAPI {
+    /// Shares the board; the new share starts read-only unless `permissions` say otherwise.
+    func addShare(boardId: Int, type: ShareType, participant: String, permissions: SharePermissions) async throws {
+        try await requestNoContent(
+            "boards/\(boardId)/acl",
+            method: "POST",
+            body: AddShareRequest(
+                type: type.rawValue,
+                participant: participant,
+                permissionEdit: permissions.edit,
+                permissionShare: permissions.share,
+                permissionManage: permissions.manage
+            )
+        )
+    }
+
+    func updateShare(boardId: Int, aclId: Int, permissions: SharePermissions) async throws {
+        try await requestNoContent(
+            "boards/\(boardId)/acl/\(aclId)",
+            method: "PUT",
+            body: UpdateShareRequest(
+                permissionEdit: permissions.edit,
+                permissionShare: permissions.share,
+                permissionManage: permissions.manage
+            )
+        )
+    }
+
+    func removeShare(boardId: Int, aclId: Int) async throws {
+        try await requestNoContent("boards/\(boardId)/acl/\(aclId)", method: "DELETE")
+    }
+
+    /// People, groups, federated users and Teams matching `query`, as Deck's web UI searches.
+    func searchSharees(_ query: String, limit: Int = 20) async throws -> [Sharee] {
+        guard let base = Self.url(base: coreOCSBaseURL, path: "autocomplete/get"),
+              var components = URLComponents(url: base, resolvingAgainstBaseURL: false) else {
+            throw DeckAPIError.invalidURL
+        }
+        components.queryItems = [
+            URLQueryItem(name: "search", value: query),
+            URLQueryItem(name: "itemType", value: "deck"),
+            URLQueryItem(name: "limit", value: String(limit)),
+        ] + ShareType.allCases.map { URLQueryItem(name: "shareTypes[]", value: String($0.rawValue)) }
+        guard let url = components.url else { throw DeckAPIError.invalidURL }
+        let (data, _) = try await performRequest(url: url, method: "GET")
+        return try decoder.decode(OCSResponse<[Sharee]>.self, from: data).ocs.data
+    }
+}
+
 // MARK: - Comments
 
 extension DeckAPI {
@@ -826,6 +883,20 @@ struct UpdateCardRequest: Encodable {
 private struct ReorderCardRequest: Encodable {
     let order: Int
     let stackId: Int
+}
+
+private struct AddShareRequest: Encodable {
+    let type: Int
+    let participant: String
+    let permissionEdit: Bool
+    let permissionShare: Bool
+    let permissionManage: Bool
+}
+
+private struct UpdateShareRequest: Encodable {
+    let permissionEdit: Bool
+    let permissionShare: Bool
+    let permissionManage: Bool
 }
 
 private struct CommentRequest: Encodable {

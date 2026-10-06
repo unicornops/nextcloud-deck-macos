@@ -255,4 +255,41 @@ final class DeckAPITests: XCTestCase {
             "GET /index.php/apps/deck/api/v1.0/boards/1/stacks/archived",
         ])
     }
+
+    // MARK: - Sharing (#80)
+
+    func testShareRequests() async throws {
+        StubURLProtocol.handler = { _ in .json("{}") }
+        try await api.addShare(boardId: 1, type: .group, participant: "staff", permissions: SharePermissions())
+        try await api.updateShare(boardId: 1, aclId: 7, permissions: SharePermissions(edit: true, manage: true))
+        try await api.removeShare(boardId: 1, aclId: 7)
+        XCTAssertEqual(lines, [
+            "POST /index.php/apps/deck/api/v1.0/boards/1/acl",
+            "PUT /index.php/apps/deck/api/v1.0/boards/1/acl/7",
+            "DELETE /index.php/apps/deck/api/v1.0/boards/1/acl/7",
+        ])
+        let added = try XCTUnwrap(StubURLProtocol.requests[0].json)
+        XCTAssertEqual(added["type"] as? Int, 1)
+        XCTAssertEqual(added["participant"] as? String, "staff")
+        XCTAssertEqual(added["permissionEdit"] as? Bool, false, "new shares start read-only")
+        let updated = try XCTUnwrap(StubURLProtocol.requests[1].json)
+        XCTAssertEqual(updated["permissionEdit"] as? Bool, true)
+        XCTAssertEqual(updated["permissionShare"] as? Bool, false)
+        XCTAssertEqual(updated["permissionManage"] as? Bool, true)
+    }
+
+    func testShareeSearchMatchesDecksWebUI() async throws {
+        StubURLProtocol
+            .handler = { _ in
+                .json(#"{"ocs": {"meta": {}, "data": [{"id": "alice", "label": "Alice", "source": "users"}]}}"#)
+            }
+        let found = try await api.searchSharees("ali")
+        XCTAssertEqual(found.map(\.participantId), ["alice"])
+        let request = try XCTUnwrap(StubURLProtocol.requests.first)
+        XCTAssertEqual(request.path, "/ocs/v2.php/core/autocomplete/get")
+        let items = URLComponents(string: "x:/?" + (request.query ?? ""))?.queryItems ?? []
+        XCTAssertEqual(items.first { $0.name == "search" }?.value, "ali")
+        XCTAssertEqual(items.first { $0.name == "itemType" }?.value, "deck")
+        XCTAssertEqual(items.filter { $0.name == "shareTypes[]" }.compactMap(\.value), ["0", "1", "6", "7"])
+    }
 }

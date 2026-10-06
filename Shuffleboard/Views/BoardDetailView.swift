@@ -27,6 +27,7 @@ struct BoardDetailView: View {
     @State private var newStackTitle = ""
     @State private var showingNewStack = false
     @State private var showingArchivedCards = false
+    @State private var showingSharing = false
     @State private var stackDragInsertIndex: Int?
 
     var body: some View {
@@ -51,6 +52,12 @@ struct BoardDetailView: View {
         }
         .navigationTitle(appState.selectedBoard?.title ?? "Deck")
         .searchable(text: $appState.cardFilter.text, placement: .toolbar, prompt: "Filter cards")
+        .sheet(isPresented: $showingSharing) {
+            if let board = appState.selectedBoard {
+                BoardSharingSheet(boardId: board.id)
+                    .environmentObject(appState)
+            }
+        }
         .sheet(isPresented: $showingArchivedCards) {
             if let board = appState.selectedBoard {
                 ArchivedCardsSheet(board: board)
@@ -96,6 +103,13 @@ struct BoardDetailView: View {
                 .font(.title2.weight(.semibold))
             Spacer()
             filterMenu(board)
+            Button {
+                showingSharing = true
+            } label: {
+                Image(systemName: board.acl.isEmpty ? "person.crop.circle.badge.plus" : "person.2.fill")
+            }
+            .help(board.acl.isEmpty ? "Share this board" : "Shared with \(board.acl.count)")
+            .accessibilityLabel("Sharing")
             Button {
                 showingArchivedCards = true
             } label: {

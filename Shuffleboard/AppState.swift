@@ -485,6 +485,65 @@ extension AppState {
     }
 }
 
+// MARK: - Sharing
+
+@MainActor
+extension AppState {
+    /// Shares `board` with `sharee`, read-only to start, then refreshes the board's sharing list.
+    func share(_ board: Board, with sharee: Sharee) async -> Bool {
+        guard let type = sharee.shareType else { return false }
+        return await sharingAction(on: board) {
+            try await $0.addShare(
+                boardId: board.id,
+                type: type,
+                participant: sharee.participantId,
+                permissions: SharePermissions()
+            )
+        }
+    }
+
+    func updateShare(_ entry: ACLEntry, on board: Board, permissions: SharePermissions) async {
+        guard let aclId = entry.id else { return }
+        _ = await sharingAction(on: board) {
+            try await $0.updateShare(boardId: board.id, aclId: aclId, permissions: permissions)
+        }
+    }
+
+    func removeShare(_ entry: ACLEntry, from board: Board) async {
+        guard let aclId = entry.id else { return }
+        _ = await sharingAction(on: board) { try await $0.removeShare(boardId: board.id, aclId: aclId) }
+    }
+
+    /// Search results for the share field; empty (and the banner) on failure.
+    func searchSharees(_ query: String) async -> [Sharee] {
+        guard let api = deckAPI else { return [] }
+        do {
+            return try await api.searchSharees(query)
+        } catch {
+            if !(error is CancellationError), (error as? URLError)?.code != .cancelled {
+                report(error)
+            }
+            return []
+        }
+    }
+
+    /// Runs a sharing change, then re-fetches just this board so its sharing list and rights are current.
+    private func sharingAction(on board: Board, _ action: (DeckAPI) async throws -> Void) async -> Bool {
+        guard let api = deckAPI else { return false }
+        do {
+            try await action(api)
+            let updated = try await api.getBoard(id: board.id)
+            if let index = boards.firstIndex(where: { $0.id == board.id }) {
+                boards[index] = updated
+            }
+            return true
+        } catch {
+            report(error)
+            return false
+        }
+    }
+}
+
 // MARK: - Comments
 
 @MainActor

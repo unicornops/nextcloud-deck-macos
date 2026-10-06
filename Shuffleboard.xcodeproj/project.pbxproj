@@ -46,6 +46,9 @@
 		A10000000000000000000036 /* CardFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036 /* CardFilter.swift */; };
 		B10000000000000000000007 /* CardFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* CardFilterTests.swift */; };
 		A10000000000000000000037 /* ArchivedCardsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000037 /* ArchivedCardsSheet.swift */; };
+		A10000000000000000000038 /* Sharing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000038 /* Sharing.swift */; };
+		A10000000000000000000039 /* BoardSharingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000039 /* BoardSharingSheet.swift */; };
+		B10000000000000000000008 /* SharingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000008 /* SharingTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -101,6 +104,9 @@
 		A20000000000000000000036 /* CardFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardFilter.swift; sourceTree = "<group>"; };
 		B20000000000000000000007 /* CardFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardFilterTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000037 /* ArchivedCardsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchivedCardsSheet.swift; sourceTree = "<group>"; };
+		A20000000000000000000038 /* Sharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sharing.swift; sourceTree = "<group>"; };
+		A20000000000000000000039 /* BoardSharingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardSharingSheet.swift; sourceTree = "<group>"; };
+		B20000000000000000000008 /* SharingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -167,6 +173,7 @@
 				A20000000000000000000032 /* Comment.swift */,
 				A20000000000000000000034 /* Markdown.swift */,
 				A20000000000000000000036 /* CardFilter.swift */,
+				A20000000000000000000038 /* Sharing.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -192,6 +199,7 @@
 				A20000000000000000000033 /* CardCommentsView.swift */,
 				A20000000000000000000035 /* MarkdownView.swift */,
 				A20000000000000000000037 /* ArchivedCardsSheet.swift */,
+				A20000000000000000000039 /* BoardSharingSheet.swift */,
 				A20000000000000000000010 /* NewStackSheet.swift */,
 				A20000000000000000000012 /* NewBoardSheet.swift */,
 			);
@@ -222,6 +230,7 @@
 				B20000000000000000000005 /* LoginFlowTests.swift */,
 				B20000000000000000000006 /* MarkdownTests.swift */,
 				B20000000000000000000007 /* CardFilterTests.swift */,
+				B20000000000000000000008 /* SharingTests.swift */,
 			);
 			path = ShuffleboardTests;
 			sourceTree = "<group>";
@@ -360,6 +369,7 @@
 				A10000000000000000000032 /* Comment.swift in Sources */,
 				A10000000000000000000034 /* Markdown.swift in Sources */,
 				A10000000000000000000036 /* CardFilter.swift in Sources */,
+				A10000000000000000000038 /* Sharing.swift in Sources */,
 				A10000000000000000000008 /* DeckAPI.swift in Sources */,
 				A10000000000000000000009 /* NextcloudAuth.swift in Sources */,
 				A1000000000000000000000A /* KeychainStorage.swift in Sources */,
@@ -371,6 +381,7 @@
 				A10000000000000000000033 /* CardCommentsView.swift in Sources */,
 				A10000000000000000000035 /* MarkdownView.swift in Sources */,
 				A10000000000000000000037 /* ArchivedCardsSheet.swift in Sources */,
+				A10000000000000000000039 /* BoardSharingSheet.swift in Sources */,
 				A10000000000000000000010 /* NewStackSheet.swift in Sources */,
 				A10000000000000000000012 /* NewBoardSheet.swift in Sources */,
 				A10000000000000000000011 /* Color+Hex.swift in Sources */,
@@ -394,6 +405,7 @@
 				B10000000000000000000005 /* LoginFlowTests.swift in Sources */,
 				B10000000000000000000006 /* MarkdownTests.swift in Sources */,
 				B10000000000000000000007 /* CardFilterTests.swift in Sources */,
+				B10000000000000000000008 /* SharingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
