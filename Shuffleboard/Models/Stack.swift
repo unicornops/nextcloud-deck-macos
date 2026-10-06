@@ -52,3 +52,15 @@ struct Stack: Identifiable, Codable {
         case id, title, boardId, deletedAt, lastModified, cards, order
     }
 }
+
+extension Stack {
+    /// The stack's cards that aren't archived, in board order.
+    var activeCards: [Card] {
+        (cards ?? []).filter { !$0.archived }.sorted { $0.order < $1.order }
+    }
+
+    /// The stack's archived cards, most recently changed first.
+    var archivedCards: [Card] {
+        (cards ?? []).filter(\.archived).sorted { ($0.lastModified ?? 0) > ($1.lastModified ?? 0) }
+    }
+}

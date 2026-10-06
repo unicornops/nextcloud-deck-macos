@@ -26,6 +26,7 @@ struct BoardDetailView: View {
     @State private var selectedCard: Card?
     @State private var newStackTitle = ""
     @State private var showingNewStack = false
+    @State private var showingArchivedCards = false
     @State private var stackDragInsertIndex: Int?
 
     var body: some View {
@@ -50,6 +51,12 @@ struct BoardDetailView: View {
         }
         .navigationTitle(appState.selectedBoard?.title ?? "Deck")
         .searchable(text: $appState.cardFilter.text, placement: .toolbar, prompt: "Filter cards")
+        .sheet(isPresented: $showingArchivedCards) {
+            if let board = appState.selectedBoard {
+                ArchivedCardsSheet(board: board)
+                    .environmentObject(appState)
+            }
+        }
         .sheet(item: $selectedCard) { card in
             if let board = appState.selectedBoard {
                 // Card actions reload the lists themselves; closing the sheet doesn't need to.
@@ -89,6 +96,13 @@ struct BoardDetailView: View {
                 .font(.title2.weight(.semibold))
             Spacer()
             filterMenu(board)
+            Button {
+                showingArchivedCards = true
+            } label: {
+                Image(systemName: "archivebox")
+            }
+            .help("Archived cards")
+            .accessibilityLabel("Archived cards")
             if appState.isLoadingStacks, !appState.stacks.isEmpty {
                 ProgressView()
                     .controlSize(.small)

@@ -318,7 +318,7 @@ final class DeckAPI: Sendable {
         try await request("boards/\(boardId)/stacks/\(stackId)")
     }
 
-    /// Fetches stacks that have been archived (soft-deleted) on the board.
+    /// The board's stacks, each holding its *archived* cards.
     func getArchivedStacks(boardId: Int) async throws -> [Stack] {
         guard let url = url(for: "boards/\(boardId)/stacks/archived") else { throw DeckAPIError.invalidURL }
         let (data, _) = try await performRequest(url: url, method: "GET")
@@ -433,6 +433,15 @@ final class DeckAPI: Sendable {
             method: "PUT",
             body: ReorderCardRequest(order: order, stackId: newStackId)
         )
+    }
+
+    /// Archives a card: it leaves the board's lists and appears in `getArchivedStacks`.
+    func archiveCard(boardId: Int, stackId: Int, cardId: Int) async throws {
+        try await requestNoContent("boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/archive", method: "PUT")
+    }
+
+    func unarchiveCard(boardId: Int, stackId: Int, cardId: Int) async throws {
+        try await requestNoContent("boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/unarchive", method: "PUT")
     }
 
     /// Assigns a user (type 0) or another participant type to a card.

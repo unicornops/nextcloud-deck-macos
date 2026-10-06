@@ -136,6 +136,14 @@ struct CardDetailSheet: View {
                     CardCommentsView(card: card)
                 }
                 Section {
+                    Button("Archive card") {
+                        Task {
+                            await appState.archiveCard(currentCard ?? card, boardId: boardId)
+                            dismiss()
+                            onDismiss()
+                        }
+                    }
+                    .help("Hide the card from the board; restore it from Archived Cards")
                     Button("Delete card", role: .destructive) {
                         showDeleteConfirmation = true
                     }

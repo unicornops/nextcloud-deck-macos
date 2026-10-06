@@ -221,4 +221,19 @@ final class CardModelTests: XCTestCase {
             try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "commentsCount": 3}"#)
         XCTAssertEqual(card.commentsCount, 3)
     }
+
+    // MARK: - Archived cards (#76)
+
+    func testStackSplitsActiveAndArchivedCards() throws {
+        let stack = try JSONDecoder().decode(Stack.self, from: Data("""
+        {"id": 10, "title": "To do", "boardId": 1, "order": 0, "cards": [
+          {"id": 1, "title": "Second", "stackId": 10, "order": 2, "archived": false},
+          {"id": 2, "title": "Old", "stackId": 10, "order": 0, "archived": true, "lastModified": 100},
+          {"id": 3, "title": "First", "stackId": 10, "order": 1, "archived": false},
+          {"id": 4, "title": "Newer", "stackId": 10, "order": 3, "archived": true, "lastModified": 200}
+        ]}
+        """.utf8))
+        XCTAssertEqual(stack.activeCards.map(\.title), ["First", "Second"], "archived cards stay off the board")
+        XCTAssertEqual(stack.archivedCards.map(\.title), ["Newer", "Old"], "most recently archived first")
+    }
 }

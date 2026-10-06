@@ -241,4 +241,18 @@ final class DeckAPITests: XCTestCase {
             XCTAssertEqual(message, "No comment found")
         }
     }
+
+    // MARK: - Archive (#76)
+
+    func testArchiveRequests() async throws {
+        StubURLProtocol.handler = { _ in .json("[]") }
+        try await api.archiveCard(boardId: 1, stackId: 2, cardId: 3)
+        try await api.unarchiveCard(boardId: 1, stackId: 2, cardId: 3)
+        _ = try await api.getArchivedStacks(boardId: 1)
+        XCTAssertEqual(lines, [
+            "PUT /index.php/apps/deck/api/v1.0/boards/1/stacks/2/cards/3/archive",
+            "PUT /index.php/apps/deck/api/v1.0/boards/1/stacks/2/cards/3/unarchive",
+            "GET /index.php/apps/deck/api/v1.0/boards/1/stacks/archived",
+        ])
+    }
 }
