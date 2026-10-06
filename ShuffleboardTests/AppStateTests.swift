@@ -415,4 +415,34 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(restored)
         XCTAssertEqual(app.actionError, DeckAPIError.permissionDenied.localizedDescription)
     }
+
+    // MARK: - Sharing (#80)
+
+    func testSharingRefreshesTheBoard() async throws {
+        let sharedBoard = #"{"id": 1, "title": "One", "archived": false, "acl": [{"id": 3, "participant": {"uid": "alice"}, "type": 0, "permissionEdit": false, "permissionShare": false, "permissionManage": false}]}"#
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.path.hasSuffix("/acl") {
+                return .json("{}")
+            }
+            if request.path.hasSuffix("/boards/1") {
+                return .json(sharedBoard)
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let board = try XCTUnwrap(app.boards.first)
+
+        let shared = await app.share(board, with: Sharee(participantId: "alice", label: "Alice", source: "users"))
+
+        XCTAssertTrue(shared)
+        XCTAssertEqual(app.boards.first?.acl.first?.participant?.uid, "alice", "sharing list refreshed")
+        let lines = StubURLProtocol.requests.map(\.line)
+        XCTAssertEqual(lines.suffix(2), [
+            "POST /index.php/apps/deck/api/v1.0/boards/1/acl",
+            "GET /index.php/apps/deck/api/v1.0/boards/1",
+        ])
+    }
 }
