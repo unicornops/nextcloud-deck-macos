@@ -21,6 +21,7 @@ struct Card: Identifiable, Codable {
     var done: String?
     var deletedAt: Int?
     var commentsUnread: Int?
+    var commentsCount: Int?
     var overdue: Int?
     var etag: String?
 
@@ -47,6 +48,7 @@ struct Card: Identifiable, Codable {
         self.done = (try? c.decodeIfPresent(String.self, forKey: .done))
         self.deletedAt = (try? c.decodeIntOrStringIfPresent(forKey: .deletedAt))
         self.commentsUnread = (try? c.decodeIntOrStringIfPresent(forKey: .commentsUnread))
+        self.commentsCount = (try? c.decodeIntOrStringIfPresent(forKey: .commentsCount))
         self.overdue = (try? c.decodeIntOrStringIfPresent(forKey: .overdue))
         self.etag = (try? c.decodeIfPresent(String.self, forKey: .etag))
     }
@@ -54,7 +56,7 @@ struct Card: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, title, description, stackId, type, lastModified, createdAt
         case labels, assignedUsers, attachments, attachmentCount, owner, order
-        case archived, duedate, startdate, done, deletedAt, commentsUnread, overdue
+        case archived, duedate, startdate, done, deletedAt, commentsUnread, commentsCount, overdue
         case etag = "ETag"
     }
 
@@ -79,6 +81,7 @@ struct Card: Identifiable, Codable {
         try c.encodeIfPresent(done, forKey: .done)
         try c.encodeIfPresent(deletedAt, forKey: .deletedAt)
         try c.encode(commentsUnread ?? 0, forKey: .commentsUnread)
+        try c.encodeIfPresent(commentsCount, forKey: .commentsCount)
         try c.encodeIfPresent(overdue, forKey: .overdue)
         try c.encodeIfPresent(etag, forKey: .etag)
     }

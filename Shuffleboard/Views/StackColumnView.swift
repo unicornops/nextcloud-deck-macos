@@ -372,6 +372,16 @@ struct CardRowView: View {
                 }
                 .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
             }
+            if let count = card.commentsCount, count > 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "text.bubble")
+                        .font(.caption2)
+                    Text("\(count)")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(count == 1 ? "1 comment" : "\(count) comments")
+            }
             if let count = card.attachmentCount, count > 0 {
                 HStack(spacing: 4) {
                     Image(systemName: "paperclip")

@@ -190,4 +190,35 @@ final class CardModelTests: XCTestCase {
         """.utf8))
         XCTAssertEqual(board.assignableUsers.map(\.uid), ["alice", "bob", "rob"], "sorted, unique, no groups")
     }
+
+    // MARK: - Comments (#75)
+
+    func testCommentsDecodeFromTheOCSEnvelope() throws {
+        let json = """
+        {"ocs": {"meta": {"status": "ok", "statuscode": 200, "message": "OK"}, "data": [
+          {"id": "177", "objectId": "13", "message": "My message to @bob", "actorId": "admin", "actorType": "users",
+           "actorDisplayName": "Administrator", "creationDateTime": "2020-03-10T10:30:17+00:00", "mentions": []}
+        ]}}
+        """
+        let comments = try JSONDecoder().decode(OCSResponse<[CardComment]>.self, from: Data(json.utf8)).ocs.data
+        let comment = try XCTUnwrap(comments.first)
+        XCTAssertEqual(comment.id, 177)
+        XCTAssertEqual(comment.message, "My message to @bob")
+        XCTAssertEqual(comment.author.uid, "admin")
+        XCTAssertEqual(comment.author.displayName, "Administrator")
+        XCTAssertEqual(comment.createdAt, DeckDate.parse("2020-03-10T10:30:17+00:00"))
+    }
+
+    func testCommentLengthAndBlankRules() {
+        XCTAssertFalse(CardComment.isPostable("   \n "))
+        XCTAssertTrue(CardComment.isPostable("  hi  "))
+        XCTAssertTrue(CardComment.isPostable(String(repeating: "a", count: CardComment.maximumLength)))
+        XCTAssertFalse(CardComment.isPostable(String(repeating: "a", count: CardComment.maximumLength + 1)))
+    }
+
+    func testCardDecodesCommentCount() throws {
+        let card =
+            try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "commentsCount": 3}"#)
+        XCTAssertEqual(card.commentsCount, 3)
+    }
 }

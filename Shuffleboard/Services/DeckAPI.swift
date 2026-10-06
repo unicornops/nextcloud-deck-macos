@@ -12,6 +12,8 @@ final class DeckAPI: Sendable {
     /// API v1.1 (Deck 1.3+), used for attachments: v1.0 only lists and addresses `deck_file` attachments,
     /// while files attached since Deck 1.3 have the type `file`.
     private let attachmentsBaseURL: URL
+    /// The OCS API, used for comments.
+    private let ocsBaseURL: URL
     private let appPasswordURL: URL
     private let username: String
     private let appPassword: String
@@ -28,6 +30,13 @@ final class DeckAPI: Sendable {
     init(serverURL: URL, username: String, appPassword: String, session: URLSession = .shared) {
         self.baseURL = serverURL
             .appendingPathComponent("index.php")
+            .appendingPathComponent("apps")
+            .appendingPathComponent("deck")
+            .appendingPathComponent("api")
+            .appendingPathComponent("v1.0")
+        self.ocsBaseURL = serverURL
+            .appendingPathComponent("ocs")
+            .appendingPathComponent("v2.php")
             .appendingPathComponent("apps")
             .appendingPathComponent("deck")
             .appendingPathComponent("api")
@@ -196,6 +205,12 @@ final class DeckAPI: Sendable {
         }
         if http.statusCode == 400, let err = try? decoder.decode(APIErrorResponse.self, from: data) {
             throw DeckAPIError.badRequest(err.message)
+        }
+        // OCS endpoints put the reason in ocs.meta.message.
+        if !(200 ... 299).contains(http.statusCode), http.statusCode != 401, http.statusCode != 403,
+           let err = try? decoder.decode(OCSErrorResponse.self, from: data),
+           let message = err.ocs.meta.message, !message.isEmpty {
+            throw DeckAPIError.badRequest(message)
         }
         if http.statusCode == 401 {
             throw DeckAPIError.unauthorized
@@ -462,6 +477,51 @@ final class DeckAPI: Sendable {
             method: "POST",
             body: CreateLabelRequest(title: title, color: color)
         )
+    }
+}
+
+// MARK: - Comments
+
+extension DeckAPI {
+    /// A page of a card's comments, newest first.
+    func getComments(cardId: Int, limit: Int = 20, offset: Int = 0) async throws -> [CardComment] {
+        guard var components = commentsURL(cardId: cardId)
+            .flatMap({ URLComponents(url: $0, resolvingAgainstBaseURL: false) }) else {
+            throw DeckAPIError.invalidURL
+        }
+        components.queryItems = [
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "offset", value: String(offset)),
+        ]
+        guard let url = components.url else { throw DeckAPIError.invalidURL }
+        let (data, _) = try await performRequest(url: url, method: "GET")
+        return try decoder.decode(OCSResponse<[CardComment]>.self, from: data).ocs.data
+    }
+
+    func addComment(cardId: Int, message: String) async throws -> CardComment {
+        guard let url = commentsURL(cardId: cardId) else { throw DeckAPIError.invalidURL }
+        let body = try encoder.encode(CommentRequest(message: message))
+        let (data, _) = try await performRequest(url: url, method: "POST", body: body)
+        return try decoder.decode(OCSResponse<CardComment>.self, from: data).ocs.data
+    }
+
+    /// Only the comment's author may update it.
+    func updateComment(cardId: Int, commentId: Int, message: String) async throws -> CardComment {
+        guard let url = commentsURL(cardId: cardId, commentId: commentId) else { throw DeckAPIError.invalidURL }
+        let body = try encoder.encode(CommentRequest(message: message))
+        let (data, _) = try await performRequest(url: url, method: "PUT", body: body)
+        return try decoder.decode(OCSResponse<CardComment>.self, from: data).ocs.data
+    }
+
+    /// Only the comment's author may delete it.
+    func deleteComment(cardId: Int, commentId: Int) async throws {
+        guard let url = commentsURL(cardId: cardId, commentId: commentId) else { throw DeckAPIError.invalidURL }
+        _ = try await performRequest(url: url, method: "DELETE")
+    }
+
+    private func commentsURL(cardId: Int, commentId: Int? = nil) -> URL? {
+        let path = "cards/\(cardId)/comments" + (commentId.map { "/\($0)" } ?? "")
+        return Self.url(base: ocsBaseURL, path: path)
     }
 }
 
@@ -757,6 +817,10 @@ struct UpdateCardRequest: Encodable {
 private struct ReorderCardRequest: Encodable {
     let order: Int
     let stackId: Int
+}
+
+private struct CommentRequest: Encodable {
+    let message: String
 }
 
 private struct AssignUserRequest: Encodable {

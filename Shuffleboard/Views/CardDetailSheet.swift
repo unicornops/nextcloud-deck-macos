@@ -122,6 +122,9 @@ struct CardDetailSheet: View {
                 Section("Attachments") {
                     attachmentsContent
                 }
+                Section("Comments") {
+                    CardCommentsView(card: card)
+                }
                 Section {
                     Button("Delete card", role: .destructive) {
                         showDeleteConfirmation = true

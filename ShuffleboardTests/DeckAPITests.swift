@@ -191,4 +191,54 @@ final class DeckAPITests: XCTestCase {
         let fetched = try await api.fetchBoards(ifNoneMatch: "\"b1\"")
         XCTAssertNil(fetched)
     }
+
+    // MARK: - Comments (#75)
+
+    private static let ocsComment = """
+    {"ocs": {"meta": {"status": "ok", "statuscode": 200, "message": "OK"},
+     "data": {"id": 9, "message": "Hi", "actorId": "rob", "actorDisplayName": "Rob",
+              "creationDateTime": "2026-10-06T09:00:00+00:00"}}}
+    """
+
+    func testCommentRequests() async throws {
+        StubURLProtocol.handler = { request in
+            switch request.method {
+            case "GET": .json(#"{"ocs": {"meta": {}, "data": []}}"#)
+            case "DELETE": .json(#"{"ocs": {"meta": {}, "data": []}}"#)
+            default: .json(Self.ocsComment)
+            }
+        }
+        _ = try await api.getComments(cardId: 5, offset: 20)
+        let added = try await api.addComment(cardId: 5, message: "Hi")
+        _ = try await api.updateComment(cardId: 5, commentId: 9, message: "Hello")
+        try await api.deleteComment(cardId: 5, commentId: 9)
+
+        let base = "/ocs/v2.php/apps/deck/api/v1.0/cards/5/comments"
+        XCTAssertEqual(lines, [
+            "GET \(base)?limit=20&offset=20",
+            "POST \(base)",
+            "PUT \(base)/9",
+            "DELETE \(base)/9",
+        ])
+        XCTAssertEqual(added.id, 9)
+        XCTAssertEqual(StubURLProtocol.requests[1].json?["message"] as? String, "Hi")
+        XCTAssertEqual(StubURLProtocol.requests[2].json?["message"] as? String, "Hello")
+        XCTAssertEqual(StubURLProtocol.requests[1].header("OCS-APIRequest"), "true")
+    }
+
+    func testOCSErrorMessagesAreReported() async {
+        StubURLProtocol.handler = { _ in
+            .json(
+                #"{"ocs": {"meta": {"status": "failure", "statuscode": 404, "message": "No comment found"}, "data": []}}"#,
+                status: 404
+            )
+        }
+        do {
+            _ = try await api.updateComment(cardId: 5, commentId: 9, message: "x")
+            XCTFail("expected an error")
+        } catch {
+            guard case let DeckAPIError.badRequest(message) = error else { return XCTFail("got \(error)") }
+            XCTAssertEqual(message, "No comment found")
+        }
+    }
 }
