@@ -172,6 +172,24 @@ final class ServerDeckAPITests: XCTestCase {
             saved = try await api.getCard(boardId: board.id, stackId: stack.id, cardId: card.id)
             XCTAssertEqual(saved.labels?.count ?? 0, 0)
 
+            // Editing and deleting labels (#135): cards that have the label follow.
+            try await api.assignLabel(boardId: board.id, stackId: stack.id, cardId: card.id, labelId: label.id)
+            let renamed = try await api.updateLabel(
+                boardId: board.id,
+                labelId: label.id,
+                title: "Critical",
+                color: "9C59B6"
+            )
+            XCTAssertEqual(renamed.title, "Critical")
+            saved = try await api.getCard(boardId: board.id, stackId: stack.id, cardId: card.id)
+            XCTAssertEqual(saved.labels?.map(\.title), ["Critical"])
+            XCTAssertEqual(saved.labels?.first?.color?.lowercased(), "9c59b6")
+            try await api.deleteLabel(boardId: board.id, labelId: label.id)
+            let remaining = try await api.getBoard(id: board.id).labels
+            XCTAssertFalse(remaining.contains { $0.id == label.id }, "Deleted label still on the board")
+            saved = try await api.getCard(boardId: board.id, stackId: stack.id, cardId: card.id)
+            XCTAssertEqual(saved.labels?.count ?? 0, 0, "Deleted label still on the card")
+
             // Bob can only be assigned once the board is shared with him.
             try await api.addShare(
                 boardId: board.id,

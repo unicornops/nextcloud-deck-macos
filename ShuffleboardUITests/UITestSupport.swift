@@ -121,6 +121,15 @@ struct DeckClient: Sendable {
         ))
     }
 
+    func createLabel(board: Int, _ title: String, color: String = "FF7A66") async throws -> Int {
+        try await Self.id(call("POST", "boards/\(board)/labels", ["title": title, "color": color]))
+    }
+
+    /// The titles of the board's labels.
+    func labels(board: Int) async throws -> [String] {
+        try await (self.board(board)["labels"] as? [[String: Any]] ?? []).compactMap { $0["title"] as? String }
+    }
+
     func deleteBoard(_ id: Int) async {
         _ = try? await call("DELETE", "boards/\(id)")
     }

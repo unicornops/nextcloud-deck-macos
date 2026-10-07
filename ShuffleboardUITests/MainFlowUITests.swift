@@ -235,6 +235,37 @@ final class MainFlowUITests: XCTestCase {
         app.find(.button, "Cancel").click()
     }
 
+    // MARK: - Labels
+
+    func testEditingAndDeletingLabels() async throws {
+        let board = try await makeBoard()
+        _ = try await alice.createLabel(board: board.id, "UI urgent")
+        _ = try await alice.createLabel(board: board.id, "UI someday")
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+
+        app.find(.button, "Labels").waitToAppear().click()
+        app.find(.button, "Edit UI urgent").waitToAppear("Label not listed in the Labels sheet").click()
+        app.find(.textField, "Label name").waitToAppear("Label editor did not open").replaceText(with: "UI critical")
+        app.find(.button, "Save").click()
+        app.staticTexts["UI critical"].waitToAppear("Renamed label not shown")
+        try await eventually("Label not renamed on the server") {
+            let labels = try await alice.labels(board: board.id)
+            return labels.contains("UI critical") && !labels.contains("UI urgent")
+        }
+
+        app.find(.button, "Delete UI someday").click()
+        app.find(.button, "Delete").waitToAppear("No confirmation before deleting a label").click()
+        try await eventually("Label not deleted on the server") {
+            try await !alice.labels(board: board.id).contains("UI someday")
+        }
+        XCTAssertTrue(
+            app.staticTexts["UI someday"].waitForNonExistence(timeout: 10),
+            "Deleted label still listed"
+        )
+        app.find(.button, "Done").click()
+    }
+
     // MARK: - Sharing
 
     func testSharingABoard() async throws {
