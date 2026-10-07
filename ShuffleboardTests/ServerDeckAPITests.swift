@@ -112,7 +112,6 @@ final class ServerDeckAPITests: XCTestCase {
 
             try await api.reorderCard(
                 boardId: board.id,
-                stackId: todo.id,
                 cardId: cards[0].id,
                 order: 0,
                 newStackId: doing.id
@@ -123,7 +122,6 @@ final class ServerDeckAPITests: XCTestCase {
             // Within a list: "Three" to the top.
             try await api.reorderCard(
                 boardId: board.id,
-                stackId: todo.id,
                 cardId: cards[2].id,
                 order: 0,
                 newStackId: todo.id

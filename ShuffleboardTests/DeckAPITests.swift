@@ -61,8 +61,9 @@ final class DeckAPITests: XCTestCase {
 
     func testReorderUsesDocumentedEndpoint() async throws {
         StubURLProtocol.handler = { _ in .json("[]") }
-        try await api.reorderCard(boardId: 1, stackId: 2, cardId: 3, order: 4, newStackId: 5)
-        XCTAssertEqual(lines, ["PUT /index.php/apps/deck/api/v1.0/boards/1/stacks/2/cards/3/reorder"])
+        try await api.reorderCard(boardId: 1, cardId: 3, order: 4, newStackId: 5)
+        // The destination stack in the URL as well as the body: some servers take the URL's (#131).
+        XCTAssertEqual(lines, ["PUT /index.php/apps/deck/api/v1.0/boards/1/stacks/5/cards/3/reorder"])
         let body = try XCTUnwrap(StubURLProtocol.requests.first?.json)
         XCTAssertEqual(body["order"] as? Int, 4)
         XCTAssertEqual(body["stackId"] as? Int, 5)

@@ -738,7 +738,6 @@ extension AppState {
         do {
             try await api.reorderCard(
                 boardId: boardId,
-                stackId: fromStackId,
                 cardId: cardId,
                 order: order,
                 newStackId: toStackId
