@@ -438,10 +438,15 @@ final class DeckAPI: Sendable {
     }
 
     /// Moves a card to position `order` in the stack `newStackId`, which may be the stack it is already in.
-    /// `stackId` is the stack the card is in now. The server renumbers the other cards.
-    func reorderCard(boardId: Int, stackId: Int, cardId: Int, order: Int, newStackId: Int) async throws {
+    /// The server renumbers the other cards.
+    ///
+    /// The URL names the destination stack too, not the card's current one. Deck reads the destination from
+    /// `stackId`, which the URL and the body both set, and which one wins depends on the server: when anything
+    /// reads the request's parameters before routing (some installed apps do), the URL's value wins. With the
+    /// card's current stack there, the server answered 200 and left the card where it was.
+    func reorderCard(boardId: Int, cardId: Int, order: Int, newStackId: Int) async throws {
         try await requestNoContent(
-            "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/reorder",
+            "boards/\(boardId)/stacks/\(newStackId)/cards/\(cardId)/reorder",
             method: "PUT",
             body: ReorderCardRequest(order: order, stackId: newStackId)
         )

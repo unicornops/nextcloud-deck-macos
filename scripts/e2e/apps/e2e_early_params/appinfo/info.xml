@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<info>
+    <id>e2e_early_params</id>
+    <name>E2E early params</name>
+    <summary>Test only: reads a request parameter while apps boot</summary>
+    <description>Test only.</description>
+    <version>1.0.0</version>
+    <licence>agpl</licence>
+    <author>Shuffleboard tests</author>
+    <namespace>E2EEarlyParams</namespace>
+    <category>tools</category>
+    <dependencies>
+        <nextcloud min-version="28" max-version="99"/>
+    </dependencies>
+</info>

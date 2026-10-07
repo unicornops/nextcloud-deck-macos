@@ -110,6 +110,14 @@ else
     occ app:install deck
 fi
 
+# MARK: - Test app
+
+# Real servers run apps that read request parameters while booting, which changes which value wins when the URL
+# and the body set the same parameter (#131). This test-only app does the same, so the tests see what they see.
+rm -rf "$SERVER_DIR/apps/e2e_early_params"
+cp -R "$(dirname "$0")/apps/e2e_early_params" "$SERVER_DIR/apps/"
+occ app:enable e2e_early_params
+
 # MARK: - Users
 
 add_user() { # user display-name password
