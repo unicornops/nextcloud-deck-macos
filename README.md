@@ -30,6 +30,25 @@ Shuffleboard has a new app identity (bundle ID `ie.unicornops.shuffleboard`), so
 
 Your boards live on your Nextcloud server, so nothing is lost. The old app's Keychain entry can be removed in Keychain Access (search for `nextclouddeck`).
 
+## Screenshots
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/board-dark.png">
+  <img src="docs/screenshots/board-light.png" alt="A board with lists of cards showing labels, due dates, checklists and assignees" width="720">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/card-dark.png">
+  <img src="docs/screenshots/card-light.png" alt="Editing a card: title, description checklist, due date and assignees" width="720">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/sharing-dark.png">
+  <img src="docs/screenshots/sharing-light.png" alt="Sharing a board with a person and a group" width="720">
+</picture>
+
+The screenshots are taken by the end-to-end UI tests from demo data (see [End-to-end tests](#end-to-end-tests)).
+
 ## Features
 
 - **Sign in** with your Nextcloud server URL: the app opens your browser to sign in (including two-factor authentication) using [Nextcloud Login Flow v2](https://docs.nextcloud.com/server/latest/developer_manual/client_apis/LoginFlow/index.html), receives an app password and stores it securely in the system Keychain. Signing out revokes the app password.
