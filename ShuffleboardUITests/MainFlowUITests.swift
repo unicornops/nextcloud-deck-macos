@@ -68,8 +68,10 @@ final class MainFlowUITests: XCTestCase {
         try await app.launch(on: server, as: [UITestServer.alice])
         app.openBoard(board.title)
 
-        app.element("board: \(board.title)").rightClick()
-        app.menuItems["Delete"].waitToAppear().click()
+        let row = app.element("board: \(board.title)")
+        row.rightClick()
+        // The row's context menu, not Edit > Delete in the menu bar.
+        row.menuItems["Delete"].waitToAppear("No Delete item in the board's context menu").click()
         // The dialog's button, not its Touch Bar copy, which can't be clicked.
         app.windows.descendants(matching: .button).matching(NSPredicate(format: "label == %@", "Delete")).firstMatch
             .waitToAppear("No confirmation before deleting the board").click()
