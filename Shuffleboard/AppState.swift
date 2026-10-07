@@ -343,48 +343,6 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Restores a deleted board and opens it. Deck before 1.17 refuses with 403 (a server bug, fixed in Deck 1.17.0);
-    /// the banner then says so instead of "Permission denied".
-    func restoreBoard(id: Int) async {
-        guard let api = deckAPI else { return }
-        do {
-            try await api.undoDeleteBoard(id: id)
-            await loadBoards()
-            if activeBoards.contains(where: { $0.id == id }) || archivedBoards.contains(where: { $0.id == id }) {
-                selectedBoardId = id
-            }
-        } catch DeckAPIError.permissionDenied {
-            if let version = try? await api.deckVersion(), !DeckAPI.version(version, isAtLeast: "1.17") {
-                actionError = Self.restoreUnsupportedMessage(deckVersion: version)
-            } else {
-                report(DeckAPIError.permissionDenied)
-            }
-        } catch {
-            report(error)
-        }
-    }
-
-    nonisolated static func restoreUnsupportedMessage(deckVersion: String) -> String {
-        "This server has Deck \(deckVersion), which can't restore deleted boards. Deck 1.17 or later can; "
-            + "your Nextcloud administrator can update it."
-    }
-
-    /// Deletes a board. Deck keeps it restorable for a while, so it moves to "Recently Deleted" in the sidebar.
-    func deleteBoard(id: Int) async {
-        guard let api = deckAPI else { return }
-        do {
-            try await api.deleteBoard(id: id)
-            if let idx = boards.firstIndex(where: { $0.id == id }) {
-                boards[idx].deletedAt = Int(Date().timeIntervalSince1970)
-            }
-            if selectedBoardId == id {
-                selectedBoardId = activeBoards.first?.id
-            }
-        } catch {
-            report(error)
-        }
-    }
-
     /// Returns `true` if the board was created successfully, `false` otherwise (and sets `errorMessage`).
     func createBoard(title: String, color: String) async -> Bool {
         guard let api = deckAPI else { return false }
@@ -518,6 +476,53 @@ final class AppState: ObservableObject {
         } catch {
             report(error)
             return nil
+        }
+    }
+}
+
+// MARK: - Deleting and restoring boards
+
+@MainActor
+extension AppState {
+    /// Restores a deleted board and opens it. Deck before 1.17 refuses with 403 (a server bug, fixed in Deck 1.17.0);
+    /// the banner then says so instead of "Permission denied".
+    func restoreBoard(id: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.undoDeleteBoard(id: id)
+            await loadBoards()
+            if activeBoards.contains(where: { $0.id == id }) || archivedBoards.contains(where: { $0.id == id }) {
+                selectedBoardId = id
+            }
+        } catch DeckAPIError.permissionDenied {
+            if let version = try? await api.deckVersion(), !DeckAPI.version(version, isAtLeast: "1.17") {
+                actionError = Self.restoreUnsupportedMessage(deckVersion: version)
+            } else {
+                report(DeckAPIError.permissionDenied)
+            }
+        } catch {
+            report(error)
+        }
+    }
+
+    nonisolated static func restoreUnsupportedMessage(deckVersion: String) -> String {
+        "This server has Deck \(deckVersion), which can't restore deleted boards. Deck 1.17 or later can; "
+            + "your Nextcloud administrator can update it."
+    }
+
+    /// Deletes a board. Deck keeps it restorable for a while, so it moves to "Recently Deleted" in the sidebar.
+    func deleteBoard(id: Int) async {
+        guard let api = deckAPI else { return }
+        do {
+            try await api.deleteBoard(id: id)
+            if let idx = boards.firstIndex(where: { $0.id == id }) {
+                boards[idx].deletedAt = Int(Date().timeIntervalSince1970)
+            }
+            if selectedBoardId == id {
+                selectedBoardId = activeBoards.first?.id
+            }
+        } catch {
+            report(error)
         }
     }
 }
