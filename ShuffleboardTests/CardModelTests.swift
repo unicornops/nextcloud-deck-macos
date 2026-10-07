@@ -237,3 +237,37 @@ final class CardModelTests: XCTestCase {
         XCTAssertEqual(stack.archivedCards.map(\.title), ["Newer", "Old"], "most recently archived first")
     }
 }
+
+// MARK: - Moving cards
+
+extension CardModelTests {
+    private func board() throws -> [Stack] {
+        try JSONDecoder().decode([Stack].self, from: Data("""
+        [{"id": 1, "title": "To do", "boardId": 1, "order": 0, "cards": [
+           {"id": 10, "title": "A", "stackId": 1, "order": 0},
+           {"id": 11, "title": "B", "stackId": 1, "order": 1}]},
+         {"id": 2, "title": "Done", "boardId": 1, "order": 1, "cards": [
+           {"id": 20, "title": "C", "stackId": 2, "order": 0},
+           {"id": 21, "title": "Old", "stackId": 2, "order": 5, "archived": true}]}]
+        """.utf8))
+    }
+
+    func testMovingACardToAnotherList() throws {
+        let moved = try XCTUnwrap(board().movingCard(10, toStack: 2, at: 1))
+        XCTAssertEqual(moved[0].activeCards.map(\.id), [11])
+        XCTAssertEqual(moved[1].activeCards.map(\.id), [20, 10])
+        XCTAssertEqual(moved[1].activeCards.map(\.order), [0, 1])
+        XCTAssertEqual(moved[1].activeCards.last?.stackId, 2)
+        XCTAssertEqual(moved[1].archivedCards.map(\.id), [21], "archived cards stay put")
+    }
+
+    func testMovingACardWithinItsList() throws {
+        let moved = try XCTUnwrap(board().movingCard(11, toStack: 1, at: 0))
+        XCTAssertEqual(moved[0].activeCards.map(\.id), [11, 10])
+    }
+
+    func testMovingAnUnknownCardChangesNothing() throws {
+        XCTAssertNil(try board().movingCard(99, toStack: 2, at: 0))
+        XCTAssertNil(try board().movingCard(10, toStack: 99, at: 0))
+    }
+}

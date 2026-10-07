@@ -324,31 +324,10 @@ struct BoardDetailView: View {
     }
 
     private func handleStackDrop(providers: [NSItemProvider], insertIndex: Int, boardId: Int) -> Bool {
-        guard let provider = providers.first(where: { provider in
-            stackDropTypes.contains { provider.hasItemConformingToTypeIdentifier($0) }
-        }) else {
-            return false
-        }
-
-        let typeIdentifier = stackDropTypes.first(where: {
-            provider.hasItemConformingToTypeIdentifier($0)
-        }) ?? UTType.plainText.identifier
-
-        provider.loadItem(forTypeIdentifier: typeIdentifier, options: nil) { item, _ in
-            let value: String? = if let data = item as? Data {
-                String(data: data, encoding: .utf8)
-            } else if let str = item as? String {
-                str
-            } else if let nsStr = item as? NSString {
-                nsStr as String
-            } else {
-                nil
-            }
-
-            guard let value, let draggedStack = DraggedStack.fromProviderString(value) else { return }
-
+        providers.loadDroppedText { text in
             Task { @MainActor in
                 appState.isDraggingStack = false
+                guard let draggedStack = DraggedStack.fromProviderString(text) else { return }
                 await appState.reorderStacks(
                     boardId: boardId,
                     fromIndex: draggedStack.index,
@@ -356,7 +335,6 @@ struct BoardDetailView: View {
                 )
             }
         }
-        return true
     }
 }
 

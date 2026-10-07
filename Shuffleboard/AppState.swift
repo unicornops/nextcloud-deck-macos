@@ -729,6 +729,12 @@ extension AppState {
     /// Moves a card to position `order` in `toStackId`, which may be the stack it is already in.
     func reorderCard(boardId: Int, fromStackId: Int, cardId: Int, toStackId: Int, order: Int) async {
         guard let api = deckAPI else { return }
+        // Show the move straight away; the reload below (or after a failure) replaces it with the server's lists.
+        if stacksBoardId == boardId, let moved = stacks.movingCard(cardId, toStack: toStackId, at: order) {
+            // Drop any refresh already in flight, so it can't put the card back where it was.
+            stacksGeneration += 1
+            stacks = moved
+        }
         do {
             try await api.reorderCard(
                 boardId: boardId,
@@ -740,6 +746,7 @@ extension AppState {
             await loadStacks(boardId: boardId)
         } catch {
             report(error)
+            await loadStacks(boardId: boardId)
         }
     }
 

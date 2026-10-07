@@ -64,3 +64,24 @@ extension Stack {
         (cards ?? []).filter(\.archived).sorted { ($0.lastModified ?? 0) > ($1.lastModified ?? 0) }
     }
 }
+
+extension [Stack] {
+    /// These stacks with card `cardId` moved to position `index` among stack `stackId`'s active cards, numbered
+    /// the way Deck renumbers them; `nil` if either isn't here. Shows a move straight away, before the server
+    /// confirms it.
+    func movingCard(_ cardId: Int, toStack stackId: Int, at index: Int) -> [Stack]? {
+        guard let fromStack = firstIndex(where: { $0.cards?.contains { $0.id == cardId } == true }),
+              let toStack = firstIndex(where: { $0.id == stackId }),
+              var card = self[fromStack].cards?.first(where: { $0.id == cardId }) else { return nil }
+        var stacks = self
+        stacks[fromStack].cards?.removeAll { $0.id == cardId }
+        card.stackId = stackId
+        var active = stacks[toStack].activeCards
+        active.insert(card, at: Swift.min(Swift.max(index, 0), active.count))
+        for position in active.indices {
+            active[position].order = position
+        }
+        stacks[toStack].cards = active + stacks[toStack].archivedCards
+        return stacks
+    }
+}
