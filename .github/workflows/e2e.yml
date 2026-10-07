@@ -138,7 +138,12 @@ jobs:
       # Also on pull requests, so a change to the UI can be looked at in the run's artifacts.
       - name: Screenshots
         if: strategy.job-index == 0
-        run: scripts/e2e/test.sh screenshots
+        run: |
+          # The runner's screen is small: keep the Dock from covering the bottom of the window.
+          defaults write com.apple.dock autohide -bool true
+          killall Dock
+          sleep 2
+          scripts/e2e/test.sh screenshots
 
       - name: Upload screenshots
         if: strategy.job-index == 0

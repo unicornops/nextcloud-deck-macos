@@ -26,9 +26,11 @@ api() {
 as_alice() { api "$ALICE_AUTH" "$@"; }
 
 # Dates relative to today, so "overdue" and "due soon" look the same whenever the screenshots are taken.
-iso_date() { # days from now
+iso_date() { # days from now, e.g. 5 or -2
     if date -v+1d >/dev/null 2>&1; then
-        date -u -v"${1}d" +%Y-%m-%dT17:00:00+00:00
+        # BSD date: -v5d would set the day of the month; -v+5d adds five days.
+        case "$1" in -*) offset="$1" ;; *) offset="+$1" ;; esac
+        date -u -v"${offset}d" +%Y-%m-%dT17:00:00+00:00
     else
         date -u -d "$1 days" +%Y-%m-%dT17:00:00+00:00
     fi
