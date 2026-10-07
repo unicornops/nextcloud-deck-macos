@@ -33,6 +33,10 @@ struct StackColumnView: View {
     @State private var pendingCardDelete: Card?
     @State private var dragInsertIndex: Int?
     @State private var isColumnDropTargeted = false
+    /// The list's title is being edited in place; `renameTitle` holds the edit.
+    @State private var isRenaming = false
+    @State private var renameTitle = ""
+    @FocusState private var isRenameFocused: Bool
 
     private var isDropTargeted: Bool {
         guard !appState.isDraggingStack else { return false }
@@ -112,11 +116,28 @@ struct StackColumnView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 6) {
-            Text(stack.title)
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if isRenaming {
+                renameField
+            } else {
+                Text(stack.title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        if board.canEdit {
+                            startRenaming()
+                        }
+                    }
+            }
             Menu {
+                if board.canEdit {
+                    Button {
+                        startRenaming()
+                    } label: {
+                        Label("Rename list", systemImage: "pencil")
+                    }
+                }
                 Button(role: .destructive) {
                     pendingDelete = true
                 } label: {
@@ -130,9 +151,42 @@ struct StackColumnView: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
+            .accessibilityLabel("List actions")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+    }
+
+    /// The title, editable in place: Return or clicking elsewhere saves, Escape cancels.
+    private var renameField: some View {
+        TextField("List name", text: $renameTitle)
+            .textFieldStyle(.roundedBorder)
+            .font(.headline)
+            .focused($isRenameFocused)
+            .frame(maxWidth: .infinity)
+            .onAppear {
+                // Focusing in the same update as the field appears is sometimes ignored.
+                Task { @MainActor in isRenameFocused = true }
+            }
+            .onSubmit { finishRenaming() }
+            .onExitCommand { isRenaming = false }
+            .onChange(of: isRenameFocused) { _, focused in
+                if !focused {
+                    finishRenaming()
+                }
+            }
+    }
+
+    private func startRenaming() {
+        renameTitle = stack.title
+        isRenaming = true
+    }
+
+    private func finishRenaming() {
+        guard isRenaming else { return }
+        isRenaming = false
+        let title = renameTitle
+        Task { await appState.renameStack(boardId: board.id, stackId: stack.id, title: title) }
     }
 
     private var cardList: some View {

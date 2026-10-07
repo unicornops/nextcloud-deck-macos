@@ -151,6 +151,30 @@ final class ServerAppStateTests: XCTestCase {
         await app.deleteBoard(id: board.id)
     }
 
+    func testRenamingAList() async throws {
+        let app = try await signedInApp()
+        let title = uniqueTitle("E2E rename list")
+        let created = await app.createBoard(title: title, color: "31CC7C")
+        XCTAssertTrue(created, app.errorMessage ?? "")
+        let board = try XCTUnwrap(app.boards.first { $0.title == title })
+        XCTAssertTrue(board.canEdit, "The owner can edit the board")
+        app.selectBoard(board)
+        await app.loadStacks(boardId: board.id)
+        for list in ["To do", "Doing", "Done"] {
+            let added = await app.createStack(boardId: board.id, title: list)
+            XCTAssertTrue(added, app.errorMessage ?? "")
+        }
+        let doing = try XCTUnwrap(app.stacks.first { $0.title == "Doing" })
+
+        await app.renameStack(boardId: board.id, stackId: doing.id, title: "In progress")
+
+        XCTAssertNil(app.actionError)
+        XCTAssertEqual(app.stacks.map(\.title), ["To do", "In progress", "Done"])
+        let onServer = try await server.api(for: TestServer.alice).getStacks(boardId: board.id)
+        XCTAssertEqual(AppState.sorted(onServer).map(\.title), ["To do", "In progress", "Done"], "Renamed list moved")
+        await app.deleteBoard(id: board.id)
+    }
+
     /// Picks up a change made elsewhere (here: another client) with the ETag refresh.
     func testRefreshIfChangedPicksUpChangesFromAnotherClient() async throws {
         let app = try await signedInApp()

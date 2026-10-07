@@ -432,6 +432,24 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Renames a list, keeping its position. The new title shows straight away; if the server refuses it, the error
+    /// goes to the banner and the lists are reloaded so the old title comes back. Blank or unchanged titles are
+    /// ignored.
+    func renameStack(boardId: Int, stackId: Int, title: String) async {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let api = deckAPI, !trimmed.isEmpty, stacksBoardId == boardId,
+              let idx = stacks.firstIndex(where: { $0.id == stackId }),
+              stacks[idx].title != trimmed else { return }
+        let order = stacks[idx].order
+        stacks[idx].title = trimmed
+        do {
+            _ = try await api.updateStack(boardId: boardId, stackId: stackId, title: trimmed, order: order)
+        } catch {
+            report(error)
+            await loadStacks(boardId: boardId)
+        }
+    }
+
     /// Deletes the stack and its cards. Deck keeps them restorable until the server clears deleted items.
     func deleteStack(boardId: Int, stackId: Int) async {
         guard let api = deckAPI else { return }

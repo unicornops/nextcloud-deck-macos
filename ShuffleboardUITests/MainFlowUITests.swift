@@ -95,6 +95,35 @@ final class MainFlowUITests: XCTestCase {
         )
     }
 
+    func testRenamingLists() async throws {
+        let board = try await makeBoard()
+        _ = try await alice.createStack(board: board.id, "To do", order: 0)
+        _ = try await alice.createStack(board: board.id, "Doing", order: 1)
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+
+        // From the list's menu.
+        app.list("To do").waitToAppear().descendants(matching: .any)["List actions"].click()
+        app.menuItems["Rename list"].waitToAppear("No Rename list item in the list's menu").click()
+        app.find(.textField, "List name").waitToAppear("No field to rename the list").replaceText(with: "Backlog\r")
+        app.list("Backlog").waitToAppear("Renamed list not shown")
+        try await eventually("List not renamed on the server") {
+            let titles = try await alice.stacks(board: board.id).compactMap { $0["title"] as? String }
+            return titles.sorted() == ["Backlog", "Doing"]
+        }
+
+        // By double-clicking its title; Escape cancels.
+        app.list("Doing").staticTexts["Doing"].doubleClick()
+        let field = app.find(.textField, "List name").waitToAppear("Double-click did not start renaming")
+        field.typeKey(.escape, modifierFlags: [])
+        app.list("Doing").staticTexts["Doing"].waitToAppear("Escape did not cancel renaming").doubleClick()
+        app.find(.textField, "List name").waitToAppear().replaceText(with: "In progress\r")
+        app.list("In progress").waitToAppear("List renamed by double-click not shown")
+        try await eventually("List renamed by double-click not saved on the server") {
+            try await alice.stacks(board: board.id).contains { $0["title"] as? String == "In progress" }
+        }
+    }
+
     /// Moving cards into a list that already has cards (#117): dropped onto a card, and dropped between two cards.
     func testDraggingCardsIntoAListThatHasCards() async throws {
         let board = try await makeBoard()
