@@ -4,6 +4,7 @@ struct BoardListView: View {
     @EnvironmentObject private var appState: AppState
     @State private var showingNewBoard = false
     @State private var pendingBoardDelete: Int?
+    @State private var editingBoard: Board?
 
     var body: some View {
         List(selection: Binding(
@@ -51,6 +52,7 @@ struct BoardListView: View {
                         .accessibilityIdentifier("board: \(board.title)")
                         .tag(board.id)
                         .contextMenu {
+                            editButton(board)
                             Button("Archive") {
                                 Task { await appState.archiveBoard(id: board.id) }
                             }
@@ -75,6 +77,7 @@ struct BoardListView: View {
                         .accessibilityIdentifier("board: \(board.title)")
                         .tag(board.id)
                         .contextMenu {
+                            editButton(board)
                             Button("Unarchive") {
                                 Task { await appState.unarchiveBoard(id: board.id) }
                             }
@@ -121,8 +124,13 @@ struct BoardListView: View {
             .background(.background)
         }
         .sheet(isPresented: $showingNewBoard) {
-            NewBoardSheet {
+            BoardSheet {
                 showingNewBoard = false
+            }
+        }
+        .sheet(item: $editingBoard) { board in
+            BoardSheet(board: board) {
+                editingBoard = nil
             }
         }
         .confirmationDialog("Delete board?", isPresented: Binding(
@@ -147,6 +155,16 @@ struct BoardListView: View {
                 Text(
                     DeleteConfirmation.message("\u{201c}\(board.title)\u{201d} and all its lists and cards")
                 )
+            }
+        }
+    }
+
+    /// "Edit Board…", for boards the signed-in user may manage.
+    @ViewBuilder
+    private func editButton(_ board: Board) -> some View {
+        if board.canManage {
+            Button("Edit Board\u{2026}") {
+                editingBoard = board
             }
         }
     }

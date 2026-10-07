@@ -24,7 +24,7 @@
 		A1000000000000000000000F /* CardDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000F /* CardDetailSheet.swift */; };
 		A10000000000000000000010 /* NewStackSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* NewStackSheet.swift */; };
 		A10000000000000000000011 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Color+Hex.swift */; };
-		A10000000000000000000012 /* NewBoardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* NewBoardSheet.swift */; };
+		A10000000000000000000012 /* BoardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* BoardSheet.swift */; };
 		A10000000000000000000013 /* CodingKeyHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* CodingKeyHelpers.swift */; };
 		A10000000000000000000014 /* BoardColorPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* BoardColorPickerView.swift */; };
 		A10000000000000000000015 /* CreateSheetFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* CreateSheetFooter.swift */; };
@@ -97,7 +97,7 @@
 		A2000000000000000000000F /* CardDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardDetailSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000010 /* NewStackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewStackSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000011 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
-		A20000000000000000000012 /* NewBoardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewBoardSheet.swift; sourceTree = "<group>"; };
+		A20000000000000000000012 /* BoardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000013 /* CodingKeyHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodingKeyHelpers.swift; sourceTree = "<group>"; };
 		A20000000000000000000014 /* BoardColorPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardColorPickerView.swift; sourceTree = "<group>"; };
 		A20000000000000000000015 /* CreateSheetFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSheetFooter.swift; sourceTree = "<group>"; };
@@ -239,7 +239,7 @@
 				A20000000000000000000037 /* ArchivedCardsSheet.swift */,
 				A20000000000000000000039 /* BoardSharingSheet.swift */,
 				A20000000000000000000010 /* NewStackSheet.swift */,
-				A20000000000000000000012 /* NewBoardSheet.swift */,
+				A20000000000000000000012 /* BoardSheet.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -467,7 +467,7 @@
 				A10000000000000000000037 /* ArchivedCardsSheet.swift in Sources */,
 				A10000000000000000000039 /* BoardSharingSheet.swift in Sources */,
 				A10000000000000000000010 /* NewStackSheet.swift in Sources */,
-				A10000000000000000000012 /* NewBoardSheet.swift in Sources */,
+				A10000000000000000000012 /* BoardSheet.swift in Sources */,
 				A10000000000000000000011 /* Color+Hex.swift in Sources */,
 				A10000000000000000000013 /* CodingKeyHelpers.swift in Sources */,
 				A10000000000000000000014 /* BoardColorPickerView.swift in Sources */,

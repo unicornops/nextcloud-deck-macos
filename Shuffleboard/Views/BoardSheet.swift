@@ -1,16 +1,27 @@
 import SwiftUI
 
-struct NewBoardSheet: View {
+/// Creates a board, or with `board` set, renames and recolours that board.
+struct BoardSheet: View {
+    /// The board to edit; nil creates a new one.
+    var board: Board?
     var onDismiss: () -> Void
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
-    @State private var title = ""
-    @State private var color = BoardColorPickerView.defaultColor
+    @State private var title: String
+    @State private var color: String
     @State private var isSaving = false
+
+    init(board: Board? = nil, onDismiss: @escaping () -> Void) {
+        self.board = board
+        self.onDismiss = onDismiss
+        _title = State(initialValue: board?.title ?? "")
+        let color = board?.color ?? ""
+        _color = State(initialValue: color.isEmpty ? BoardColorPickerView.defaultColor : color)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("New board")
+            Text(board == nil ? "New board" : "Edit board")
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: 6) {
@@ -26,7 +37,8 @@ struct NewBoardSheet: View {
 
             CreateSheetFooter(
                 isDisabled: title.trimmingCharacters(in: .whitespaces).isEmpty,
-                isSaving: $isSaving
+                isSaving: $isSaving,
+                actionTitle: board == nil ? "Create" : "Save"
             ) {
                 save()
             } onCancel: {
@@ -43,11 +55,15 @@ struct NewBoardSheet: View {
 
     private func save() {
         let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !t.isEmpty else { return }
+        guard !t.isEmpty, !isSaving else { return }
         isSaving = true
         appState.errorMessage = nil
         Task {
-            let success = await appState.createBoard(title: t, color: color)
+            let success = if let board {
+                await appState.updateBoard(id: board.id, title: t, color: color)
+            } else {
+                await appState.createBoard(title: t, color: color)
+            }
             await MainActor.run {
                 isSaving = false
                 if success {

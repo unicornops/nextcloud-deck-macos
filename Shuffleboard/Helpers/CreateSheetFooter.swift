@@ -5,9 +5,9 @@ import SwiftUI
 /// Reusable footer for "create something" sheets, combining:
 ///   - an optional inline error message (from `AppState.errorMessage`)
 ///   - a Cancel button (keyboard shortcut: Escape)
-///   - a Create button with an in-flight spinner (keyboard shortcut: Return)
+///   - a Create (or `actionTitle`) button with an in-flight spinner (keyboard shortcut: Return)
 ///
-/// Both `NewBoardSheet` and `NewStackSheet` share this component so that the
+/// Both `BoardSheet` and `NewStackSheet` share this component so that the
 /// save/cancel affordance is consistent and maintained in one place.
 ///
 /// **Usage**
@@ -37,6 +37,9 @@ struct CreateSheetFooter: View {
     /// Reflects whether an async save is in progress; the Create button shows a
     /// spinner and is disabled while `true`.
     @Binding var isSaving: Bool
+
+    /// The confirming button's title: "Create", or e.g. "Save" when editing.
+    var actionTitle = "Create"
 
     /// Called when the user taps Create or presses ⌘Return.
     var onSave: () -> Void
@@ -78,7 +81,7 @@ struct CreateSheetFooter: View {
                         .scaleEffect(0.8)
                         .frame(minWidth: 60)
                 } else {
-                    Text("Create")
+                    Text(actionTitle)
                 }
             }
             .buttonStyle(.borderedProminent)

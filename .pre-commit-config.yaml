@@ -80,7 +80,7 @@ repos:
           # 105 tokens: calibrated to skip unavoidable structural overlap between
           # the two private request-building helpers in DeckAPI (request<T> and
           # requestNoContent both call performRequest) and the identical call-site
-          # boilerplate in NewBoardSheet / NewStackSheet after extracting
+          # boilerplate in BoardSheet / NewStackSheet after extracting
           # CreateSheetFooter. All real duplications above this threshold were
           # refactored away; see Helpers/CodingKeyHelpers.swift,
           # Helpers/BoardColorPickerView.swift, and Helpers/CreateSheetFooter.swift.

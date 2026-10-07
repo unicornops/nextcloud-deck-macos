@@ -29,6 +29,7 @@ struct BoardDetailView: View {
     @State private var showingNewStack = false
     @State private var showingArchivedCards = false
     @State private var showingSharing = false
+    @State private var showingEditBoard = false
     @State private var stackDragInsertIndex: Int?
 
     var body: some View {
@@ -57,6 +58,14 @@ struct BoardDetailView: View {
             if let board = appState.selectedBoard {
                 BoardSharingSheet(boardId: board.id)
                     .environmentObject(appState)
+            }
+        }
+        .sheet(isPresented: $showingEditBoard) {
+            if let board = appState.selectedBoard {
+                BoardSheet(board: board) {
+                    showingEditBoard = false
+                }
+                .environmentObject(appState)
             }
         }
         .sheet(isPresented: $showingArchivedCards) {
@@ -102,6 +111,16 @@ struct BoardDetailView: View {
                 .frame(width: 16, height: 16)
             Text(board.title)
                 .font(.title2.weight(.semibold))
+            if board.canManage {
+                Button {
+                    showingEditBoard = true
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.borderless)
+                .help("Rename this board or change its color")
+                .accessibilityLabel("Edit board")
+            }
             Spacer()
             filterMenu(board)
             Button {

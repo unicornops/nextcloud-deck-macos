@@ -497,3 +497,65 @@ extension AppStateTests {
         XCTAssertNotNil(app.actionError)
     }
 }
+
+// MARK: - Editing boards (#133)
+
+extension AppStateTests {
+    func testEditingABoardUpdatesItInPlace() async {
+        StubURLProtocol.handler = { request in
+            if request.method == "PUT" {
+                return .json(#"{"id": 2, "title": "Renamed", "color": "9C59B6", "archived": false}"#)
+            }
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let before = StubURLProtocol.requests.count
+
+        let saved = await app.updateBoard(id: 2, title: "  Renamed ", color: "9C59B6")
+
+        XCTAssertTrue(saved)
+        XCTAssertEqual(app.boards.map(\.title), ["One", "Renamed"], "renamed in place, order kept")
+        XCTAssertEqual(app.boards.last?.color, "9C59B6")
+        let sent = StubURLProtocol.requests.dropFirst(before)
+        XCTAssertEqual(sent.map(\.line), ["PUT /index.php/apps/deck/api/v1.0/boards/2"], "no reload needed")
+        XCTAssertEqual(sent.first?.json?["title"] as? String, "Renamed", "title is trimmed")
+        XCTAssertEqual(sent.first?.json?["archived"] as? Bool, false)
+        XCTAssertEqual(app.selectedBoardId, 1, "editing another board keeps the open one")
+    }
+
+    func testFailedBoardEditKeepsTheBoardAndExplains() async {
+        StubURLProtocol.handler = { request in
+            if request.method == "PUT" {
+                return .status(403)
+            }
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+
+        let saved = await app.updateBoard(id: 1, title: "Renamed", color: "9C59B6")
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(app.boards.first?.title, "One")
+        XCTAssertEqual(app.errorMessage, DeckAPIError.permissionDenied.localizedDescription, "shown in the sheet")
+        XCTAssertTrue(app.isLoggedIn)
+    }
+
+    func testBlankBoardTitleIsNotSent() async {
+        StubURLProtocol.handler = { request in
+            request.path.hasSuffix("/boards") ? .json(Self.boardsJSON) : .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let before = StubURLProtocol.requests.count
+
+        let saved = await app.updateBoard(id: 1, title: "  ", color: "9C59B6")
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(StubURLProtocol.requests.count, before)
+    }
+}

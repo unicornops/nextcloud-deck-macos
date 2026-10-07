@@ -32,6 +32,35 @@ final class MainFlowUITests: XCTestCase {
 
     // MARK: - Boards, lists and cards
 
+    func testRenamingAndRecolouringABoard() async throws {
+        let board = try await makeBoard()
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+
+        // From the sidebar's context menu.
+        app.element("board: \(board.title)").rightClick()
+        app.menuItems["Edit Board\u{2026}"].waitToAppear("No Edit Board item in the board's context menu").click()
+        app.find(.textField, "Enter board name").waitToAppear("Edit sheet did not open")
+            .replaceText(with: board.title + " renamed")
+        app.find(.button, "Purple").click()
+        app.find(.button, "Save").click()
+        app.element("board: \(board.title) renamed").waitToAppear("Renamed board not shown in the sidebar")
+        try await eventually("Board not renamed and recoloured on the server") {
+            let saved = try await alice.board(board.id)
+            return saved["title"] as? String == board.title + " renamed"
+                && (saved["color"] as? String)?.lowercased() == "9c59b6"
+        }
+
+        // From the board's header.
+        app.find(.button, "Edit board").waitToAppear().click()
+        app.find(.textField, "Enter board name").waitToAppear().replaceText(with: board.title + " again")
+        app.find(.button, "Save").click()
+        app.element("board: \(board.title) again").waitToAppear("Board renamed from its header not shown")
+        try await eventually("Board renamed from its header not saved on the server") {
+            try await alice.board(board.id)["title"] as? String == board.title + " again"
+        }
+    }
+
     func testCreatingListsAndACardThenDraggingItToAnotherList() async throws {
         let board = try await makeBoard()
         try await app.launch(on: server, as: [UITestServer.alice])
