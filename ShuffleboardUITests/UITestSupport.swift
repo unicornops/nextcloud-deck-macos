@@ -151,6 +151,13 @@ struct DeckClient: Sendable {
         try await call("GET", "boards/\(id)") as? [String: Any] ?? [:]
     }
 
+    /// Whether the board is soft-deleted. Reads the board list: a deleted board itself answers 403.
+    func isDeleted(_ id: Int) async throws -> Bool {
+        let boards = try await call("GET", "boards") as? [[String: Any]] ?? []
+        guard let board = boards.first(where: { $0["id"] as? Int == id }) else { throw UITestError("No board \(id)") }
+        return board["deletedAt"] as? Int ?? 0 > 0
+    }
+
     /// The board's lists, each with its cards.
     func stacks(board: Int) async throws -> [[String: Any]] {
         try await call("GET", "boards/\(board)/stacks") as? [[String: Any]] ?? []

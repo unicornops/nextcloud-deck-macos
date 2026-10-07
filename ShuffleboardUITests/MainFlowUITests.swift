@@ -82,7 +82,7 @@ final class MainFlowUITests: XCTestCase {
             "Deleted board still with the others"
         )
         try await eventually("Board not deleted on the server") {
-            try await alice.board(board.id)["deletedAt"] as? Int ?? 0 > 0
+            try await alice.isDeleted(board.id)
         }
 
         app.find(.button, "Recently Deleted").waitToAppear("No Recently Deleted section").click()
@@ -97,7 +97,7 @@ final class MainFlowUITests: XCTestCase {
         }
         app.element("board: \(board.title)").waitToAppear("Restored board not back with the others")
         try await eventually("Board not restored on the server") {
-            try await alice.board(board.id)["deletedAt"] as? Int ?? 0 == 0
+            try await !alice.isDeleted(board.id)
         }
     }
 
