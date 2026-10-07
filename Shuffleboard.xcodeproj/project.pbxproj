@@ -51,6 +51,7 @@
 		B10000000000000000000008 /* SharingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000008 /* SharingTests.swift */; };
 		A10000000000000000000040 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000040 /* Account.swift */; };
 		B10000000000000000000009 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000009 /* AccountTests.swift */; };
+		A10000000000000000000041 /* DroppedText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000041 /* DroppedText.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -111,6 +112,7 @@
 		B20000000000000000000008 /* SharingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000040 /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		B20000000000000000000009 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
+		A20000000000000000000041 /* DroppedText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroppedText.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -220,6 +222,7 @@
 				A20000000000000000000015 /* CreateSheetFooter.swift */,
 				A20000000000000000000030 /* ErrorBanner.swift */,
 				A20000000000000000000031 /* DeleteConfirmation.swift */,
+				A20000000000000000000041 /* DroppedText.swift */,
 				C40000000000000000000002 /* SoftwareUpdater.swift */,
 			);
 			path = Helpers;
@@ -397,6 +400,7 @@
 				A10000000000000000000015 /* CreateSheetFooter.swift in Sources */,
 				A10000000000000000000030 /* ErrorBanner.swift in Sources */,
 				A10000000000000000000031 /* DeleteConfirmation.swift in Sources */,
+				A10000000000000000000041 /* DroppedText.swift in Sources */,
 				C10000000000000000000002 /* SoftwareUpdater.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

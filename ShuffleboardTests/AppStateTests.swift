@@ -446,3 +446,54 @@ final class AppStateTests: XCTestCase {
         ])
     }
 }
+
+// MARK: - Moving cards
+
+extension AppStateTests {
+    private nonisolated static let twoListsJSON = """
+    [{"id": 10, "title": "To do", "boardId": 1, "order": 0, "cards": [{"id": 5, "title": "Card", "stackId": 10, "order": 0}]},
+     {"id": 20, "title": "Done", "boardId": 1, "order": 1, "cards": []}]
+    """
+
+    func testMovedCardShowsInItsNewListStraightAway() async {
+        let moved = Locked(false)
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.path.hasSuffix("/reorder") {
+                moved.withLock { $0 = true }
+                return .json("[]", delay: 0.3)
+            }
+            return .json(moved.withLock { $0 } ? Self.twoListsJSON.replacingOccurrences(
+                of: "\"stackId\": 10",
+                with: "\"stackId\": 20"
+            ) : Self.twoListsJSON)
+        }
+        let app = await makeSignedInApp()
+
+        let move = Task { await app.moveCard(boardId: 1, cardId: 5, fromStackId: 10, toStackId: 20, order: 0) }
+        await waitUntil { moved.withLock { $0 } }
+
+        XCTAssertEqual(app.stacks.map { $0.activeCards.map(\.id) }, [[], [5]], "no snapping back while saving")
+        await move.value
+    }
+
+    func testFailedMovePutsTheCardBack() async {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.path.hasSuffix("/reorder") {
+                return .status(500)
+            }
+            return .json(Self.twoListsJSON)
+        }
+        let app = await makeSignedInApp()
+
+        await app.moveCard(boardId: 1, cardId: 5, fromStackId: 10, toStackId: 20, order: 0)
+
+        XCTAssertEqual(app.stacks.map { $0.activeCards.map(\.id) }, [[5], []])
+        XCTAssertNotNil(app.actionError)
+    }
+}
