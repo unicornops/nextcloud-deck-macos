@@ -116,7 +116,8 @@ done_card "$home" "$finished" "$c"
 # An attachment on the paint card.
 attachment="$E2E_DIR/paint-colours.txt"
 printf 'Sage green\nWarm white\nSlate grey\n' >"$attachment"
-curl -fsS -u "$ALICE_AUTH" -H 'OCS-APIRequest: true' -F type=file -F "file=@$attachment" \
+# Deck 1.17 and 1.18 require the "data" field, though it's unused for uploads.
+curl -fsS -u "$ALICE_AUTH" -H 'OCS-APIRequest: true' -F type=file -F data= -F "file=@$attachment" \
     "$DECK_V11/boards/$home/stacks/$todo/cards/$paint_card/attachments" >/dev/null
 
 launch=$(board "Product launch" "8E44AD")

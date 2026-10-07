@@ -18,7 +18,7 @@ case "$(uname -s)" in
         sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$CA_CERT"
         ;;
     Linux)
-        sudo cp "$CA_CERT" /usr/local/share/ca-certificates/shuffleboard-e2e.crt
+        sudo cp "$CA_CERT" "/usr/local/share/ca-certificates/shuffleboard-e2e-$(basename "$E2E_DIR").crt"
         sudo update-ca-certificates
         ;;
     *)

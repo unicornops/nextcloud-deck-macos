@@ -13,6 +13,8 @@ struct TestServer: Sendable {
     let url: URL
     /// Nextcloud version, as the server reported it when it was set up (for test failure messages).
     let version: String
+    /// The Deck release on the server, e.g. `1.19.0`.
+    let deckVersion: String
     private let passwords: [String: String]
 
     static let alice = "alice"
@@ -32,7 +34,14 @@ struct TestServer: Sendable {
             passwords[user] = password
         }
         let version = "Nextcloud \(env["E2E_NEXTCLOUD_VERSION"] ?? "?"), Deck \(env["E2E_DECK_VERSION"] ?? "?")"
-        return TestServer(url: url, version: version, passwords: passwords)
+        return TestServer(url: url, version: version, deckVersion: env["E2E_DECK_VERSION"] ?? "", passwords: passwords)
+    }
+
+    /// Whether the server's Deck is `version` or newer, for behaviour that changed between Deck releases.
+    func deck(atLeast version: String) -> Bool {
+        let have = deckVersion.split(separator: ".").map { Int($0) ?? 0 }
+        let want = version.split(separator: ".").map { Int($0) ?? 0 }
+        return !have.lexicographicallyPrecedes(want)
     }
 
     /// `user`'s login password: only for creating app passwords and the browser sign-in page.
@@ -143,7 +152,7 @@ enum LoginFlowBrowser {
 
         // The flow's landing page redirects to the page that asks the user to sign in, with the flow's state.
         let flow = try await browser.get(loginURL)
-        let state = try decodeInitialState(LoginFlowAuth.self, named: "core-loginFlowAuth", in: flow)
+        let state = try flowState(in: flow)
 
         // Sign in; the login form then redirects to the grant page.
         let login = try await browser.get(server.url.appendingPathComponent("index.php/login"))
@@ -170,6 +179,22 @@ enum LoginFlowBrowser {
     private struct LoginFlowAuth: Decodable {
         let stateToken: String
         let loginRedirectUrl: String
+    }
+
+    /// The flow's state token and where to go after signing in: page data in newer Nextcloud versions, a form on
+    /// the page in older ones (32).
+    private static func flowState(in page: ScriptedBrowser.Page) throws -> LoginFlowAuth {
+        if let state = try? decodeInitialState(LoginFlowAuth.self, named: "core-loginFlowAuth", in: page) {
+            return state
+        }
+        guard let token = page.html.firstMatch(of: #/name="stateToken" value="([^"]+)"/#),
+              let grant = page.html.firstMatch(of: #/id="login-form" action="([^"]+)"/#) else {
+            throw Failure.missing("login flow state", page: page.url)
+        }
+        return LoginFlowAuth(
+            stateToken: String(token.1),
+            loginRedirectUrl: String(grant.1).replacingOccurrences(of: "&amp;", with: "&")
+        )
     }
 
     /// The CSRF token Nextcloud puts on every page's `<head>`.

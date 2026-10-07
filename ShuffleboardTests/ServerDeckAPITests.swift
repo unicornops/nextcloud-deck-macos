@@ -35,6 +35,16 @@ final class ServerDeckAPITests: XCTestCase {
         let deleted = boards.first { $0.id == created.id }
         XCTAssertGreaterThan(deleted?.deletedAt ?? 0, 0, "Deleted board should be soft-deleted, not gone")
 
+        guard server.deck(atLeast: "1.17") else {
+            // Deck 1.16 refuses to restore a deleted board (fixed in 1.17.0), so the app's "Restore" fails there.
+            do {
+                try await api.undoDeleteBoard(id: created.id)
+                XCTFail("Deck \(server.deckVersion) restored a deleted board: drop this exception")
+            } catch DeckAPIError.permissionDenied {
+                // Expected.
+            }
+            return
+        }
         try await api.undoDeleteBoard(id: created.id)
         let restored = try await api.getBoard(id: created.id)
         XCTAssertEqual(restored.deletedAt ?? 0, 0)
