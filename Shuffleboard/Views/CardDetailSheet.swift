@@ -107,6 +107,7 @@ struct CardDetailSheet: View {
                 }
                 Section("Title") {
                     TextField("Title", text: $title)
+                        .accessibilityIdentifier("card title")
                 }
                 Section {
                     descriptionContent

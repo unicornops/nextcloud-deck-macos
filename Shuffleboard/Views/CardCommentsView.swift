@@ -143,6 +143,7 @@ struct CardCommentsView: View {
             TextField("Add a comment…", text: $draft, axis: .vertical)
                 .lineLimit(1 ... 6)
                 .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("new comment")
             HStack {
                 characterCount(draft)
                 Spacer()

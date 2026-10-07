@@ -48,6 +48,7 @@ struct BoardListView: View {
                             BoardRowView(board: board)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("board: \(board.title)")
                         .tag(board.id)
                         .contextMenu {
                             Button("Archive") {
@@ -71,6 +72,7 @@ struct BoardListView: View {
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("board: \(board.title)")
                         .tag(board.id)
                         .contextMenu {
                             Button("Unarchive") {

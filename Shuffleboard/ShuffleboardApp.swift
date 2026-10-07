@@ -2,13 +2,16 @@ import SwiftUI
 
 @main
 struct ShuffleboardApp: App {
-    @StateObject private var appState = AppState()
+    @StateObject private var appState = AppState.atLaunch()
     @StateObject private var updater = SoftwareUpdater()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
+                #if DEBUG
+                .onAppear { UITestLaunch.applyAppearance() }
+                #endif
         }
         .windowStyle(.automatic)
         .defaultSize(width: 1000, height: 700)

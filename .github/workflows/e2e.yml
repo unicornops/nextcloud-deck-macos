@@ -1,0 +1,232 @@
+name: End-to-end tests
+
+# Runs Shuffleboard against a real Nextcloud server with the Deck app (#119).
+#
+# GitHub's macOS runners can't run Docker (no nested virtualisation on Apple silicon), so Nextcloud runs natively
+# on the runner: PHP's built-in server behind Caddy for HTTPS, with SQLite. See scripts/e2e/.
+#
+# - Pull requests: the newest Nextcloud major that Deck supports, with the newest Deck for it.
+# - Daily, and on demand: every Nextcloud major still getting releases (up to the newest Deck supports), each
+#   with the newest Deck for it. A failing scheduled run opens (or comments on) an issue, so a server release
+#   that breaks the app is noticed.
+# - Every run takes the README screenshots (artifact "screenshots"); on demand with "screenshots" it also opens a
+#   pull request with them.
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      nextcloud:
+        description: 'Nextcloud: "all" (every supported major), "latest" (newest major Deck supports), a major ("35") or a release ("35.0.1")'
+        default: all
+      deck:
+        description: "Deck release, e.g. 1.19.0 (default: the newest the app store has for that Nextcloud)"
+        default: ""
+      screenshots:
+        description: "Take the README screenshots and open a pull request with them"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  versions:
+    name: Pick Nextcloud versions
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - name: Pick versions
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ github.event_name == 'pull_request' && 'latest' || inputs.nextcloud || 'all' }}
+        run: |
+          set -euo pipefail
+          # The newest Nextcloud major the newest Deck release supports (its appinfo max-version): a new
+          # Nextcloud major can only be tested once Deck has a release for it.
+          deck=$(gh api repos/nextcloud/deck/releases/latest --jq .tag_name)
+          newest=$(gh api "repos/nextcloud/deck/contents/appinfo/info.xml?ref=$deck" --jq .content | base64 -d |
+            sed -n 's/.*<nextcloud [^>]*max-version="\([0-9]*\)".*/\1/p')
+          echo "Deck $deck supports up to Nextcloud $newest"
+          case "$REQUESTED" in
+            all)
+              # Every major with a release in the last four months (the ones Nextcloud still supports), up to $newest.
+              since=$(date -u -d '120 days ago' +%Y-%m-%dT%H:%M:%SZ)
+              matrix=$(gh api 'repos/nextcloud/server/releases?per_page=100' --jq \
+                "[.[] | select(.prerelease | not) | select(.published_at > \"$since\") | .tag_name | ltrimstr(\"v\") | split(\".\")[0] | tonumber]
+                 | unique | map(select(. <= $newest)) | sort | reverse | map(tostring) | {nextcloud: .}")
+              ;;
+            latest) matrix=$(jq -nc --arg v "$newest" '{nextcloud: [$v]}') ;;
+            *) matrix=$(jq -nc --arg v "$REQUESTED" '{nextcloud: [$v]}') ;;
+          esac
+          echo "Testing against: $matrix"
+          echo "matrix=$(echo "$matrix" | jq -c .)" >> "$GITHUB_OUTPUT"
+
+  e2e:
+    name: Nextcloud ${{ matrix.nextcloud }}
+    needs: versions
+    runs-on: macos-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.versions.outputs.matrix) }}
+    env:
+      NEXTCLOUD_VERSION: ${{ matrix.nextcloud }}
+      DECK_VERSION: ${{ inputs.deck }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          # 8.4 runs every Nextcloud major still supported (32 needs < 8.5, 35 needs >= 8.3).
+          php-version: "8.4"
+          extensions: gd, intl, mbstring, pdo_sqlite, sqlite3, xml, zip, curl, bcmath, gmp
+          ini-values: memory_limit=512M
+          tools: none
+
+      - name: Install Caddy
+        run: brew install caddy
+
+      - name: Start Nextcloud with Deck
+        run: scripts/e2e/start-server.sh
+
+      - name: Trust the test server's certificate
+        run: scripts/e2e/trust-ca.sh
+
+      - name: Seed demo data
+        run: scripts/e2e/seed.sh
+
+      - name: Show versions
+        run: |
+          grep VERSION build/e2e/env | tee -a "$GITHUB_STEP_SUMMARY"
+          # The test users' passwords are throwaway, but keep them out of the logs anyway.
+          for name in E2E_ADMIN_PASSWORD E2E_ALICE_PASSWORD E2E_BOB_PASSWORD; do
+            echo "::add-mask::$(grep "^$name=" build/e2e/env | cut -d= -f2-)"
+          done
+
+      - name: Select Xcode version
+        run: |
+          XCODE_PATH=$(ls -td /Applications/Xcode_*.app 2>/dev/null | head -1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH="/Applications/Xcode.app"
+          fi
+          echo "Using Xcode at: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
+
+      - name: API tests (DeckAPI and AppState)
+        run: scripts/e2e/test.sh api
+
+      - name: Allow UI testing
+        # Without this, XCUITest can wait for someone to approve "automation mode" and time out.
+        run: sudo automationmodetool enable-automationmode-without-authentication
+
+      - name: UI tests
+        run: scripts/e2e/test.sh ui
+
+      # Also on pull requests, so a change to the UI can be looked at in the run's artifacts.
+      - name: Screenshots
+        if: strategy.job-index == 0
+        run: |
+          # The runner's screen is small: keep the Dock from covering the bottom of the window.
+          defaults write com.apple.dock autohide -bool true
+          killall Dock
+          sleep 2
+          scripts/e2e/test.sh screenshots
+
+      - name: Upload screenshots
+        if: strategy.job-index == 0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: screenshots
+          path: docs/screenshots
+          if-no-files-found: error
+
+      - name: Upload server logs and test results
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-nextcloud-${{ matrix.nextcloud }}
+          path: |
+            build/e2e/logs
+            build/*.xcresult
+          if-no-files-found: ignore
+
+      - name: Stop the server
+        if: always()
+        run: scripts/e2e/stop-server.sh
+
+  report:
+    name: Report scheduled failure
+    needs: e2e
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="End-to-end tests fail against a current Nextcloud or Deck release"
+          body="The scheduled end-to-end run failed: $RUN_URL
+
+          A new Nextcloud or Deck release may have changed something the app relies on. The run's artifacts have the server log (\`nextcloud.log\`) and the test results for each version that failed."
+          number=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "Still failing: $RUN_URL"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+
+  screenshots-pr:
+    name: Open screenshots pull request
+    needs: e2e
+    if: inputs.screenshots
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download screenshots
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: screenshots
+          path: docs/screenshots
+
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/screenshots && [ -z "$(git ls-files --others --exclude-standard docs/screenshots)" ]; then
+            echo "Screenshots unchanged"
+            exit 0
+          fi
+          branch="docs/screenshots-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add docs/screenshots
+          git commit -m "docs: update README screenshots"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "docs: update README screenshots" \
+            --body "Screenshots taken by the end-to-end UI tests from the seeded demo data (light and dark mode), run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Pull requests opened by GitHub Actions don't start CI on their own: close and reopen this one to run it."
