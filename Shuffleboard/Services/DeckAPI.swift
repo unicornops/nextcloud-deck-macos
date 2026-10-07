@@ -608,6 +608,10 @@ extension DeckAPI {
 
     private static let defaultAttachmentType = "file"
 
+    /// Form fields sent with an upload. Deck 1.17 and 1.18 answer 400 without `data`, though uploads don't use
+    /// it (fixed in Deck 1.19).
+    static let uploadFields = ["type": defaultAttachmentType, "data": ""]
+
     /// Fetches the list of attachments for a card.
     func getAttachments(boardId: Int, stackId: Int, cardId: Int) async throws -> [Attachment] {
         guard let url = attachmentsURL(for: "boards/\(boardId)/stacks/\(stackId)/cards/\(cardId)/attachments") else {
@@ -689,7 +693,7 @@ extension DeckAPI {
         let bodyFile = try Self.writeMultipartBody(
             fileURL: fileURL,
             filename: filename,
-            fields: ["type": Self.defaultAttachmentType],
+            fields: Self.uploadFields,
             boundary: boundary
         )
         defer { try? FileManager.default.removeItem(at: bodyFile) }

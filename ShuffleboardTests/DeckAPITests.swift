@@ -110,6 +110,8 @@ final class DeckAPITests: XCTestCase {
         XCTAssertEqual(lines, ["POST \(attachments)"])
         let contentType = StubURLProtocol.requests.first?.header("Content-Type") ?? ""
         XCTAssertTrue(contentType.hasPrefix("multipart/form-data; boundary="), contentType)
+        // Deck 1.17 and 1.18 reject an upload without a `data` field.
+        XCTAssertEqual(DeckAPI.uploadFields, ["type": "file", "data": ""])
     }
 
     func testUploadWithUnreadableResponseIsNotRetried() async throws {
