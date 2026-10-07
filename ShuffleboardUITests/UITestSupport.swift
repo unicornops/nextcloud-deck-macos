@@ -262,6 +262,7 @@ extension XCUIElement {
 func eventually(
     timeout: TimeInterval = 15,
     _ message: String,
+    isolation _: isolated (any Actor)? = #isolation,
     file: StaticString = #filePath,
     line: UInt = #line,
     _ condition: () async throws -> Bool
