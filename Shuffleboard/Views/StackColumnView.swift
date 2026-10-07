@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -277,12 +278,16 @@ struct StackColumnView: View {
     )
         -> Bool {
         providers.loadDroppedText { text in
-            guard let draggedCard = DraggedCard.fromProviderString(text) else { return }
+            guard let draggedCard = DraggedCard.fromProviderString(text) else {
+                dragLogger.notice("Drop ignored: not a card: \(text, privacy: .public)")
+                return
+            }
             completion(draggedCard)
         }
     }
 
     private func handleDropAtIndex(providers: [NSItemProvider], insertIndex: Int) -> Bool {
+        dragLogger.notice("Drop on list \(stack.id) at position \(insertIndex)")
         // A list dropped here (rather than between lists) ends its drag too.
         appState.isDraggingStack = false
         return loadDraggedCard(from: providers) { draggedCard in
@@ -310,8 +315,19 @@ struct StackColumnView: View {
                         toStackId: stack.id,
                         order: insertIndex
                     )
+                    logMoveResult(cardId: draggedCard.id)
                 }
             }
+        }
+    }
+
+    /// Logs where the server put a card this list asked to move.
+    private func logMoveResult(cardId: Int) {
+        let list = appState.stacks.first { $0.cards?.contains { $0.id == cardId } == true }?.id
+        let outcome = list.map { "is in list \($0)" } ?? "is in no list"
+        dragLogger.notice("Moved card \(cardId) to list \(stack.id): it \(outcome, privacy: .public)")
+        if let error = appState.actionError {
+            dragLogger.error("Moving card \(cardId) failed: \(error, privacy: .public)")
         }
     }
 
@@ -319,9 +335,13 @@ struct StackColumnView: View {
     /// appending the card to the end of this list. Gap drops take priority for
     /// precise placement (both cross-stack and within-stack reordering).
     private func handleColumnDrop(providers: [NSItemProvider]) -> Bool {
+        dragLogger.notice("Drop on list \(stack.id), not between cards")
         appState.isDraggingStack = false
         return loadDraggedCard(from: providers) { draggedCard in
-            guard draggedCard.stackId != stack.id else { return }
+            guard draggedCard.stackId != stack.id else {
+                dragLogger.notice("Drop ignored: card \(draggedCard.id) is already in list \(stack.id)")
+                return
+            }
 
             Task { @MainActor in
                 await appState.moveCard(
@@ -331,6 +351,7 @@ struct StackColumnView: View {
                     toStackId: stack.id,
                     order: cards.count
                 )
+                logMoveResult(cardId: draggedCard.id)
             }
         }
     }
@@ -507,6 +528,7 @@ private extension View {
         if enabled {
             onDrag {
                 onStart?()
+                dragLogger.notice("Card drag started: card \(card.id) in list \(card.stackId)")
                 let dragged = DraggedCard(id: card.id, stackId: card.stackId)
                 return NSItemProvider(object: NSString(string: dragged.providerString))
             }
