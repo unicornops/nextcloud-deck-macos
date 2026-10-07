@@ -122,6 +122,36 @@ final class MainFlowUITests: XCTestCase {
         }
     }
 
+    /// Card moves made the way a person drags: a short press, a quick move and an immediate drop, with no pause
+    /// over the target.
+    func testQuickDragsToOtherLists() async throws {
+        let board = try await makeBoard()
+        let todo = try await alice.createStack(board: board.id, "To do", order: 0)
+        let doing = try await alice.createStack(board: board.id, "Doing", order: 1)
+        _ = try await alice.createStack(board: board.id, "Done", order: 2)
+        for (order, title) in ["Quick one", "Quick two", "Quick three"].enumerated() {
+            _ = try await alice.createCard(board: board.id, stack: todo, title, order: order)
+        }
+        _ = try await alice.createCard(board: board.id, stack: doing, "Already here")
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+        app.card("Already here").waitToAppear()
+
+        let moves: [(card: String, list: String, velocity: XCUIGestureVelocity)] = [
+            ("Quick one", "Doing", .default),
+            ("Quick two", "Done", .fast),
+            ("Quick three", "Doing", .fast),
+        ]
+        for move in moves {
+            let target = app.list(move.list).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            app.card(move.card).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                .click(forDuration: 0.2, thenDragTo: target, withVelocity: move.velocity, thenHoldForDuration: 0)
+            try await eventually("\(move.card), dragged quickly, is not in \(move.list) on the server") {
+                try await alice.list(holding: move.card, board: board.id) == move.list
+            }
+        }
+    }
+
     func testEditingACardAndCommenting() async throws {
         let board = try await makeBoard()
         let stack = try await alice.createStack(board: board.id, "To do", order: 0)
