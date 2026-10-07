@@ -69,6 +69,20 @@ final class DeckAPI: Sendable {
         return "Basic \(data.base64EncodedString())"
     }
 
+    /// A request signed in as this account. It neither sends nor stores cookies: Nextcloud answers a request
+    /// that carries a session cookie as that session's user, whatever its `Authorization` header says. With the
+    /// app's one URLSession, a second account on the same server would otherwise read and change the first
+    /// account's boards.
+    private func authorizedRequest(url: URL, method: String, timeout: TimeInterval = 60) -> URLRequest {
+        var req = URLRequest(url: url, timeoutInterval: timeout)
+        req.httpMethod = method
+        req.httpShouldHandleCookies = false
+        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
+        return req
+    }
+
     /// Builds a full URL by appending the relative path to the base URL (avoids `URL(string:relativeTo:)` replacing the
     /// last path component and dropping `/v1.0`).
     private func url(for path: String) -> URL? {
@@ -115,11 +129,7 @@ final class DeckAPI: Sendable {
     /// user's devices in Nextcloud's security settings (`DELETE /ocs/v2.php/core/apppassword`).
     /// The server answers 403 if the credential is not an app password.
     func revokeAppPassword(timeout: TimeInterval = 10) async throws {
-        var req = URLRequest(url: appPasswordURL, timeoutInterval: timeout)
-        req.httpMethod = "DELETE"
-        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
+        let req = authorizedRequest(url: appPasswordURL, method: "DELETE", timeout: timeout)
         let (data, response) = try await session.data(for: req)
         try validate(response: response, data: data)
     }
@@ -187,16 +197,12 @@ final class DeckAPI: Sendable {
         ifNoneMatch etag: String? = nil
     ) async throws
         -> (Data, URLResponse) {
-        var req = URLRequest(url: url)
-        req.httpMethod = method
+        var req = authorizedRequest(url: url, method: method)
         if let etag {
             req.setValue(etag, forHTTPHeaderField: "If-None-Match")
             req.cachePolicy = .reloadIgnoringLocalCacheData
         }
-        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
         req.httpBody = body
         let (data, response) = try await session.data(for: req)
         try validate(response: response, data: data)
@@ -757,11 +763,7 @@ extension DeckAPI {
     /// Uploads a prepared multipart body file to `url` with the standard Deck headers and returns the
     /// response body on success.
     private func performMultipartUpload(url: URL, bodyFile: URL, boundary: String) async throws -> Data {
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.setValue(authHeader, forHTTPHeaderField: "Authorization")
+        var req = authorizedRequest(url: url, method: "POST")
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         let (data, response) = try await session.upload(for: req, fromFile: bodyFile)

@@ -30,6 +30,8 @@ struct RecordedRequest: Sendable {
     let query: String?
     let headers: [String: String]
     let body: Data
+    /// Whether the request lets URLSession send and store cookies.
+    var handlesCookies = true
 
     /// The value of header `name`, matched case-insensitively as HTTP requires.
     func header(_ name: String) -> String? {
@@ -90,7 +92,8 @@ final class StubURLProtocol: URLProtocol {
             path: request.url?.path ?? "",
             query: request.url?.query,
             headers: request.allHTTPHeaderFields ?? [:],
-            body: request.httpBody ?? Self.read(request.httpBodyStream)
+            body: request.httpBody ?? Self.read(request.httpBodyStream),
+            handlesCookies: request.httpShouldHandleCookies
         )
         let response = Self.lock.withLock { () -> StubResponse in
             Self._requests.append(recorded)
