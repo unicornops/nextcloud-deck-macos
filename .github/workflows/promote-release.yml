@@ -1,0 +1,72 @@
+name: Promote Release
+
+# Releases are published as GitHub pre-releases, which installed copies (Sparkle reads
+# releases/latest/download/appcast.xml) and the Homebrew tap (the latest release) never see.
+# After testing a pre-release by hand, run this to make it the full, latest release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tested pre-release to make the full release (e.g. v1.2.3)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promote-release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Promote ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Check the pre-release is complete
+        run: |
+          set -euo pipefail
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag must look like v1.2.3, got '$TAG'"
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+
+          RELEASE=$(gh release view "$TAG" --json isPrerelease,isDraft,assets)
+          if [ "$(jq -r '.isPrerelease' <<<"$RELEASE")" != "true" ] || [ "$(jq -r '.isDraft' <<<"$RELEASE")" = "true" ]; then
+            echo "::error::$TAG is not a published pre-release"
+            exit 1
+          fi
+
+          # Everything the build uploads; without these, updates and the Homebrew cask would break.
+          for ASSET in "Shuffleboard-$VERSION.dmg" "Shuffleboard-$VERSION.zip" appcast.xml checksums.txt; do
+            if ! jq -e --arg name "$ASSET" '.assets[] | select(.name == $name)' <<<"$RELEASE" > /dev/null; then
+              echo "::error::$TAG has no $ASSET; is its build still running, or did it fail?"
+              exit 1
+            fi
+          done
+
+          # Never move installed copies back to an older version.
+          LATEST=$(gh release view --json tagName --jq '.tagName' 2>/dev/null || true)
+          if [ -n "$LATEST" ] && [ "$(printf '%s\n%s\n' "${LATEST#v}" "$VERSION" | sort -V | tail -n 1)" != "$VERSION" ]; then
+            echo "::error::$TAG is older than the current release $LATEST"
+            exit 1
+          fi
+          echo "Promoting $TAG (current release: ${LATEST:-none})"
+
+      - name: Publish as the full release
+        run: gh release edit "$TAG" --prerelease=false --latest
+
+      - name: Summary
+        run: |
+          {
+            echo "## Promoted $TAG"
+            echo ""
+            echo "- Installed copies are offered it on their next update check."
+            echo "- The Homebrew tap picks it up on its next daily run (or run **Update Shuffleboard** in unicornops/homebrew-tap now)."
+          } >> "$GITHUB_STEP_SUMMARY"

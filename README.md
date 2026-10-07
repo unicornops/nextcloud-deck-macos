@@ -138,12 +138,20 @@ The icon source is `icon_source.svg`; edit it and re-run `./generate-appicon.sh`
 
 ## Releases
 
-On each published GitHub release, the **Build and Attach Release Assets** workflow builds the app (signed and notarized), generates a DMG and a ZIP, and attaches them to the release.
+Releases are made by [release-please](https://github.com/googleapis/release-please). Merging its release pull request tags the version and creates a GitHub **pre-release**. The **Release Please** workflow then builds the app (signed and notarized), creates a DMG and a ZIP, and attaches them, with the Sparkle `appcast.xml` and `checksums.txt`.
+
+A pre-release reaches nobody automatically. Installed copies check `releases/latest/download/appcast.xml`, and the Homebrew tap follows the latest release; GitHub never counts a pre-release as the latest. To ship one:
+
+1. Download the DMG from the pre-release and test it.
+2. Run the **Promote Release** workflow (Actions → Promote Release → Run workflow) with its tag, e.g. `v1.2.3`. It checks that the build attached everything and that the version is newer than the current release, then makes it the full, latest release.
+3. Installed copies are offered the update on their next check. The Homebrew tap updates on its next daily run; run **Update Shuffleboard** in [unicornops/homebrew-tap](https://github.com/unicornops/homebrew-tap) to update it straight away.
+
+A pre-release that fails testing stays a pre-release. Fix the problem, and the next release pull request builds a new pre-release.
 
 - **Icon**: The workflow runs `./generate-appicon.sh` (using `librsvg` on the runner) so the built app and DMG use the icon from `icon_source.svg`.
-- **Signing and notarization**: The workflow signs and notarizes the app by default. Configure these repository secrets for the release job to succeed: `APPLE_CERTIFICATE_BASE64`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID`, `APPLE_DEVELOPER_ID`, `APPLE_APP_PASSWORD`.
+- **Signing and notarization**: The workflow signs and notarizes the app by default. Configure these repository secrets for the release job to succeed: `APPLE_CERTIFICATE_BASE64`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID`, `APPLE_DEVELOPER_ID`, `APPLE_APP_PASSWORD`. Notarization requests are retried, so one dropped request to Apple doesn't fail the release.
 - **Updates**: the workflow signs the ZIP with the Sparkle EdDSA private key (repository secret `SPARKLE_ED_PRIVATE_KEY`, passed to Sparkle's `sign_update` on stdin) and attaches `appcast.xml` to the release. Installed copies check `releases/latest/download/appcast.xml` (`SUFeedURL` in `Shuffleboard/Info.plist`, next to the public key `SUPublicEDKey`). Losing the private key means existing installs can't be updated automatically, so keep a copy in a secret store.
-- **Dry runs**: run the workflow manually with `dry_run` checked to build, sign and notarize the selected branch without uploading anything.
+- **Rebuilds and dry runs**: run the **Release Please** workflow by hand with a `tag_name` to rebuild that release's assets, or with `dry_run` checked to build, sign and notarize the selected branch without uploading anything.
 
 ## API
 

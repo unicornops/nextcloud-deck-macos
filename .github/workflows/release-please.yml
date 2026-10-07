@@ -52,6 +52,15 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      # release-please only honours `prerelease` for 0.x versions, so make sure here: a release must be tested
+      # and promoted (Promote Release workflow) before installed copies or Homebrew see it.
+      - name: Publish as a pre-release
+        if: steps.release.outputs.releases_created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease
+
   build:
     name: Build and Publish Release
     runs-on: macos-latest
@@ -438,7 +447,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Code signed with Developer ID" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Notarized by Apple" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Ready for public distribution" >> $GITHUB_STEP_SUMMARY
+          echo "- 🧪 Published as a **pre-release**: installed copies and Homebrew don't see it yet." >> $GITHUB_STEP_SUMMARY
+          echo "  Test it, then run the **Promote Release** workflow to make it the full release." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Assets Uploaded" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

@@ -4,6 +4,7 @@
   "packages": {
     ".": {
       "release-type": "simple",
+      "prerelease": true,
       "component": "",
       "changelog-sections": [
         { "type": "feat", "section": "Features" },
