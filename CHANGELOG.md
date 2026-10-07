@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.3](https://github.com/unicornops/shuffleboard/compare/v0.17.2...v0.17.3) (2026-10-07)
+
+
+### Bug Fixes
+
+* **cards:** moving a card to another list could do nothing ([#126](https://github.com/unicornops/shuffleboard/issues/126)) ([8cefe64](https://github.com/unicornops/shuffleboard/commit/8cefe64f362840c45fc874db931a77a7b0285bd8))
+
 ## [0.17.2](https://github.com/unicornops/shuffleboard/compare/v0.17.1...v0.17.2) (2026-10-07)
 
 
