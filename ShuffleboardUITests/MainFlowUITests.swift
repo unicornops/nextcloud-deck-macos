@@ -255,7 +255,9 @@ final class MainFlowUITests: XCTestCase {
         }
 
         app.find(.button, "Delete UI someday").click()
-        app.find(.button, "Delete").waitToAppear("No confirmation before deleting a label").click()
+        // The dialog's button, not its Touch Bar copy, which can't be clicked.
+        app.windows.descendants(matching: .button).matching(NSPredicate(format: "label == %@", "Delete")).firstMatch
+            .waitToAppear("No confirmation before deleting a label").click()
         try await eventually("Label not deleted on the server") {
             try await !alice.labels(board: board.id).contains("UI someday")
         }
