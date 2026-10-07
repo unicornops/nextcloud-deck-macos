@@ -48,7 +48,7 @@ jobs:
         id: pick
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED: all # TEMP: matrix check on the PR, revert before merge
+          REQUESTED: ${{ github.event_name == 'pull_request' && 'latest' || inputs.nextcloud || 'all' }}
         run: |
           set -euo pipefail
           # The newest Nextcloud major the newest Deck release supports (its appinfo max-version): a new
