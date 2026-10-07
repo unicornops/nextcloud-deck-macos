@@ -111,6 +111,29 @@ xcodebuild test -scheme Shuffleboard -destination 'platform=macOS' CODE_SIGN_IDE
 
 They never touch the real Keychain or a real server: `AppState` takes an in-memory `CredentialStore` and a `URLSession` that talks to `StubURLProtocol`. They run on every pull request.
 
+### End-to-end tests
+
+The end-to-end tests run the app against a real Nextcloud server with the Deck app, so they catch the server behaving differently from what the unit tests assume. There are two kinds:
+
+- **API tests** (`ShuffleboardTests/Server*`): every Deck endpoint the app uses through `DeckAPI`, and `AppState`'s sign-in, multiple accounts, card moves and sign-out. One test signs in with Login Flow v2 for real, approving it on the server's own login and grant pages.
+- **UI tests** (`ShuffleboardUITests`, scheme `ShuffleboardUITests`): the app driven through its windows. They create lists and cards, drag a card to another list, edit a card, comment, share a board, switch accounts and sign out. Each test checks the result on the server, not just on screen.
+
+The scripts in `scripts/e2e/` start a throwaway server without Docker. Nextcloud runs on PHP's built-in server behind [Caddy](https://caddyserver.com), which serves it at `https://localhost:8443` with its own local CA, and uses SQLite. Everything lives in `build/e2e`. You need PHP 8.3 or 8.4 and Caddy (`brew install php@8.4 caddy`).
+
+```bash
+scripts/e2e/start-server.sh   # Nextcloud (NEXTCLOUD_VERSION=latest, 35 or 35.0.1) with the newest Deck for it (or DECK_VERSION=1.19.0)
+scripts/e2e/trust-ca.sh       # trust the server's local CA (asks for your password)
+scripts/e2e/seed.sh           # demo boards, users alice and bob, the group "family"
+scripts/e2e/test.sh api       # or: test.sh ui, test.sh screenshots
+scripts/e2e/stop-server.sh
+```
+
+When you're done, remove the CA again in Keychain Access ("Caddy Local Authority" in the System keychain) and delete `build/e2e`. Without a server, the end-to-end tests skip themselves, so the normal test run above doesn't need one.
+
+To sign in, the UI tests pass app passwords to the app in its launch environment. Only Debug builds read them (`UITestLaunch`) and keep them in memory, so UI tests never read or write the Keychain. Release builds always use the Keychain and the browser sign-in.
+
+The **End-to-end tests** workflow runs on every pull request against the newest Nextcloud that Deck supports. Every day it also runs against every Nextcloud major that still gets releases, each with its newest Deck, and opens an issue if a run fails. Failed runs upload `nextcloud.log` and the test results. Run it by hand (Actions → End-to-end tests → Run workflow) to pick versions, or tick **screenshots** to retake the README screenshots from the demo data in light and dark mode. That run opens a pull request with the new screenshots in `docs/screenshots/`.
+
 ### Building a signed DMG for distribution
 
 From the repo root:
@@ -172,6 +195,9 @@ Authentication uses Basic auth with the app password obtained through Login Flow
   - **Services/** – `DeckAPI`, `NextcloudAuth`, `KeychainStorage`
   - **Views/** – Login, board list, board detail (columns + cards), card sheet, new stack sheet
   - **Helpers/** – `Color+Hex` for label/board colors
+- **ShuffleboardTests/** – unit tests, plus end-to-end API tests (`Server*`) that need a test server
+- **ShuffleboardUITests/** – UI tests against a test server
+- **scripts/e2e/** – start, seed and stop the end-to-end test server, and run the tests
 
 ## License
 

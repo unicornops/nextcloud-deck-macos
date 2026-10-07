@@ -9,7 +9,8 @@ name: End-to-end tests
 # - Daily, and on demand: every Nextcloud major still getting releases (up to the newest Deck supports), each
 #   with the newest Deck for it. A failing scheduled run opens (or comments on) an issue, so a server release
 #   that breaks the app is noticed.
-# - On demand with "screenshots": also takes the README screenshots and opens a pull request with them.
+# - Every run takes the README screenshots (artifact "screenshots"); on demand with "screenshots" it also opens a
+#   pull request with them.
 
 on:
   pull_request:
@@ -134,12 +135,13 @@ jobs:
       - name: UI tests
         run: scripts/e2e/test.sh ui
 
+      # Also on pull requests, so a change to the UI can be looked at in the run's artifacts.
       - name: Screenshots
-        if: inputs.screenshots && strategy.job-index == 0
+        if: strategy.job-index == 0
         run: scripts/e2e/test.sh screenshots
 
       - name: Upload screenshots
-        if: inputs.screenshots && strategy.job-index == 0
+        if: strategy.job-index == 0
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: screenshots
