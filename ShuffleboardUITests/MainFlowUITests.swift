@@ -66,6 +66,62 @@ final class MainFlowUITests: XCTestCase {
         )
     }
 
+    /// Moving cards into a list that already has cards (#117): dropped onto a card, and dropped between two cards.
+    func testDraggingCardsIntoAListThatHasCards() async throws {
+        let board = try await makeBoard()
+        let todo = try await alice.createStack(board: board.id, "To do", order: 0)
+        let doing = try await alice.createStack(board: board.id, "Doing", order: 1)
+        for (order, title) in ["One", "Two", "Three"].enumerated() {
+            _ = try await alice.createCard(board: board.id, stack: todo, title, order: order)
+        }
+        for (order, title) in ["Alpha", "Beta"].enumerated() {
+            _ = try await alice.createCard(board: board.id, stack: doing, title, order: order)
+        }
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+        app.card("Beta").waitToAppear()
+
+        // Onto a card: the card goes to the end of that card's list.
+        app.card("One").click(
+            forDuration: 0.6,
+            thenDragTo: app.card("Beta"),
+            withVelocity: .slow,
+            thenHoldForDuration: 0.6
+        )
+        try await eventually("Card dropped onto a card in Doing is not in Doing on the server") {
+            try await alice.list(holding: "One", board: board.id) == "Doing"
+        }
+
+        // Between two cards: onto the gap just above Beta.
+        let gap = app.card("Beta").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0)).withOffset(CGVector(
+            dx: 0,
+            dy: -5
+        ))
+        app.card("Two").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .click(forDuration: 0.6, thenDragTo: gap, withVelocity: .slow, thenHoldForDuration: 0.6)
+        try await eventually("Card dropped between two cards in Doing is not in Doing on the server") {
+            try await alice.list(holding: "Two", board: board.id) == "Doing"
+        }
+        let doingTitles = try await alice.titles(inList: "Doing", board: board.id)
+        XCTAssertEqual(doingTitles, ["Alpha", "Two", "Beta", "One"])
+
+        // Just inside the list's left edge, next to the gap between lists: that gap must not take the card.
+        let edge = app.list("Doing").coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.5))
+        app.card("Three").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .click(forDuration: 0.6, thenDragTo: edge, withVelocity: .slow, thenHoldForDuration: 0.6)
+        try await eventually("Card dropped at the edge of Doing is not in Doing on the server") {
+            try await alice.list(holding: "Three", board: board.id) == "Doing"
+        }
+
+        app.typeKey("r", modifierFlags: .command)
+        for title in ["One", "Two", "Three"] {
+            XCTAssertTrue(
+                app.list("Doing").descendants(matching: .any)["card: \(title)"].waitForExistence(timeout: 10),
+                "\(title) snapped back out of Doing after a refresh"
+            )
+        }
+    }
+
     func testEditingACardAndCommenting() async throws {
         let board = try await makeBoard()
         let stack = try await alice.createStack(board: board.id, "To do", order: 0)

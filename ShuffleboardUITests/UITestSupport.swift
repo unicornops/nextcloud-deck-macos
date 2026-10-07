@@ -113,11 +113,11 @@ struct DeckClient: Sendable {
         try await Self.id(call("POST", "boards/\(board)/stacks", ["title": title, "order": order]))
     }
 
-    func createCard(board: Int, stack: Int, _ title: String) async throws -> Int {
+    func createCard(board: Int, stack: Int, _ title: String, order: Int = 0) async throws -> Int {
         try await Self.id(call(
             "POST",
             "boards/\(board)/stacks/\(stack)/cards",
-            ["title": title, "type": "plain", "order": 0]
+            ["title": title, "type": "plain", "order": order]
         ))
     }
 
@@ -139,6 +139,18 @@ struct DeckClient: Sendable {
         try await stacks(board: board).first { stack in
             (stack["cards"] as? [[String: Any]] ?? []).contains { $0["title"] as? String == card }
         }?["title"] as? String
+    }
+
+    /// The titles of the active cards in the list titled `list`, in board order.
+    func titles(inList list: String, board: Int) async throws -> [String] {
+        let stack = try await stacks(board: board).first { $0["title"] as? String == list }
+        let cards = (stack?["cards"] as? [[String: Any]] ?? []).filter { ($0["archived"] as? Bool) != true }
+        return cards
+            .sorted { ($0["order"] as? Int ?? 0, $0["id"] as? Int ?? 0) < (
+                $1["order"] as? Int ?? 0,
+                $1["id"] as? Int ?? 0
+            ) }
+            .compactMap { $0["title"] as? String }
     }
 
     /// True if the app password still works, false once it has been revoked.

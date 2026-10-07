@@ -158,6 +158,8 @@ struct StackColumnView: View {
                             Task { await appState.archiveCard(card, boardId: board.id) }
                         },
                         isDraggable: !isFiltering,
+                        // A list drag that was cancelled may have left this set; this drag is a card.
+                        onDragStart: { appState.isDraggingStack = false },
                         action: { onSelectCard(currentCards[index]) }
                     )
                     .padding(.horizontal, 10)
@@ -340,6 +342,7 @@ struct CardRowView: View {
     var onToggleDone: (() -> Void)?
     var onArchive: (() -> Void)?
     var isDraggable = true
+    var onDragStart: (() -> Void)?
     var action: () -> Void
     @State private var isHovering = false
 
@@ -443,7 +446,7 @@ struct CardRowView: View {
         .shadow(color: .black.opacity(isHovering ? 0.08 : 0.05), radius: isHovering ? 4 : 2, y: 2)
         .contentShape(Rectangle())
         .onTapGesture(perform: action)
-        .draggableCard(card, enabled: isDraggable)
+        .draggableCard(card, enabled: isDraggable, onStart: onDragStart)
         .onHover { hovering in
             isHovering = hovering
             DispatchQueue.main.async {
@@ -500,10 +503,12 @@ struct CardRowView: View {
 private extension View {
     /// Lets the card be dragged to another position or list, unless `enabled` is false (while filtering).
     @ViewBuilder
-    func draggableCard(_ card: Card, enabled: Bool) -> some View {
+    func draggableCard(_ card: Card, enabled: Bool, onStart: (() -> Void)?) -> some View {
         if enabled {
             onDrag {
-                NSItemProvider(object: NSString(string: DraggedCard(id: card.id, stackId: card.stackId).providerString))
+                onStart?()
+                let dragged = DraggedCard(id: card.id, stackId: card.stackId)
+                return NSItemProvider(object: NSString(string: dragged.providerString))
             }
         } else {
             self
