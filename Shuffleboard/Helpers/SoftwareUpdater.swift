@@ -17,8 +17,12 @@ final class SoftwareUpdater: ObservableObject {
     private let controller: SPUStandardUpdaterController
 
     init() {
-        // The app also hosts the unit tests; don't check for updates or show update UI there.
-        let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        // The app also hosts the unit tests; don't check for updates or show update UI there. UI tests launch
+        // the app as a separate process without XCTest's variable, so they are recognised by their own.
+        var isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        #if DEBUG
+        isRunningTests = isRunningTests || UITestLaunch.isActive
+        #endif
         self.controller = SPUStandardUpdaterController(
             startingUpdater: !isRunningTests,
             updaterDelegate: nil,

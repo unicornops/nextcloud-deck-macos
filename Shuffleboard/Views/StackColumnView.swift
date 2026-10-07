@@ -70,6 +70,8 @@ struct StackColumnView: View {
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .animation(.easeInOut(duration: 0.15), value: isDropTargeted)
         .onDrop(of: dropTypes, isTargeted: $isColumnDropTargeted, perform: handleColumnDrop(providers:))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("list: \(stack.title)")
         .confirmationDialog("Delete list?", isPresented: $pendingDelete) {
             Button("Delete", role: .destructive) {
                 Task {
@@ -448,7 +450,9 @@ struct CardRowView: View {
                 (hovering ? NSCursor.pointingHand : NSCursor.arrow).set()
             }
         }
+        .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
+        .accessibilityIdentifier("card: \(card.title)")
         .accessibilityHint("Opens card details")
         .accessibilityAddTraits(.isButton)
         .contextMenu {
