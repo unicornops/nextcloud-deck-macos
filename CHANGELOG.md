@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.17.4](https://github.com/unicornops/shuffleboard/compare/v0.17.3...v0.17.4) (2026-10-07)
+
+
+### Bug Fixes
+
+* **cards:** moving a card to another list snapped back on some servers ([#132](https://github.com/unicornops/shuffleboard/issues/132)) ([49b3c45](https://github.com/unicornops/shuffleboard/commit/49b3c45e6ee849f3f44fb3f474364cc41927ed86)), closes [#131](https://github.com/unicornops/shuffleboard/issues/131)
+
+
+### Chores
+
+* **cards:** log card drags and drops ([#129](https://github.com/unicornops/shuffleboard/issues/129)) ([b5e63d5](https://github.com/unicornops/shuffleboard/commit/b5e63d58080bd5169d3de59a840fb602b8467bb5))
+
 ## [0.17.3](https://github.com/unicornops/shuffleboard/compare/v0.17.2...v0.17.3) (2026-10-07)
 
 
