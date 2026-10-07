@@ -285,9 +285,12 @@ struct BoardDetailView: View {
         }
     }
 
+    /// The gap before list `index`, where a dragged list can be dropped. It only reacts to a dragged list: a card
+    /// dragged across it would otherwise widen it, pushing the next list away from the pointer so the card landed
+    /// in the gap, which ignored it and left the card where it was.
     @ViewBuilder
     private func stackInsertionGap(at index: Int, boardId: Int) -> some View {
-        let targeted = stackDragInsertIndex == index
+        let targeted = stackDragInsertIndex == index && appState.isDraggingStack
         ZStack(alignment: .center) {
             Color.clear
                 .frame(width: targeted ? 80 : 16)
@@ -310,7 +313,7 @@ struct BoardDetailView: View {
             isTargeted: Binding(
                 get: { stackDragInsertIndex == index },
                 set: { isTargeted in
-                    if isTargeted {
+                    if isTargeted, appState.isDraggingStack {
                         stackDragInsertIndex = index
                     } else if stackDragInsertIndex == index {
                         stackDragInsertIndex = nil
@@ -318,7 +321,8 @@ struct BoardDetailView: View {
                 }
             ),
             perform: { providers in
-                handleStackDrop(providers: providers, insertIndex: index, boardId: boardId)
+                guard appState.isDraggingStack else { return false }
+                return handleStackDrop(providers: providers, insertIndex: index, boardId: boardId)
             }
         )
     }
