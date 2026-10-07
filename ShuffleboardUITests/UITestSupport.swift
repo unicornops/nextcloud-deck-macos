@@ -7,6 +7,8 @@ import XCTest
 /// the app, so this is a small copy). The tests are skipped without it.
 struct UITestServer: Sendable {
     let url: URL
+    /// The server's Deck version, e.g. "1.18.5".
+    let deckVersion: String
     private let passwords: [String: String]
 
     static let alice = "alice"
@@ -18,7 +20,18 @@ struct UITestServer: Sendable {
               let alice = env["E2E_ALICE_PASSWORD"], let bob = env["E2E_BOB_PASSWORD"] else {
             throw XCTSkip("No test server: run scripts/e2e/start-server.sh and pass E2E_SERVER_URL (see README)")
         }
-        return UITestServer(url: url, passwords: [Self.alice: alice, Self.bob: bob])
+        return UITestServer(
+            url: url,
+            deckVersion: env["E2E_DECK_VERSION"] ?? "",
+            passwords: [Self.alice: alice, Self.bob: bob]
+        )
+    }
+
+    /// Whether the server's Deck is `version` or newer, for behaviour that changed between Deck releases.
+    func deck(atLeast version: String) -> Bool {
+        let have = deckVersion.split(separator: ".").map { Int($0) ?? 0 }
+        let want = version.split(separator: ".").map { Int($0) ?? 0 }
+        return !have.lexicographicallyPrecedes(want)
     }
 
     /// The account id the app shows, e.g. `alice@localhost:8443`.

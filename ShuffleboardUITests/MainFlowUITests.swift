@@ -61,6 +61,42 @@ final class MainFlowUITests: XCTestCase {
         }
     }
 
+    /// A deleted board goes to "Recently Deleted" and can be restored from there, except on Deck 1.16, which
+    /// refuses; the app then says why.
+    func testDeletingAndRestoringABoard() async throws {
+        let board = try await makeBoard()
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+
+        app.element("board: \(board.title)").rightClick()
+        app.menuItems["Delete"].waitToAppear().click()
+        // The dialog's button, not its Touch Bar copy, which can't be clicked.
+        app.windows.descendants(matching: .button).matching(NSPredicate(format: "label == %@", "Delete")).firstMatch
+            .waitToAppear("No confirmation before deleting the board").click()
+        XCTAssertTrue(
+            app.element("board: \(board.title)").waitForNonExistence(timeout: 10),
+            "Deleted board still with the others"
+        )
+        try await eventually("Board not deleted on the server") {
+            try await alice.board(board.id)["deletedAt"] as? Int ?? 0 > 0
+        }
+
+        app.find(.button, "Recently Deleted").waitToAppear("No Recently Deleted section").click()
+        app.element("deleted board: \(board.title)").waitToAppear("Deleted board not under Recently Deleted")
+        app.find(.button, "Restore \(board.title)").click()
+
+        guard server.deck(atLeast: "1.17") else {
+            let explanation = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label CONTAINS %@", "can't restore deleted boards")).firstMatch
+            explanation.waitToAppear("No explanation why Deck \(server.deckVersion) can't restore the board")
+            return
+        }
+        app.element("board: \(board.title)").waitToAppear("Restored board not back with the others")
+        try await eventually("Board not restored on the server") {
+            try await alice.board(board.id)["deletedAt"] as? Int ?? 0 == 0
+        }
+    }
+
     func testCreatingListsAndACardThenDraggingItToAnotherList() async throws {
         let board = try await makeBoard()
         try await app.launch(on: server, as: [UITestServer.alice])

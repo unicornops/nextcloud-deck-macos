@@ -288,6 +288,32 @@ final class DeckAPITests: XCTestCase {
         XCTAssertEqual(body["color"] as? String, "FF7A66")
     }
 
+    // MARK: - Restoring boards (#136)
+
+    func testDeckVersionComesFromTheCapabilities() async throws {
+        StubURLProtocol.handler = { _ in
+            .json(#"{"ocs": {"data": {"capabilities": {"deck": {"version": "1.16.8", "canCreateBoards": true}}}}}"#)
+        }
+        let version = try await api.deckVersion()
+        XCTAssertEqual(version, "1.16.8")
+        XCTAssertEqual(lines, ["GET /ocs/v2.php/cloud/capabilities"])
+        XCTAssertEqual(StubURLProtocol.requests.first?.header("OCS-APIRequest"), "true")
+
+        StubURLProtocol.handler = { _ in .json(#"{"ocs": {"data": {"capabilities": {"core": {}}}}}"#) }
+        let missing = try await api.deckVersion()
+        XCTAssertNil(missing)
+    }
+
+    func testVersionComparison() {
+        XCTAssertFalse(DeckAPI.version("1.16.8", isAtLeast: "1.17"))
+        XCTAssertTrue(DeckAPI.version("1.17.0", isAtLeast: "1.17"))
+        XCTAssertTrue(DeckAPI.version("1.17", isAtLeast: "1.17.0"))
+        XCTAssertTrue(DeckAPI.version("1.18.5", isAtLeast: "1.17"))
+        XCTAssertTrue(DeckAPI.version("2.0", isAtLeast: "1.17"))
+        XCTAssertFalse(DeckAPI.version("1.9.9", isAtLeast: "1.17"), "compared as numbers, not text")
+        XCTAssertFalse(DeckAPI.version("", isAtLeast: "1.17"))
+    }
+
     // MARK: - Archive (#76)
 
     func testArchiveRequests() async throws {

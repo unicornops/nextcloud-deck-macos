@@ -17,6 +17,8 @@ final class DeckAPI: Sendable {
     /// Nextcloud's core OCS API, used to search for people and groups to share with.
     private let coreOCSBaseURL: URL
     private let appPasswordURL: URL
+    /// Nextcloud's capabilities, which include the server's Deck version.
+    private let capabilitiesURL: URL
     private let username: String
     private let appPassword: String
     private let session: URLSession
@@ -53,6 +55,11 @@ final class DeckAPI: Sendable {
             .appendingPathComponent("deck")
             .appendingPathComponent("api")
             .appendingPathComponent("v1.1")
+        self.capabilitiesURL = serverURL
+            .appendingPathComponent("ocs")
+            .appendingPathComponent("v2.php")
+            .appendingPathComponent("cloud")
+            .appendingPathComponent("capabilities")
         self.appPasswordURL = serverURL
             .appendingPathComponent("ocs")
             .appendingPathComponent("v2.php")
@@ -515,6 +522,42 @@ extension DeckAPI {
     /// label can't be restored.
     func deleteLabel(boardId: Int, labelId: Int) async throws {
         try await requestNoContent("boards/\(boardId)/labels/\(labelId)", method: "DELETE")
+    }
+}
+
+// MARK: - Server
+
+extension DeckAPI {
+    /// The server's Deck version, e.g. "1.18.5", from Nextcloud's capabilities; nil if it doesn't say.
+    func deckVersion() async throws -> String? {
+        let (data, _) = try await performRequest(url: capabilitiesURL, method: "GET")
+        return try decoder.decode(OCSResponse<Capabilities>.self, from: data).ocs.data.capabilities.deck?.version
+    }
+
+    /// Whether `version` ("1.16.8") is `minimum` ("1.17") or newer; missing parts count as 0.
+    static func version(_ version: String, isAtLeast minimum: String) -> Bool {
+        let have = version.split(separator: ".").map { Int($0) ?? 0 }
+        let need = minimum.split(separator: ".").map { Int($0) ?? 0 }
+        for index in 0 ..< max(have.count, need.count) {
+            let part = index < have.count ? have[index] : 0
+            let wanted = index < need.count ? need[index] : 0
+            if part != wanted {
+                return part > wanted
+            }
+        }
+        return true
+    }
+
+    private struct Capabilities: Decodable {
+        struct List: Decodable {
+            let deck: Deck?
+        }
+
+        struct Deck: Decodable {
+            let version: String?
+        }
+
+        let capabilities: List
     }
 }
 
