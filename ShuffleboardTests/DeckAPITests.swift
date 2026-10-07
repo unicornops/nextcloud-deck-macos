@@ -151,6 +151,19 @@ final class DeckAPITests: XCTestCase {
 
     // MARK: - Assignments (#74)
 
+    /// Nextcloud answers a request with a session cookie as that session's user, so no request may use cookies:
+    /// with one shared URLSession, a second account on the same server would act as the first.
+    func testRequestsDoNotUseCookies() async throws {
+        StubURLProtocol.handler = { _ in .json("[]") }
+        _ = try await api.getBoards()
+        _ = try? await api.uploadAttachment(boardId: 1, stackId: 2, cardId: 3, fileURL: fileURL, filename: "a.txt")
+        try await api.revokeAppPassword()
+        XCTAssertEqual(StubURLProtocol.requests.count, 3)
+        for request in StubURLProtocol.requests {
+            XCTAssertFalse(request.handlesCookies, "\(request.line) uses cookies")
+        }
+    }
+
     func testAssignAndUnassignUser() async throws {
         StubURLProtocol.handler = { _ in .json("{}") }
         try await api.assignUser(boardId: 1, stackId: 2, cardId: 3, userId: "alice")
