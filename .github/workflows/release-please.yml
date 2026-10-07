@@ -244,22 +244,59 @@ jobs:
           echo "Creating ZIP for notarization..."
           ditto -c -k --keepParent "$APP_PATH" NotarizeApp.zip
 
+          AUTH=(--apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$APPLE_PASSWORD")
+
+          # Apple's notary service drops the odd request, and `notarytool submit --wait` gives up on the first
+          # one. So submit and staple with retries, and poll the submission's status, tolerating failed polls.
+          retry() {
+            local attempt
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              echo "::warning::Attempt $attempt failed: $*"
+              sleep $((attempt * 30))
+            done
+            return 1
+          }
+          submit() {
+            xcrun notarytool submit NotarizeApp.zip "${AUTH[@]}" --output-format json > submission.json
+          }
+
           echo "Submitting to Apple for notarization..."
-          xcrun notarytool submit NotarizeApp.zip \
-            --apple-id "$APPLE_ID" \
-            --team-id "$TEAM_ID" \
-            --password "$APPLE_PASSWORD" \
-            --wait \
-            --timeout 30m
+          retry submit
+          SUBMISSION_ID=$(jq -r '.id' submission.json)
+          echo "Submission: $SUBMISSION_ID"
+
+          echo "Waiting for notarization..."
+          DEADLINE=$((SECONDS + 45 * 60))
+          while true; do
+            if xcrun notarytool info "$SUBMISSION_ID" "${AUTH[@]}" --output-format json > result.json; then
+              STATUS=$(jq -r '.status' result.json)
+              echo "Status: $STATUS"
+              [ "$STATUS" != "In Progress" ] && break
+            else
+              echo "::warning::Couldn't fetch the notarization status; trying again"
+            fi
+            if [ "$SECONDS" -ge "$DEADLINE" ]; then
+              echo "::error::Notarization still not finished after 45 minutes (submission $SUBMISSION_ID)"
+              exit 1
+            fi
+            sleep 30
+          done
+
+          if [ "$STATUS" != "Accepted" ]; then
+            xcrun notarytool log "$SUBMISSION_ID" "${AUTH[@]}" || true
+            echo "::error::Notarization finished with status $STATUS"
+            exit 1
+          fi
 
           echo "Stapling notarization ticket..."
-          xcrun stapler staple "$APP_PATH"
+          retry xcrun stapler staple "$APP_PATH"
 
           echo "Verifying notarization..."
           xcrun stapler validate "$APP_PATH"
           spctl -a -vv "$APP_PATH"
 
-          rm NotarizeApp.zip
+          rm NotarizeApp.zip submission.json result.json
           echo "✅ App successfully notarized and stapled"
 
       - name: Get app info
