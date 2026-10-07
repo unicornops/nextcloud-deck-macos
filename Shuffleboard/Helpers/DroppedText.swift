@@ -1,7 +1,9 @@
 import AppKit
 import os
 
-private let logger = Logger(subsystem: "ie.unicornops.shuffleboard", category: "DragAndDrop")
+/// Logs drags and drops by card and list id (never titles), to diagnose moves that don't happen:
+/// `log stream --level debug --predicate 'subsystem == "ie.unicornops.shuffleboard"'`.
+let dragLogger = Logger(subsystem: "ie.unicornops.shuffleboard", category: "DragAndDrop")
 
 extension [NSItemProvider] {
     /// Loads the text of a drop (a dragged card or list) and passes it to `completion`, on a background queue.
@@ -12,12 +14,12 @@ extension [NSItemProvider] {
     /// drops do nothing and the card snap back.
     func loadDroppedText(_ completion: @escaping @Sendable (String) -> Void) -> Bool {
         guard let provider = first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {
-            logger.notice("Drop ignored: no text in \(self.count) item(s)")
+            dragLogger.notice("Drop ignored: no text in \(self.count) item(s)")
             return false
         }
         _ = provider.loadObject(ofClass: NSString.self) { @Sendable object, error in
             guard let text = object as? NSString else {
-                logger.error("Drop ignored: couldn't load its text: \(String(describing: error), privacy: .public)")
+                dragLogger.error("Drop ignored: couldn't load its text: \(String(describing: error), privacy: .public)")
                 return
             }
             completion(text as String)

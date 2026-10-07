@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -264,6 +265,7 @@ struct BoardDetailView: View {
                         )
                         .environmentObject(appState)
                         .onDrag {
+                            dragLogger.notice("List drag started: list \(stack.id)")
                             appState.isDraggingStack = true
                             return NSItemProvider(
                                 object: NSString(
@@ -279,6 +281,7 @@ struct BoardDetailView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .onDrop(of: stackDropTypes, isTargeted: nil) { _ in
                 // Catch-all: reset stack-dragging state for drops that miss a gap
+                dragLogger.notice("Drop outside the lists ignored")
                 appState.isDraggingStack = false
                 return false
             }
@@ -321,6 +324,7 @@ struct BoardDetailView: View {
                 }
             ),
             perform: { providers in
+                dragLogger.notice("Drop between lists at \(index), list drag: \(appState.isDraggingStack)")
                 guard appState.isDraggingStack else { return false }
                 return handleStackDrop(providers: providers, insertIndex: index, boardId: boardId)
             }
