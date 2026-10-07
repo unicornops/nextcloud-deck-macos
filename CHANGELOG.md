@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.2](https://github.com/unicornops/shuffleboard/compare/v0.17.1...v0.17.2) (2026-10-07)
+
+
+### Bug Fixes
+
+* **accounts:** a second account on the same server acted as the first ([#122](https://github.com/unicornops/shuffleboard/issues/122)) ([2009ab4](https://github.com/unicornops/shuffleboard/commit/2009ab49e55fabc6978dacbf0d8bd11f2c447162)), closes [#121](https://github.com/unicornops/shuffleboard/issues/121)
+* **attachments:** uploads failed with Deck 1.17 and 1.18 ([#124](https://github.com/unicornops/shuffleboard/issues/124)) ([06fda70](https://github.com/unicornops/shuffleboard/commit/06fda70726d53d52702f4fc2b1d1b6e2e2eb8405)), closes [#123](https://github.com/unicornops/shuffleboard/issues/123)
+
 ## [0.17.1](https://github.com/unicornops/shuffleboard/compare/v0.17.0...v0.17.1) (2026-10-07)
 
 
