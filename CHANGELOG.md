@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.1](https://github.com/unicornops/shuffleboard/compare/v0.17.0...v0.17.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **cards:** dragging a card to another list snaps back ([#117](https://github.com/unicornops/shuffleboard/issues/117)) ([49b7c40](https://github.com/unicornops/shuffleboard/commit/49b7c40cc2794794dabdb1d04036dccbacffa641))
+* **release:** retry notarization requests instead of failing on one ([#115](https://github.com/unicornops/shuffleboard/issues/115)) ([2633e17](https://github.com/unicornops/shuffleboard/commit/2633e17e298491bf2bfcb20c0b043f3a5226172d))
+
 ## [0.17.0](https://github.com/unicornops/shuffleboard/compare/v0.16.0...v0.17.0) (2026-10-06)
 
 
