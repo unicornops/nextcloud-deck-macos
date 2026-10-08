@@ -114,10 +114,9 @@ final class MainFlowUITests: XCTestCase {
         }
 
         app.list("To do").buttons["Add card"].click()
-        // The field doesn't take focus by itself.
-        let cardTitle = app.find(.textField, "Card title").waitToAppear()
-        cardTitle.click()
-        cardTitle.typeText("Write UI tests\r")
+        // The field takes focus by itself (#140): type straight away, without clicking it.
+        app.find(.textField, "Card title").waitToAppear()
+        app.typeText("Write UI tests\r")
         let card = app.card("Write UI tests").waitToAppear("New card not shown")
         try await eventually("Card not created in To do on the server") {
             try await alice.list(holding: "Write UI tests", board: board.id) == "To do"
