@@ -138,8 +138,26 @@ bob_board=$(api "$BOB_AUTH" POST "$DECK/boards" '{"title": "Bob'"'"'s errands", 
 bob_stack=$(api "$BOB_AUTH" POST "$DECK/boards/$bob_board/stacks" '{"title": "Errands", "order": 0}' | jq -r .id)
 api "$BOB_AUTH" POST "$DECK/boards/$bob_board/stacks/$bob_stack/cards" '{"title": "Post office", "type": "plain", "order": 0}' >/dev/null
 
+# A big board on the realistic server (#142), as real boards grow: 12 lists of 25 cards, some with labels and
+# due dates. The UI tests and screenshots don't use it.
+if [ "${E2E_PROFILE:-minimal}" = realistic ]; then
+    echo "==> Seeding the large board"
+    big=$(board "Big backlog" "2C3E50")
+    big_labels=("$(label "$big" "Bug" "C0392B")" "$(label "$big" "Feature" "2E8B57")" "$(label "$big" "Chore" "7F8C8D")")
+    for list in $(seq 1 12); do
+        s=$(stack "$big" "List $list" "$list")
+        for n in $(seq 1 25); do
+            if [ $((n % 4)) = 0 ]; then due=$(iso_date $((n - 10))); else due=""; fi
+            c=$(card "$big" "$s" "$n" "Card $list.$n" "Card $n of list $list." "$due")
+            if [ $((n % 3)) = 0 ]; then
+                tag "$big" "$s" "$c" "${big_labels[$((n % 9 / 3))]}"
+            fi
+        done
+    done
+fi
+
 # The seed's own app passwords are no longer needed.
 for auth in "$ALICE_AUTH" "$BOB_AUTH"; do
     curl -fsS -u "$auth" -X DELETE -H 'OCS-APIRequest: true' "$E2E_SERVER_URL/ocs/v2.php/core/apppassword" >/dev/null
 done
-echo "==> Seeded: Home renovation ($home), Product launch ($launch), Reading list ($reading), Bob's errands ($bob_board)"
+echo "==> Seeded: Home renovation ($home), Product launch ($launch), Reading list ($reading), Bob's errands ($bob_board)${big:+, Big backlog ($big)}"

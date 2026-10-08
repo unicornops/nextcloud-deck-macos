@@ -208,6 +208,26 @@ final class ServerAppStateTests: XCTestCase {
         await app.deleteBoard(id: board.id)
     }
 
+    /// The realistic test server's board of 300 cards (#142) loads whole: every list and card, in order, with labels.
+    func testOpeningALargeBoard() async throws {
+        guard ProcessInfo.processInfo.environment["E2E_PROFILE"] == "realistic" else {
+            throw XCTSkip("Only the realistic test server has the large board")
+        }
+        let app = try await signedInApp()
+        await app.loadBoards()
+        let board = try XCTUnwrap(app.boards.first { $0.title == "Big backlog" }, "No large board: run seed.sh")
+        app.selectBoard(board)
+        await app.loadStacks(boardId: board.id)
+
+        XCTAssertNil(app.stacksError)
+        XCTAssertEqual(app.stacks.map(\.title), (1 ... 12).map { "List \($0)" })
+        XCTAssertEqual(app.stacks.reduce(0) { $0 + $1.activeCards.count }, 300)
+        let first = try XCTUnwrap(app.stacks.first)
+        XCTAssertEqual(first.activeCards.map(\.title), (1 ... 25).map { "Card 1.\($0)" })
+        XCTAssertEqual(first.activeCards.count { !($0.labels ?? []).isEmpty }, 8, "Labels missing")
+        XCTAssertEqual(first.activeCards.count { $0.duedate != nil }, 6, "Due dates missing")
+    }
+
     /// Picks up a change made elsewhere (here: another client) with the ETag refresh.
     func testRefreshIfChangedPicksUpChangesFromAnotherClient() async throws {
         let app = try await signedInApp()
