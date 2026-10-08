@@ -354,7 +354,9 @@ final class MainFlowUITests: XCTestCase {
             .waitToAppear("No confirmation before removing an attachment").click()
         try await eventually("Attachment not removed on the server") { try await deletedAt() > 0 }
 
-        app.find(.button, "Restore notes.txt").waitToAppear("Removed attachment can't be restored").click()
+        // A link-style button: not necessarily of type button.
+        app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Restore notes.txt")).firstMatch
+            .waitToAppear("Removed attachment can't be restored").click()
         try await eventually("Attachment not restored on the server") { try await deletedAt() == 0 }
         app.find(.button, "Remove notes.txt").waitToAppear("Restored attachment not shown as attached")
         app.find(.button, "Cancel").click()
