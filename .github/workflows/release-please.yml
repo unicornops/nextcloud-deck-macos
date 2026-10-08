@@ -245,12 +245,19 @@ jobs:
           EXPIRES=$(/usr/libexec/PlistBuddy -c "Print :ExpirationDate" "$RUNNER_TEMP/profile.plist")
           echo "Profile for $APP_ID, expires $EXPIRES"
 
+          # The project's entitlements, with the build setting they use filled in, plus the keychain ones.
           ENTITLEMENTS="$RUNNER_TEMP/app.entitlements"
-          codesign -d --entitlements - --xml "$APP_PATH" > "$ENTITLEMENTS"
-          plutil -insert com.apple.application-identifier -string "$APP_ID" "$ENTITLEMENTS"
-          plutil -insert com.apple.developer.team-identifier -string "$TEAM" "$ENTITLEMENTS"
-          plutil -insert keychain-access-groups -array "$ENTITLEMENTS"
-          plutil -insert keychain-access-groups.0 -string "$APP_ID" "$ENTITLEMENTS"
+          sed "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/$BUNDLE_ID/g" "${{ env.APP_NAME }}/${{ env.APP_NAME }}.entitlements" > "$ENTITLEMENTS"
+          if grep -q '\$(' "$ENTITLEMENTS"; then
+            echo "::error::The entitlements use a build setting this step doesn't fill in"
+            exit 1
+          fi
+          add() { /usr/libexec/PlistBuddy -c "Add $1" "$ENTITLEMENTS"; }
+          add ":com.apple.application-identifier string $APP_ID"
+          add ":com.apple.developer.team-identifier string $TEAM"
+          add ":keychain-access-groups array"
+          add ":keychain-access-groups:0 string $APP_ID"
+          plutil -lint "$ENTITLEMENTS"
           plutil -p "$ENTITLEMENTS"
           echo "APP_ENTITLEMENTS=$ENTITLEMENTS" >> "$GITHUB_ENV"
 
