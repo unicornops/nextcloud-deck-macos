@@ -372,15 +372,15 @@ final class MainFlowUITests: XCTestCase {
 
         app.card("Plan the trip").waitToAppear().click()
         app.find(.textField, "card title").waitToAppear("Card sheet did not open")
-        app.toggle("Has a due date").waitToAppear()
+        app.element("has due date").waitToAppear()
         guard server.deck(atLeast: "1.18") else {
-            XCTAssertFalse(app.toggle("Has a start date").exists, "Start date offered on Deck \(server.deckVersion)")
+            XCTAssertFalse(app.element("has start date").exists, "Start date offered on Deck \(server.deckVersion)")
             app.find(.button, "Cancel").click()
             return
         }
         // Starts today at 9:00, due tomorrow at 9:00: the defaults.
-        app.toggle("Has a start date").click()
-        app.toggle("Has a due date").click()
+        app.element("has start date").click()
+        app.element("has due date").click()
         app.find(.button, "Save").click()
         try await eventually("Start date not saved on the server") {
             let card = try await alice.card(titled: "Plan the trip", board: board.id)
@@ -389,7 +389,7 @@ final class MainFlowUITests: XCTestCase {
         }
 
         app.card("Plan the trip").waitToAppear().click()
-        app.toggle("Has a start date").waitToAppear("Start date not shown when reopening the card").click()
+        app.element("has start date").waitToAppear("Start date not shown when reopening the card").click()
         app.find(.button, "Save").click()
         try await eventually("Start date not cleared on the server") {
             let card = try await alice.card(titled: "Plan the trip", board: board.id)

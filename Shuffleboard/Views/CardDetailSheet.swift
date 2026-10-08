@@ -298,11 +298,13 @@ extension CardDetailSheet {
             // Deck before 1.18 has no start dates.
             if appState.supportsStartDates || card.startDate != nil {
                 Toggle("Has a start date", isOn: $hasStartDate)
+                    .accessibilityIdentifier("has start date")
                 if hasStartDate {
                     DatePicker("Start", selection: $startDate, displayedComponents: [.date, .hourAndMinute])
                 }
             }
             Toggle("Has a due date", isOn: $hasDueDate)
+                .accessibilityIdentifier("has due date")
             if hasDueDate {
                 DatePicker("Due", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
             }

@@ -310,17 +310,6 @@ extension XCUIApplication {
         element("board: \(title)").waitToAppear("Board \(title) not in the sidebar", timeout: 20).click()
     }
 
-    /// A toggle: a checkbox, or a switch in a grouped form.
-    func toggle(_ name: String) -> XCUIElement {
-        descendants(matching: .any).matching(NSPredicate(
-            format: "(elementType == %d OR elementType == %d) AND (label == %@ OR title == %@)",
-            XCUIElement.ElementType.checkBox.rawValue,
-            XCUIElement.ElementType.switch.rawValue,
-            name,
-            name
-        )).firstMatch
-    }
-
     func card(_ title: String) -> XCUIElement {
         element("card: \(title)")
     }
