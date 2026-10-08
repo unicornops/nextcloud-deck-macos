@@ -196,20 +196,34 @@ final class AppStateTests: XCTestCase {
         }
         let app = await makeSignedInApp()
         let card = try JSONDecoder().decode(Card.self, from: Data(Self.cardJSON.utf8))
+        let start = try XCTUnwrap(DeckDate.parse("2026-10-03T09:00:00+00:00"))
         let due = try XCTUnwrap(DeckDate.parse("2026-10-10T12:00:00+00:00"))
 
         let saved = await app.updateCard(
             boardId: 1,
             stackId: 10,
             card: card,
-            edits: CardEdits(title: "Card", description: "", dueDate: due, isDone: true)
+            edits: CardEdits(title: "Card", description: "", startDate: start, dueDate: due, isDone: true)
         )
 
         XCTAssertTrue(saved)
         let put = try XCTUnwrap(StubURLProtocol.requests.first { $0.method == "PUT" })
         XCTAssertEqual(put.path, "/index.php/apps/deck/api/v1.0/boards/1/stacks/10/cards/5")
         XCTAssertEqual(DeckDate.parse(put.json?["duedate"] as? String), due)
+        XCTAssertEqual(DeckDate.parse(put.json?["startdate"] as? String), start)
         XCTAssertNotNil(DeckDate.parse(put.json?["done"] as? String))
+
+        // A start after the due date isn't sent: Deck would accept it.
+        let before = StubURLProtocol.requests.count
+        let refused = await app.updateCard(
+            boardId: 1,
+            stackId: 10,
+            card: card,
+            edits: CardEdits(title: "Card", description: "", startDate: due, dueDate: start, isDone: false)
+        )
+        XCTAssertFalse(refused)
+        XCTAssertEqual(app.errorMessage, CardEdits.datesOutOfOrderMessage)
+        XCTAssertEqual(StubURLProtocol.requests.count, before)
     }
 
     func testMarkingDoneFromTheBoard() async throws {
@@ -1005,5 +1019,41 @@ extension AppStateTests {
         )
         XCTAssertFalse(refused)
         XCTAssertEqual(app.actionError, DeckAPIError.permissionDenied.localizedDescription)
+    }
+}
+
+// MARK: - Start dates (#138)
+
+extension AppStateTests {
+    private func makeApp(deckVersion: String?) async -> AppState {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/cloud/capabilities") {
+                guard let deckVersion else { return .status(404) }
+                return .json(#"{"ocs": {"data": {"capabilities": {"deck": {"version": "\#(deckVersion)"}}}}}"#)
+            }
+            return request.path.hasSuffix("/boards") ? .json(Self.boardsJSON) : .json(Self.stacksJSON([10], board: 1))
+        }
+        return await makeSignedInApp()
+    }
+
+    func testStartDatesNeedDeck118() async {
+        let new = await makeApp(deckVersion: "1.18.5")
+        XCTAssertEqual(new.serverDeckVersion, "1.18.5")
+        XCTAssertTrue(new.supportsStartDates)
+
+        let old = await makeApp(deckVersion: "1.17.2")
+        XCTAssertFalse(old.supportsStartDates)
+
+        let unknown = await makeApp(deckVersion: nil)
+        XCTAssertFalse(unknown.supportsStartDates, "not offered when the server doesn't say")
+    }
+
+    func testDeckVersionIsAskedOncePerAccount() async {
+        let app = await makeApp(deckVersion: nil)
+        await app.loadBoards()
+        await app.refresh()
+
+        let asked = StubURLProtocol.requests.filter { $0.path.hasSuffix("/cloud/capabilities") }
+        XCTAssertEqual(asked.count, 1)
     }
 }

@@ -447,12 +447,12 @@ struct CardRowView: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
             }
-            if let dueDate = card.dueDate {
+            if let dates = Self.datesText(card) {
                 let overdue = card.isOverdue()
                 HStack(spacing: 4) {
                     Image(systemName: overdue ? "exclamationmark.circle" : "calendar")
                         .font(.caption2)
-                    Text(Self.dueText(dueDate))
+                    Text(dates)
                         .font(.caption2)
                 }
                 .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
@@ -566,11 +566,25 @@ struct CardRowView: View {
         date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
     }
 
+    /// "Oct 3 – Oct 10, 12:00" with a start date, "Starts Oct 3" with only that, else the due date.
+    private static func datesText(_ card: Card) -> String? {
+        let start = card.startDate?.formatted(.dateTime.month(.abbreviated).day())
+        switch (start, card.dueDate) {
+        case let (start?, due?): return "\(start) \u{2013} \(dueText(due))"
+        case let (start?, nil): return "Starts \(start)"
+        case let (nil, due?): return dueText(due)
+        case (nil, nil): return nil
+        }
+    }
+
     /// What VoiceOver reads for the row: the title plus done/overdue/due state.
     private var accessibilityDescription: String {
         var parts = [card.title]
         if card.isDone {
             parts.append("Done")
+        }
+        if let startDate = card.startDate {
+            parts.append("Starts " + startDate.formatted(.dateTime.month(.wide).day()))
         }
         if let dueDate = card.dueDate {
             parts.append((card.isOverdue() ? "Overdue, was due " : "Due ") + Self.dueText(dueDate))

@@ -206,6 +206,12 @@ struct DeckClient: Sendable {
         try await call("GET", "boards/\(board)/stacks") as? [[String: Any]] ?? []
     }
 
+    /// The card titled `title` as the server has it, if any.
+    func card(titled title: String, board: Int) async throws -> [String: Any]? {
+        try await stacks(board: board).flatMap { $0["cards"] as? [[String: Any]] ?? [] }
+            .first { $0["title"] as? String == title }
+    }
+
     /// The title of the list holding the card titled `card`, if any.
     func list(holding card: String, board: Int) async throws -> String? {
         try await stacks(board: board).first { stack in
@@ -302,6 +308,17 @@ extension XCUIApplication {
     /// Opens a board from the sidebar.
     func openBoard(_ title: String) {
         element("board: \(title)").waitToAppear("Board \(title) not in the sidebar", timeout: 20).click()
+    }
+
+    /// A toggle: a checkbox, or a switch in a grouped form.
+    func toggle(_ name: String) -> XCUIElement {
+        descendants(matching: .any).matching(NSPredicate(
+            format: "(elementType == %d OR elementType == %d) AND (label == %@ OR title == %@)",
+            XCUIElement.ElementType.checkBox.rawValue,
+            XCUIElement.ElementType.switch.rawValue,
+            name,
+            name
+        )).firstMatch
     }
 
     func card(_ title: String) -> XCUIElement {

@@ -117,17 +117,24 @@ final class CardModelTests: XCTestCase {
     func testMarkingDoneStampsNowButKeepsAnExistingDoneDate() throws {
         let now = try XCTUnwrap(DeckDate.parse("2026-10-04T12:00:00+00:00"))
         let open = try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false}"#)
-        XCTAssertEqual(DeckDate.parse(open.withSchedule(dueDate: nil, isDone: true, now: now).done), now)
+        XCTAssertEqual(
+            DeckDate.parse(open.withSchedule(startDate: nil, dueDate: nil, isDone: true, now: now).done),
+            now
+        )
 
         let done =
             try decodeCard(
                 #"{"id": 1, "title": "t", "stackId": 2, "order": 0, "archived": false, "done": "2026-10-02T08:00:00+00:00"}"#
             )
-        XCTAssertEqual(done.withSchedule(dueDate: nil, isDone: true, now: now).done, "2026-10-02T08:00:00+00:00")
-        XCTAssertNil(done.withSchedule(dueDate: nil, isDone: false, now: now).done)
+        XCTAssertEqual(
+            done.withSchedule(startDate: nil, dueDate: nil, isDone: true, now: now).done,
+            "2026-10-02T08:00:00+00:00"
+        )
+        XCTAssertNil(done.withSchedule(startDate: nil, dueDate: nil, isDone: false, now: now).done)
     }
 
     func testScheduleIsSentInTheUpdateBody() throws {
+        let start = try XCTUnwrap(DeckDate.parse("2026-10-03T09:00:00+00:00"))
         let due = try XCTUnwrap(DeckDate.parse("2026-10-10T12:00:00+00:00"))
         let card =
             try decodeCard(
@@ -135,18 +142,41 @@ final class CardModelTests: XCTestCase {
             )
 
         let scheduled = try body(UpdateCardRequest(
-            card: card.withSchedule(dueDate: due, isDone: true),
+            card: card.withSchedule(startDate: start, dueDate: due, isDone: true),
             fallbackOwner: "me"
         ))
         XCTAssertEqual(DeckDate.parse(scheduled["duedate"] as? String), due)
+        XCTAssertEqual(DeckDate.parse(scheduled["startdate"] as? String), start)
         XCTAssertNotNil(DeckDate.parse(scheduled["done"] as? String))
 
         let cleared = try body(UpdateCardRequest(
-            card: card.withSchedule(dueDate: nil, isDone: false),
+            card: card.withSchedule(startDate: nil, dueDate: nil, isDone: false),
             fallbackOwner: "me"
         ))
         XCTAssertTrue(cleared["duedate"] is NSNull, "removing the due date clears it on the server")
+        XCTAssertTrue(cleared["startdate"] is NSNull, "removing the start date clears it on the server")
         XCTAssertTrue(cleared["done"] is NSNull)
+    }
+
+    // MARK: - Start dates (#138)
+
+    func testStartDateDecodesAndOrderIsChecked() throws {
+        let card = try decodeCard(
+            #"{"id": 1, "title": "t", "stackId": 2, "order": 0, "startdate": "2026-10-03T09:00:00+00:00"}"#
+        )
+        let start = try XCTUnwrap(card.startDate)
+        XCTAssertEqual(start, DeckDate.parse("2026-10-03T09:00:00+00:00"))
+        XCTAssertNil(try decodeCard(#"{"id": 1, "title": "t", "stackId": 2, "order": 0}"#).startDate)
+
+        let later = start.addingTimeInterval(86400)
+        func edits(start: Date?, due: Date?) -> CardEdits {
+            CardEdits(title: "t", description: "", startDate: start, dueDate: due, isDone: false)
+        }
+        XCTAssertTrue(edits(start: start, due: later).datesAreInOrder)
+        XCTAssertTrue(edits(start: start, due: start).datesAreInOrder, "starting and ending together is fine")
+        XCTAssertFalse(edits(start: later, due: start).datesAreInOrder)
+        XCTAssertTrue(edits(start: later, due: nil).datesAreInOrder)
+        XCTAssertTrue(edits(start: nil, due: start).datesAreInOrder)
     }
 
     // MARK: - Restoring attachments (#139)

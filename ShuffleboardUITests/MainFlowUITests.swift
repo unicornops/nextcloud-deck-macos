@@ -362,6 +362,41 @@ final class MainFlowUITests: XCTestCase {
         app.find(.button, "Cancel").click()
     }
 
+    /// Start dates (#138), on Deck 1.18 and later; older versions have none, so the sheet doesn't offer them.
+    func testSettingAndClearingAStartDate() async throws {
+        let board = try await makeBoard()
+        let stack = try await alice.createStack(board: board.id, "To do", order: 0)
+        _ = try await alice.createCard(board: board.id, stack: stack, "Plan the trip")
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+
+        app.card("Plan the trip").waitToAppear().click()
+        app.find(.textField, "card title").waitToAppear("Card sheet did not open")
+        app.toggle("Has a due date").waitToAppear()
+        guard server.deck(atLeast: "1.18") else {
+            XCTAssertFalse(app.toggle("Has a start date").exists, "Start date offered on Deck \(server.deckVersion)")
+            app.find(.button, "Cancel").click()
+            return
+        }
+        // Starts today at 9:00, due tomorrow at 9:00: the defaults.
+        app.toggle("Has a start date").click()
+        app.toggle("Has a due date").click()
+        app.find(.button, "Save").click()
+        try await eventually("Start date not saved on the server") {
+            let card = try await alice.card(titled: "Plan the trip", board: board.id)
+            guard let start = card?["startdate"] as? String, let due = card?["duedate"] as? String else { return false }
+            return start < due
+        }
+
+        app.card("Plan the trip").waitToAppear().click()
+        app.toggle("Has a start date").waitToAppear("Start date not shown when reopening the card").click()
+        app.find(.button, "Save").click()
+        try await eventually("Start date not cleared on the server") {
+            let card = try await alice.card(titled: "Plan the trip", board: board.id)
+            return card?["startdate"] as? String == nil && card?["duedate"] as? String != nil
+        }
+    }
+
     // MARK: - Sharing
 
     func testSharingABoard() async throws {
