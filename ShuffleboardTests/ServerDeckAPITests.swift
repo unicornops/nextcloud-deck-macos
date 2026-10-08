@@ -27,6 +27,11 @@ final class ServerDeckAPITests: XCTestCase {
         let archived = try await api.updateBoard(id: created.id, title: renamed, color: "E9322D", archived: true)
         XCTAssertEqual(archived.title, renamed)
         XCTAssertTrue(archived.archived)
+        // Deck has no partial update: leaving `archived` out unarchives the board, so the app always sends it (#133).
+        let edited = try await api.updateBoard(id: created.id, title: renamed, color: "9C59B6", archived: true)
+        XCTAssertTrue(edited.archived, "Editing an archived board unarchived it")
+        let color = try await api.getBoard(id: created.id).color
+        XCTAssertEqual(color?.lowercased(), "9c59b6")
         let unarchived = try await api.updateBoard(id: created.id, title: renamed, color: "E9322D", archived: false)
         XCTAssertFalse(unarchived.archived)
 

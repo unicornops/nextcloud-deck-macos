@@ -124,6 +124,33 @@ final class ServerAppStateTests: XCTestCase {
         XCTAssertFalse(app.boards.contains { $0.id == board.id })
     }
 
+    func testEditingABoard() async throws {
+        let app = try await signedInApp()
+        let title = uniqueTitle("E2E edit")
+        let created = await app.createBoard(title: title, color: "31CC7C")
+        XCTAssertTrue(created, app.errorMessage ?? "")
+        let board = try XCTUnwrap(app.boards.first { $0.title == title })
+        XCTAssertTrue(board.canManage, "The owner can manage the board")
+
+        let saved = await app.updateBoard(id: board.id, title: title + " renamed", color: "9C59B6")
+
+        XCTAssertTrue(saved, app.errorMessage ?? "")
+        XCTAssertEqual(app.boards.first { $0.id == board.id }?.title, title + " renamed")
+        let onServer = try await server.api(for: TestServer.alice).getBoard(id: board.id)
+        XCTAssertEqual(onServer.title, title + " renamed")
+        XCTAssertEqual(onServer.color?.lowercased(), "9c59b6")
+        XCTAssertFalse(onServer.archived)
+
+        // An archived board stays archived when it is edited.
+        await app.archiveBoard(id: board.id)
+        let renamedAgain = await app.updateBoard(id: board.id, title: title + " archived", color: "31CC7C")
+        XCTAssertTrue(renamedAgain, app.errorMessage ?? "")
+        let archived = try await server.api(for: TestServer.alice).getBoard(id: board.id)
+        XCTAssertTrue(archived.archived, "Editing an archived board unarchived it")
+        XCTAssertEqual(app.archivedBoards.map(\.id), [board.id])
+        await app.deleteBoard(id: board.id)
+    }
+
     /// Picks up a change made elsewhere (here: another client) with the ETag refresh.
     func testRefreshIfChangedPicksUpChangesFromAnotherClient() async throws {
         let app = try await signedInApp()

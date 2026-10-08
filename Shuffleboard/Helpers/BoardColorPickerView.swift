@@ -4,7 +4,7 @@ import SwiftUI
 
 /// A row of preset colour swatches used when creating or editing a board or label.
 ///
-/// Extracted from `NewBoardSheet` and `CardDetailSheet`, which previously each
+/// Extracted from `BoardSheet` and `CardDetailSheet`, which previously each
 /// contained an identical inline implementation. Use this view wherever a board
 /// or label colour needs to be chosen from the standard Nextcloud Deck palette.
 ///
@@ -64,13 +64,18 @@ struct BoardColorPickerView: View {
                     Circle()
                         .strokeBorder(
                             Color.primary.opacity(0.3),
-                            lineWidth: selectedHex == preset.hex ? 3 : 0
+                            lineWidth: isSelected(preset) ? 3 : 0
                         )
                 )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(preset.name)
-        .accessibilityAddTraits(selectedHex == preset.hex ? .isSelected : [])
+        .accessibilityAddTraits(isSelected(preset) ? .isSelected : [])
+    }
+
+    /// Deck keeps colours as they were sent, so a board's colour may be in either case.
+    private func isSelected(_ preset: (name: String, hex: String)) -> Bool {
+        selectedHex.caseInsensitiveCompare(preset.hex) == .orderedSame
     }
 }
 

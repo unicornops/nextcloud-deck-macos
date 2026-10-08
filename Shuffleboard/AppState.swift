@@ -316,6 +316,28 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Renames and recolours a board, keeping its archived state. The sidebar and the board's title change as
+    /// soon as the server confirms. Returns `true` if the board was saved, `false` otherwise (and sets
+    /// `errorMessage`, which the edit sheet shows).
+    func updateBoard(id: Int, title: String, color: String) async -> Bool {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let api = deckAPI, !trimmed.isEmpty,
+              let board = boards.first(where: { $0.id == id }) else { return false }
+        do {
+            let saved = try await api.updateBoard(id: id, title: trimmed, color: color, archived: board.archived)
+            guard api === deckAPI else { return false }
+            if let idx = boards.firstIndex(where: { $0.id == id }) {
+                boards[idx].title = saved.title
+                boards[idx].color = saved.color ?? color
+            }
+            return true
+        } catch {
+            guard !endSessionIfUnauthorized(error) else { return false }
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     func restoreBoard(id: Int) async {
         guard let api = deckAPI else { return }
         do {

@@ -250,14 +250,9 @@ final class DeckAPI: Sendable {
         return try decoder.decode(Board.self, from: data)
     }
 
-    /// `nil` arguments leave that property unchanged on the server.
-    func updateBoard(
-        id: Int,
-        title: String?,
-        color: String?,
-        archived: Bool? // swiftlint:disable:this discouraged_optional_boolean
-    ) async throws
-        -> Board {
+    /// Sets the board's title, colour and archived state. Deck has no partial update: a missing `archived` means
+    /// `false`, so renaming an archived board must send `archived: true` to keep it archived.
+    func updateBoard(id: Int, title: String, color: String?, archived: Bool) async throws -> Board {
         try await request(
             "boards/\(id)",
             method: "PUT",
@@ -822,10 +817,9 @@ private struct CreateBoardRequest: Encodable {
 }
 
 private struct UpdateBoardRequest: Encodable {
-    let title: String?
+    let title: String
     let color: String?
-    /// Omitted when `nil`, which leaves the board's archived state unchanged.
-    let archived: Bool? // swiftlint:disable:this discouraged_optional_boolean
+    let archived: Bool
 }
 
 private struct CreateStackRequest: Encodable {

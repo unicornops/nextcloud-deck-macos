@@ -258,6 +258,20 @@ final class DeckAPITests: XCTestCase {
         }
     }
 
+    // MARK: - Editing boards (#133)
+
+    func testEditingABoardSendsEveryField() async throws {
+        StubURLProtocol.handler = { _ in .json(#"{"id": 1, "title": "Renamed", "color": "9C59B6", "archived": true}"#) }
+        let board = try await api.updateBoard(id: 1, title: "Renamed", color: "9C59B6", archived: true)
+        XCTAssertEqual(board.title, "Renamed")
+        XCTAssertEqual(lines, ["PUT /index.php/apps/deck/api/v1.0/boards/1"])
+        let body = try XCTUnwrap(StubURLProtocol.requests.first?.json)
+        XCTAssertEqual(body["title"] as? String, "Renamed")
+        XCTAssertEqual(body["color"] as? String, "9C59B6")
+        // Deck takes a missing `archived` as false, which would unarchive the board.
+        XCTAssertEqual(body["archived"] as? Bool, true)
+    }
+
     // MARK: - Archive (#76)
 
     func testArchiveRequests() async throws {
