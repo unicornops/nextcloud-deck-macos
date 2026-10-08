@@ -143,6 +143,12 @@ struct DeckClient: Sendable {
         try await (self.board(board)["labels"] as? [[String: Any]] ?? []).compactMap { $0["title"] as? String }
     }
 
+    /// The id of the (not deleted) board titled `title`, if any.
+    func boardId(titled title: String) async throws -> Int? {
+        let boards = try await call("GET", "boards") as? [[String: Any]] ?? []
+        return boards.first { $0["title"] as? String == title && $0["deletedAt"] as? Int ?? 0 == 0 }?["id"] as? Int
+    }
+
     func deleteBoard(_ id: Int) async {
         _ = try? await call("DELETE", "boards/\(id)")
     }

@@ -74,3 +74,90 @@ struct BoardSheet: View {
         }
     }
 }
+
+// MARK: - DuplicateBoardSheet
+
+/// Copies a board, with or without its cards, and opens the copy.
+struct DuplicateBoardSheet: View {
+    let board: Board
+    var onDismiss: () -> Void
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var title: String
+    @State private var withCards = true
+    @State private var isSaving = false
+
+    init(board: Board, onDismiss: @escaping () -> Void) {
+        self.board = board
+        self.onDismiss = onDismiss
+        _title = State(initialValue: "\(board.title) (copy)")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Duplicate board")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Title of the copy")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                TextField("Enter board name", text: $title)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { save() }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle("Copy cards", isOn: $withCards)
+                Text(withCards
+                    ? "Lists, labels and cards are copied, with descriptions, dates and done state. Comments, "
+                    + "attachments, assignments, sharing and archived cards aren't."
+                    : "Lists and labels are copied, without cards. Sharing isn't.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let progress = appState.boardCopyProgress {
+                ProgressView(value: Double(progress.done), total: Double(max(progress.total, 1))) {
+                    Text("Copying\u{2026} \(progress.done) of \(progress.total)")
+                        .font(.caption)
+                }
+            }
+
+            CreateSheetFooter(
+                isDisabled: title.trimmingCharacters(in: .whitespaces).isEmpty,
+                isSaving: $isSaving,
+                actionTitle: "Duplicate"
+            ) {
+                save()
+            } onCancel: {
+                dismiss()
+                onDismiss()
+            }
+            .disabled(isSaving)
+        }
+        .padding(24)
+        .frame(width: 360)
+        .onAppear {
+            appState.errorMessage = nil
+        }
+    }
+
+    private func save() {
+        guard !isSaving else { return }
+        isSaving = true
+        appState.errorMessage = nil
+        let options = BoardCopyOptions(title: title, withCards: withCards)
+        Task {
+            let success = await appState.duplicateBoard(id: board.id, options: options)
+            await MainActor.run {
+                isSaving = false
+                if success {
+                    dismiss()
+                    onDismiss()
+                }
+            }
+        }
+    }
+}

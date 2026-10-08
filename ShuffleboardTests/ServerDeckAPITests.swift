@@ -62,6 +62,69 @@ final class ServerDeckAPITests: XCTestCase {
         XCTAssertEqual(version, server.deckVersion)
     }
 
+    // MARK: - Duplicating boards (#137)
+
+    /// The copy matches the source: colour, labels (Deck's defaults replaced), lists in order, and active cards with
+    /// their descriptions, dates, done state and labels. Archived cards aren't copied.
+    func testCopyingABoard() async throws {
+        try await withTemporaryBoard(api) { source in
+            var labels = try await api.getBoard(id: source.id).labels
+            let urgent = try await api.createLabel(boardId: source.id, title: "Urgent", color: "E9322D")
+            if let finished = labels.first(where: { $0.title == "Finished" }) {
+                try await api.deleteLabel(boardId: source.id, labelId: finished.id)
+            }
+            if let later = labels.first(where: { $0.title == "Later" }) {
+                _ = try await api.updateLabel(boardId: source.id, labelId: later.id, title: "Later", color: "9C59B6")
+            }
+            labels = try await api.getBoard(id: source.id).labels
+
+            let todo = try await api.createStack(boardId: source.id, title: "To do", order: 0)
+            _ = try await api.createStack(boardId: source.id, title: "Done", order: 1)
+            let first = try await api.createCard(
+                boardId: source.id,
+                stackId: todo.id,
+                title: "Write it",
+                description: "With **notes**",
+                order: 0,
+                duedate: "2030-03-04T09:00:00+00:00"
+            )
+            try await api.assignLabel(boardId: source.id, stackId: todo.id, cardId: first.id, labelId: urgent.id)
+            var second = try await api.createCard(boardId: source.id, stackId: todo.id, title: "Ship it", order: 1)
+            second.done = "2030-01-02T09:00:00+00:00"
+            _ = try await api.updateCard(boardId: source.id, stackId: todo.id, card: second)
+            let old = try await api.createCard(boardId: source.id, stackId: todo.id, title: "Old", order: 2)
+            try await api.archiveCard(boardId: source.id, stackId: todo.id, cardId: old.id)
+
+            let sourceBoard = try await api.getBoard(id: source.id)
+            let copy = try await api.copyBoard(sourceBoard, options: BoardCopyOptions(title: "Copy", withCards: true))
+
+            XCTAssertNotEqual(copy.id, source.id)
+            XCTAssertEqual(copy.title, "Copy")
+            XCTAssertEqual(copy.color?.lowercased(), sourceBoard.color?.lowercased())
+            func summary(_ labels: [DeckLabel]) -> [String] {
+                labels.map { "\($0.title) \($0.color?.lowercased() ?? "")" }.sorted()
+            }
+            XCTAssertEqual(summary(copy.labels), summary(labels), "Labels differ from the source's")
+
+            let lists = try await AppState.sorted(api.getStacks(boardId: copy.id))
+            XCTAssertEqual(lists.map(\.title), ["To do", "Done"])
+            let cards = lists[0].activeCards
+            XCTAssertEqual(cards.map(\.title), ["Write it", "Ship it"], "Archived card copied, or order lost")
+            XCTAssertEqual(cards[0].description, "With **notes**")
+            XCTAssertEqual(cards[0].dueDate, DeckDate.parse("2030-03-04T09:00:00+00:00"))
+            XCTAssertEqual(cards[0].labels?.map(\.title), ["Urgent"])
+            XCTAssertTrue(cards[1].isDone, "Done state not copied")
+            XCTAssertTrue(lists[1].activeCards.isEmpty)
+
+            let bare = try await api.copyBoard(sourceBoard, options: BoardCopyOptions(title: "Lists", withCards: false))
+            let bareLists = try await AppState.sorted(api.getStacks(boardId: bare.id))
+            XCTAssertEqual(bareLists.map(\.title), ["To do", "Done"])
+            XCTAssertTrue(bareLists.allSatisfy { $0.activeCards.isEmpty }, "Cards copied without Copy cards")
+            try? await api.deleteBoard(id: copy.id)
+            try? await api.deleteBoard(id: bare.id)
+        }
+    }
+
     // MARK: - Stacks and cards
 
     func testStacksAndCardEditing() async throws {

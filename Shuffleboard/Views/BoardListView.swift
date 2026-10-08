@@ -5,6 +5,7 @@ struct BoardListView: View {
     @State private var showingNewBoard = false
     @State private var pendingBoardDelete: Int?
     @State private var editingBoard: Board?
+    @State private var duplicatingBoard: Board?
     /// "Recently Deleted" starts collapsed.
     @State private var showingDeleted = false
 
@@ -54,7 +55,7 @@ struct BoardListView: View {
                         .accessibilityIdentifier("board: \(board.title)")
                         .tag(board.id)
                         .contextMenu {
-                            editButton(board)
+                            boardActions(board)
                             Button("Archive") {
                                 Task { await appState.archiveBoard(id: board.id) }
                             }
@@ -79,7 +80,7 @@ struct BoardListView: View {
                         .accessibilityIdentifier("board: \(board.title)")
                         .tag(board.id)
                         .contextMenu {
-                            editButton(board)
+                            boardActions(board)
                             Button("Unarchive") {
                                 Task { await appState.unarchiveBoard(id: board.id) }
                             }
@@ -138,6 +139,11 @@ struct BoardListView: View {
                 editingBoard = nil
             }
         }
+        .sheet(item: $duplicatingBoard) { board in
+            DuplicateBoardSheet(board: board) {
+                duplicatingBoard = nil
+            }
+        }
         .confirmationDialog("Delete board?", isPresented: Binding(
             get: { pendingBoardDelete != nil },
             set: {
@@ -167,13 +173,16 @@ struct BoardListView: View {
         }
     }
 
-    /// "Edit Board…", for boards the signed-in user may manage.
+    /// "Edit Board…", for boards the signed-in user may manage, and "Duplicate…".
     @ViewBuilder
-    private func editButton(_ board: Board) -> some View {
+    private func boardActions(_ board: Board) -> some View {
         if board.canManage {
             Button("Edit Board\u{2026}") {
                 editingBoard = board
             }
+        }
+        Button("Duplicate\u{2026}") {
+            duplicatingBoard = board
         }
     }
 
