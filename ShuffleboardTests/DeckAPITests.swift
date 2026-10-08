@@ -272,6 +272,22 @@ final class DeckAPITests: XCTestCase {
         XCTAssertEqual(body["archived"] as? Bool, true)
     }
 
+    // MARK: - Labels (#135)
+
+    func testLabelRequests() async throws {
+        StubURLProtocol.handler = { _ in .json(#"{"id": 7, "title": "Critical", "color": "FF7A66", "boardId": 1}"#) }
+        let label = try await api.updateLabel(boardId: 1, labelId: 7, title: "Critical", color: "FF7A66")
+        try await api.deleteLabel(boardId: 1, labelId: 7)
+        XCTAssertEqual(label.title, "Critical")
+        XCTAssertEqual(lines, [
+            "PUT /index.php/apps/deck/api/v1.0/boards/1/labels/7",
+            "DELETE /index.php/apps/deck/api/v1.0/boards/1/labels/7",
+        ])
+        let body = try XCTUnwrap(StubURLProtocol.requests.first?.json)
+        XCTAssertEqual(body["title"] as? String, "Critical")
+        XCTAssertEqual(body["color"] as? String, "FF7A66")
+    }
+
     // MARK: - Archive (#76)
 
     func testArchiveRequests() async throws {

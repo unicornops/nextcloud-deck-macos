@@ -48,6 +48,7 @@
 		A10000000000000000000037 /* ArchivedCardsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000037 /* ArchivedCardsSheet.swift */; };
 		A10000000000000000000038 /* Sharing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000038 /* Sharing.swift */; };
 		A10000000000000000000039 /* BoardSharingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000039 /* BoardSharingSheet.swift */; };
+		A10000000000000000000043 /* BoardLabelsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000043 /* BoardLabelsSheet.swift */; };
 		B10000000000000000000008 /* SharingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000008 /* SharingTests.swift */; };
 		A10000000000000000000040 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000040 /* Account.swift */; };
 		B10000000000000000000009 /* AccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000009 /* AccountTests.swift */; };
@@ -123,6 +124,7 @@
 		A20000000000000000000037 /* ArchivedCardsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchivedCardsSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000038 /* Sharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sharing.swift; sourceTree = "<group>"; };
 		A20000000000000000000039 /* BoardSharingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardSharingSheet.swift; sourceTree = "<group>"; };
+		A20000000000000000000043 /* BoardLabelsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardLabelsSheet.swift; sourceTree = "<group>"; };
 		B20000000000000000000008 /* SharingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000040 /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		B20000000000000000000009 /* AccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTests.swift; sourceTree = "<group>"; };
@@ -238,6 +240,7 @@
 				A20000000000000000000035 /* MarkdownView.swift */,
 				A20000000000000000000037 /* ArchivedCardsSheet.swift */,
 				A20000000000000000000039 /* BoardSharingSheet.swift */,
+				A20000000000000000000043 /* BoardLabelsSheet.swift */,
 				A20000000000000000000010 /* NewStackSheet.swift */,
 				A20000000000000000000012 /* BoardSheet.swift */,
 			);
@@ -466,6 +469,7 @@
 				A10000000000000000000035 /* MarkdownView.swift in Sources */,
 				A10000000000000000000037 /* ArchivedCardsSheet.swift in Sources */,
 				A10000000000000000000039 /* BoardSharingSheet.swift in Sources */,
+				A10000000000000000000043 /* BoardLabelsSheet.swift in Sources */,
 				A10000000000000000000010 /* NewStackSheet.swift in Sources */,
 				A10000000000000000000012 /* BoardSheet.swift in Sources */,
 				A10000000000000000000011 /* Color+Hex.swift in Sources */,

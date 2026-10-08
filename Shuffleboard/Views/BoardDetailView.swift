@@ -30,6 +30,7 @@ struct BoardDetailView: View {
     @State private var showingArchivedCards = false
     @State private var showingSharing = false
     @State private var showingEditBoard = false
+    @State private var showingLabels = false
     @State private var stackDragInsertIndex: Int?
 
     var body: some View {
@@ -66,6 +67,12 @@ struct BoardDetailView: View {
                     showingEditBoard = false
                 }
                 .environmentObject(appState)
+            }
+        }
+        .sheet(isPresented: $showingLabels) {
+            if let board = appState.selectedBoard {
+                BoardLabelsSheet(boardId: board.id)
+                    .environmentObject(appState)
             }
         }
         .sheet(isPresented: $showingArchivedCards) {
@@ -130,6 +137,15 @@ struct BoardDetailView: View {
             }
             .help(board.acl.isEmpty ? "Share this board" : "Shared with \(board.acl.count)")
             .accessibilityLabel("Sharing")
+            if board.canManage {
+                Button {
+                    showingLabels = true
+                } label: {
+                    Image(systemName: "tag")
+                }
+                .help("Edit this board's labels")
+                .accessibilityLabel("Labels")
+            }
             Button {
                 showingArchivedCards = true
             } label: {

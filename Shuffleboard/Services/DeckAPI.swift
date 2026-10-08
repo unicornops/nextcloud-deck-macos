@@ -488,16 +488,33 @@ final class DeckAPI: Sendable {
             body: LabelIdRequest(labelId: labelId)
         )
     }
+}
 
-    // MARK: - Labels
+// MARK: - Labels
 
+extension DeckAPI {
     /// Creates a new label on the board. Returns the created label (or reload board to get it).
     func createLabel(boardId: Int, title: String, color: String = "31CC7C") async throws -> DeckLabel {
         try await request(
             "boards/\(boardId)/labels",
             method: "POST",
-            body: CreateLabelRequest(title: title, color: color)
+            body: LabelRequest(title: title, color: color)
         )
+    }
+
+    /// Renames and recolours a label; cards that have it show the change.
+    func updateLabel(boardId: Int, labelId: Int, title: String, color: String) async throws -> DeckLabel {
+        try await request(
+            "boards/\(boardId)/labels/\(labelId)",
+            method: "PUT",
+            body: LabelRequest(title: title, color: color)
+        )
+    }
+
+    /// Deletes a label from the board and from every card that has it. Unlike boards, lists and cards, a deleted
+    /// label can't be restored.
+    func deleteLabel(boardId: Int, labelId: Int) async throws {
+        try await requestNoContent("boards/\(boardId)/labels/\(labelId)", method: "DELETE")
     }
 }
 
@@ -917,7 +934,8 @@ private struct LabelIdRequest: Encodable {
     let labelId: Int
 }
 
-private struct CreateLabelRequest: Encodable {
+/// Body for creating and updating a label.
+private struct LabelRequest: Encodable {
     let title: String
     let color: String
 }

@@ -593,18 +593,59 @@ extension AppState {
 
     /// Runs a sharing change, then re-fetches just this board so its sharing list and rights are current.
     private func sharingAction(on board: Board, _ action: (DeckAPI) async throws -> Void) async -> Bool {
+        await boardChange(boardId: board.id, action)
+    }
+
+    /// Runs a change to a board's settings, then re-fetches just that board (and, with `reloadingLists`, its lists
+    /// if it is open) so the screen matches the server. Errors go to the banner.
+    private func boardChange(
+        boardId: Int,
+        reloadingLists: Bool = false,
+        _ action: (DeckAPI) async throws -> Void
+    ) async
+        -> Bool {
         guard let api = deckAPI else { return false }
         do {
             try await action(api)
-            let updated = try await api.getBoard(id: board.id)
-            if let index = boards.firstIndex(where: { $0.id == board.id }) {
+            let updated = try await api.getBoard(id: boardId)
+            guard api === deckAPI else { return false }
+            if let index = boards.firstIndex(where: { $0.id == boardId }) {
                 boards[index] = updated
             }
-            return true
         } catch {
             report(error)
             return false
         }
+        if reloadingLists {
+            await loadStacks(boardId: boardId)
+        }
+        return true
+    }
+}
+
+// MARK: - Labels
+
+@MainActor
+extension AppState {
+    /// Renames and recolours a label, then reloads the board's labels and its lists, whose cards carry the label.
+    /// Returns `false` for a blank title or a failure (shown in the banner).
+    func updateLabel(_ label: DeckLabel, boardId: Int, title: String, color: String) async -> Bool {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        return await boardChange(boardId: boardId, reloadingLists: true) {
+            _ = try await $0.updateLabel(boardId: boardId, labelId: label.id, title: trimmed, color: color)
+        }
+    }
+
+    /// Deletes a label from the board and its cards, then reloads them; the card filter stops using it.
+    func deleteLabel(_ label: DeckLabel, boardId: Int) async -> Bool {
+        let deleted = await boardChange(boardId: boardId, reloadingLists: true) {
+            try await $0.deleteLabel(boardId: boardId, labelId: label.id)
+        }
+        if deleted {
+            cardFilter.labelIds.remove(label.id)
+        }
+        return deleted
     }
 }
 

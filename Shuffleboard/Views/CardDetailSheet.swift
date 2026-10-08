@@ -481,7 +481,7 @@ extension CardDetailSheet {
     }
 
     private var createLabelSheet: some View {
-        CreateLabelSheet(
+        LabelEditorSheet(
             title: $newLabelTitle,
             color: $newLabelColor,
             isCreating: $isCreatingLabel,
@@ -613,40 +613,5 @@ private struct LabelChip: View {
         .background(Color(hex: label.color ?? "cccccc") ?? .gray.opacity(0.3))
         .foregroundStyle(.white)
         .clipShape(Capsule())
-    }
-}
-
-// MARK: - Create label sheet
-
-private struct CreateLabelSheet: View {
-    @Binding var title: String
-    @Binding var color: String
-    @Binding var isCreating: Bool
-    var onCreate: () -> Void
-    var onCancel: () -> Void
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("New tag")
-                .font(.headline)
-            TextField("Tag name", text: $title)
-                .textFieldStyle(.roundedBorder)
-            BoardColorPickerView(selectedHex: $color)
-            HStack {
-                Button("Cancel") {
-                    onCancel()
-                }
-                .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button("Create") {
-                    onCreate()
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.return, modifiers: .command)
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
-            }
-        }
-        .padding(24)
-        .frame(width: 280)
     }
 }

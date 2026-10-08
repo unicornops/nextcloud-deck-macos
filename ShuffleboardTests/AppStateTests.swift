@@ -624,3 +624,93 @@ extension AppStateTests {
         XCTAssertEqual(app.stacks.map(\.title), ["S10"])
     }
 }
+
+// MARK: - Labels (#135)
+
+extension AppStateTests {
+    private nonisolated static let labelledBoardJSON = #"{"id": 1, "title": "One", "labels": [{"id": 7, "title": "Urgent", "color": "FF7A66"}, {"id": 8, "title": "Later", "color": "31CC7C"}]}"#
+
+    /// Board 1 with labels 7 and 8; `changed` (from the handler) answers PUT/DELETE and drops label 7 afterwards.
+    private func makeLabelledApp(failing: Bool = false) async -> AppState {
+        let changed = Locked(false)
+        StubURLProtocol.handler = { request in
+            if request.path.contains("/labels/") {
+                guard !failing else { return .json(#"{"status": 400, "message": "Label is in use"}"#, status: 400) }
+                changed.withLock { $0 = true }
+                return .json(#"{"id": 7, "title": "Critical", "color": "9C59B6"}"#)
+            }
+            if request.path.hasSuffix("/boards/1") {
+                let renamed = Self.labelledBoardJSON.replacingOccurrences(of: "Urgent", with: "Critical")
+                return .json(changed.withLock { $0 } ? renamed : Self.labelledBoardJSON)
+            }
+            if request.path.hasSuffix("/boards") {
+                return .json("[" + Self.labelledBoardJSON + "]")
+            }
+            return .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = AppState(credentialStore: store, session: StubURLProtocol.session(), openURL: { _ in })
+        await waitUntil { app.selectedBoardId == 1 && !app.isLoading }
+        await app.loadStacks(boardId: 1)
+        return app
+    }
+
+    func testEditingALabelReloadsTheBoardAndItsLists() async throws {
+        let app = await makeLabelledApp()
+        let label = try XCTUnwrap(app.boards.first?.labels.first)
+        let before = StubURLProtocol.requests.count
+
+        let saved = await app.updateLabel(label, boardId: 1, title: " Critical ", color: "9C59B6")
+
+        XCTAssertTrue(saved)
+        XCTAssertEqual(app.boards.first?.labels.map(\.title), ["Critical", "Later"])
+        let sent = StubURLProtocol.requests.dropFirst(before)
+        XCTAssertEqual(sent.map(\.line), [
+            "PUT /index.php/apps/deck/api/v1.0/boards/1/labels/7",
+            "GET /index.php/apps/deck/api/v1.0/boards/1",
+            "GET /index.php/apps/deck/api/v1.0/boards/1/stacks",
+        ], "the board's labels, then the cards that carry them")
+        XCTAssertEqual(sent.first?.json?["title"] as? String, "Critical", "title is trimmed")
+    }
+
+    func testDeletingALabelStopsFilteringByIt() async throws {
+        let app = await makeLabelledApp()
+        let label = try XCTUnwrap(app.boards.first?.labels.first)
+        app.cardFilter.labelIds = [7, 8]
+
+        let deleted = await app.deleteLabel(label, boardId: 1)
+
+        XCTAssertTrue(deleted)
+        XCTAssertEqual(app.cardFilter.labelIds, [8])
+        XCTAssertEqual(StubURLProtocol.requests.map(\.line).suffix(3), [
+            "DELETE /index.php/apps/deck/api/v1.0/boards/1/labels/7",
+            "GET /index.php/apps/deck/api/v1.0/boards/1",
+            "GET /index.php/apps/deck/api/v1.0/boards/1/stacks",
+        ])
+    }
+
+    func testLabelFailuresGoToTheBanner() async throws {
+        let app = await makeLabelledApp(failing: true)
+        let label = try XCTUnwrap(app.boards.first?.labels.first)
+        app.cardFilter.labelIds = [7]
+
+        let deleted = await app.deleteLabel(label, boardId: 1)
+        let renamed = await app.updateLabel(label, boardId: 1, title: "Critical", color: "9C59B6")
+
+        XCTAssertFalse(deleted)
+        XCTAssertFalse(renamed)
+        XCTAssertEqual(app.actionError, "Label is in use")
+        XCTAssertEqual(app.cardFilter.labelIds, [7], "a label that wasn't deleted stays in the filter")
+        XCTAssertEqual(app.boards.first?.labels.map(\.title), ["Urgent", "Later"])
+    }
+
+    func testBlankLabelTitleIsNotSent() async throws {
+        let app = await makeLabelledApp()
+        let label = try XCTUnwrap(app.boards.first?.labels.first)
+        let before = StubURLProtocol.requests.count
+
+        let saved = await app.updateLabel(label, boardId: 1, title: "  ", color: "9C59B6")
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(StubURLProtocol.requests.count, before)
+    }
+}
