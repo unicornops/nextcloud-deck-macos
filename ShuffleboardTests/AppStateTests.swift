@@ -559,3 +559,68 @@ extension AppStateTests {
         XCTAssertEqual(StubURLProtocol.requests.count, before)
     }
 }
+
+// MARK: - Renaming lists (#134)
+
+extension AppStateTests {
+    func testRenamedListShowsStraightAwayAndKeepsItsPlace() async throws {
+        let saving = Locked(false)
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.method == "PUT" {
+                saving.withLock { $0 = true }
+                return .json(#"{"id": 20, "title": "Finished", "boardId": 1, "order": 1}"#, delay: 0.3)
+            }
+            return .json(Self.stacksJSON([10, 20], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let before = StubURLProtocol.requests.count
+
+        let rename = Task { await app.renameStack(boardId: 1, stackId: 20, title: " Finished ") }
+        await waitUntil { saving.withLock { $0 } }
+        XCTAssertEqual(app.stacks.map(\.title), ["S10", "Finished"], "new title shown while saving")
+        await rename.value
+
+        let sent = StubURLProtocol.requests.dropFirst(before)
+        XCTAssertEqual(sent.map(\.line), ["PUT /index.php/apps/deck/api/v1.0/boards/1/stacks/20"])
+        let body = try XCTUnwrap(sent.first?.json)
+        XCTAssertEqual(body["title"] as? String, "Finished")
+        XCTAssertEqual(body["order"] as? Int, 1, "the list keeps its place")
+        XCTAssertEqual(app.stacks.map(\.id), [10, 20])
+        XCTAssertNil(app.actionError)
+    }
+
+    func testFailedRenamePutsTheOldTitleBack() async {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            if request.method == "PUT" {
+                return .status(403)
+            }
+            return .json(Self.stacksJSON([10, 20], board: 1))
+        }
+        let app = await makeSignedInApp()
+
+        await app.renameStack(boardId: 1, stackId: 10, title: "Renamed")
+
+        XCTAssertEqual(app.stacks.map(\.title), ["S10", "S20"])
+        XCTAssertEqual(app.actionError, DeckAPIError.permissionDenied.localizedDescription)
+    }
+
+    func testBlankOrUnchangedListTitleIsNotSent() async {
+        StubURLProtocol.handler = { request in
+            request.path.hasSuffix("/boards") ? .json(Self.boardsJSON) : .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let before = StubURLProtocol.requests.count
+
+        await app.renameStack(boardId: 1, stackId: 10, title: "   ")
+        await app.renameStack(boardId: 1, stackId: 10, title: "S10 ")
+
+        XCTAssertEqual(StubURLProtocol.requests.count, before)
+        XCTAssertEqual(app.stacks.map(\.title), ["S10"])
+    }
+}

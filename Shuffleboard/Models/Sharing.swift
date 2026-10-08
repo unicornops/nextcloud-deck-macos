@@ -137,6 +137,11 @@ extension Board {
         permissions?.permissionShare ?? false
     }
 
+    /// Whether the signed-in user may change the board's lists and cards (Deck: PERMISSION_EDIT).
+    var canEdit: Bool {
+        permissions?.permissionEdit ?? false
+    }
+
     /// Whether the signed-in user may remove shares and grant any right (Deck: PERMISSION_MANAGE).
     var canManage: Bool {
         permissions?.permissionManage ?? false
