@@ -13,6 +13,8 @@ struct CardDetailSheet: View {
     @State private var description: String
     /// Showing the plain-text editor rather than the rendered Markdown.
     @State private var isEditingDescription: Bool
+    @State private var hasStartDate: Bool
+    @State private var startDate: Date
     @State private var hasDueDate: Bool
     @State private var dueDate: Date
     @State private var isDone: Bool
@@ -65,6 +67,8 @@ struct CardDetailSheet: View {
         _title = State(initialValue: card.title)
         _description = State(initialValue: card.description ?? "")
         _isEditingDescription = State(initialValue: (card.description ?? "").isEmpty)
+        _hasStartDate = State(initialValue: card.startDate != nil)
+        _startDate = State(initialValue: card.startDate ?? Self.defaultStartDate())
         _hasDueDate = State(initialValue: card.dueDate != nil)
         _dueDate = State(initialValue: card.dueDate ?? Self.defaultDueDate())
         _isDone = State(initialValue: card.isDone)
@@ -93,7 +97,7 @@ struct CardDetailSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return, modifiers: .command)
-                .disabled(isSaving || title.isEmpty)
+                .disabled(isSaving || title.isEmpty || !edits.datesAreInOrder)
             }
             .padding()
             Divider()
@@ -121,7 +125,7 @@ struct CardDetailSheet: View {
                         .buttonStyle(.link)
                     }
                 }
-                Section("Due date") {
+                Section("Dates") {
                     scheduleContent
                 }
                 Section("Assigned to") {
@@ -287,16 +291,46 @@ extension CardDetailSheet {
         }
     }
 
-    // MARK: - Due date UI
+    // MARK: - Dates UI
 
     private var scheduleContent: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Deck before 1.18 has no start dates.
+            if appState.supportsStartDates || card.startDate != nil {
+                Toggle("Has a start date", isOn: $hasStartDate)
+                    .accessibilityIdentifier("has start date")
+                if hasStartDate {
+                    DatePicker("Start", selection: $startDate, displayedComponents: [.date, .hourAndMinute])
+                }
+            }
             Toggle("Has a due date", isOn: $hasDueDate)
+                .accessibilityIdentifier("has due date")
             if hasDueDate {
                 DatePicker("Due", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
             }
+            if !edits.datesAreInOrder {
+                Label(CardEdits.datesOutOfOrderMessage, systemImage: "exclamationmark.triangle")
+                    .font(.callout)
+                    .foregroundStyle(.red)
+            }
             Toggle("Done", isOn: $isDone)
         }
+    }
+
+    /// What Save sends.
+    private var edits: CardEdits {
+        CardEdits(
+            title: title,
+            description: description,
+            startDate: hasStartDate ? startDate : nil,
+            dueDate: hasDueDate ? dueDate : nil,
+            isDone: isDone
+        )
+    }
+
+    /// Today at 9:00, the starting point when adding a start date.
+    private static func defaultStartDate(now: Date = Date()) -> Date {
+        Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: now) ?? now
     }
 
     /// Tomorrow at 9:00, the starting point when adding a due date.
@@ -588,12 +622,7 @@ extension CardDetailSheet {
                 boardId: boardId,
                 stackId: card.stackId,
                 card: currentCard ?? card,
-                edits: CardEdits(
-                    title: title,
-                    description: description,
-                    dueDate: hasDueDate ? dueDate : nil,
-                    isDone: isDone
-                )
+                edits: edits
             )
             await MainActor.run {
                 isSaving = false

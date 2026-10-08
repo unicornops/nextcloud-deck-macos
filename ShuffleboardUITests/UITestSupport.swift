@@ -206,6 +206,12 @@ struct DeckClient: Sendable {
         try await call("GET", "boards/\(board)/stacks") as? [[String: Any]] ?? []
     }
 
+    /// The card titled `title` as the server has it, if any.
+    func card(titled title: String, board: Int) async throws -> [String: Any]? {
+        try await stacks(board: board).flatMap { $0["cards"] as? [[String: Any]] ?? [] }
+            .first { $0["title"] as? String == title }
+    }
+
     /// The title of the list holding the card titled `card`, if any.
     func list(holding card: String, board: Int) async throws -> String? {
         try await stacks(board: board).first { stack in

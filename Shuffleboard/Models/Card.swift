@@ -186,6 +186,11 @@ extension Card {
         DeckDate.parse(duedate)
     }
 
+    /// The start date, if the card has one.
+    var startDate: Date? {
+        DeckDate.parse(startdate)
+    }
+
     /// Whether the card is marked done.
     var isDone: Bool {
         DeckDate.parse(done) != nil
@@ -197,10 +202,11 @@ extension Card {
         return dueDate < now
     }
 
-    /// A copy with the due date set (or cleared with nil) and the done state set. Marking an already-done card
-    /// done keeps its original done date; marking a card done stamps it with `now`.
-    func withSchedule(dueDate: Date?, isDone: Bool, now: Date = Date()) -> Card {
+    /// A copy with the start and due dates set (or cleared with nil) and the done state set. Marking an
+    /// already-done card done keeps its original done date; marking a card done stamps it with `now`.
+    func withSchedule(startDate: Date?, dueDate: Date?, isDone: Bool, now: Date = Date()) -> Card {
         var card = self
+        card.startdate = startDate.map(DeckDate.string(from:))
         card.duedate = dueDate.map(DeckDate.string(from:))
         if !isDone {
             card.done = nil

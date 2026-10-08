@@ -78,6 +78,8 @@ final class ServerAppStateTests: XCTestCase {
         let created = await app.createBoard(title: title, color: "31CC7C")
         XCTAssertTrue(created, app.errorMessage ?? "")
         let board = try XCTUnwrap(app.boards.first { $0.title == title })
+        XCTAssertEqual(app.serverDeckVersion, server.deckVersion)
+        XCTAssertEqual(app.supportsStartDates, server.deck(atLeast: "1.18"))
 
         app.selectBoard(board)
         await app.loadStacks(boardId: board.id)
@@ -106,7 +108,7 @@ final class ServerAppStateTests: XCTestCase {
             boardId: board.id,
             stackId: done.id,
             card: moved,
-            edits: CardEdits(title: "Shipped", description: "Release notes", dueDate: nil, isDone: true)
+            edits: CardEdits(title: "Shipped", description: "Release notes", startDate: nil, dueDate: nil, isDone: true)
         )
         XCTAssertTrue(saved, app.errorMessage ?? "")
         let edited = try XCTUnwrap(app.stacks.stack(holding: card.id)?.activeCards.first { $0.id == card.id })

@@ -146,7 +146,8 @@ final class ServerDeckAPITests: XCTestCase {
             var edited = try await api.getCard(boardId: board.id, stackId: first.id, cardId: card.id)
             XCTAssertEqual(edited.description, "Against a **real** server")
             let due = Date(timeIntervalSince1970: 1_900_000_000)
-            edited = edited.withSchedule(dueDate: due, isDone: true)
+            let start = Date(timeIntervalSince1970: 1_899_000_000)
+            edited = edited.withSchedule(startDate: start, dueDate: due, isDone: true)
             edited.title = "Write more tests"
             _ = try await api.updateCard(boardId: board.id, stackId: first.id, card: edited)
 
@@ -154,15 +155,26 @@ final class ServerDeckAPITests: XCTestCase {
             XCTAssertEqual(saved.title, "Write more tests")
             XCTAssertEqual(saved.description, "Against a **real** server", "Saving the title must keep the description")
             XCTAssertEqual(saved.dueDate.map { Int($0.timeIntervalSince1970) }, 1_900_000_000)
+            if server.deck(atLeast: "1.18") {
+                XCTAssertEqual(
+                    saved.startDate.map { Int($0.timeIntervalSince1970) },
+                    1_899_000_000,
+                    "Start date not saved"
+                )
+            } else {
+                // Deck 1.18 added start dates; older versions drop them, so the app doesn't offer them (#138).
+                XCTAssertNil(saved.startDate, "Deck \(server.deckVersion) saves start dates: offer them there too")
+            }
             XCTAssertTrue(saved.isDone)
 
             let undone = try await api.updateCard(
                 boardId: board.id,
                 stackId: first.id,
-                card: saved.withSchedule(dueDate: nil, isDone: false)
+                card: saved.withSchedule(startDate: nil, dueDate: nil, isDone: false)
             )
             XCTAssertFalse(undone.isDone)
             XCTAssertNil(undone.dueDate)
+            XCTAssertNil(undone.startDate, "Start date not cleared")
 
             try await api.deleteCard(boardId: board.id, stackId: first.id, cardId: card.id)
             let stacks = try await api.getStacks(boardId: board.id)

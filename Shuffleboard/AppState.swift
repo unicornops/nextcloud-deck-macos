@@ -21,6 +21,8 @@ final class AppState: ObservableObject {
     @Published var isDraggingStack = false
     /// Which cards the open board shows; reset when switching boards.
     @Published var cardFilter = CardFilter()
+    /// The server's Deck version (e.g. "1.18.5"), read once per account; nil until known.
+    @Published private(set) var serverDeckVersion: String?
     /// Set while a board is being duplicated.
     @Published private(set) var boardCopyProgress: BoardCopyProgress?
 
@@ -44,6 +46,8 @@ final class AppState: ObservableObject {
     /// The clock; tests move it forward.
     var now: () -> Date = Date.init
     private var credentials: Credentials?
+    /// Whether `serverDeckVersion` was asked for, so a server that doesn't say isn't asked again.
+    private var checkedDeckVersion = false
     /// What `credentialStore` holds: every account and which one is active.
     private var savedAccounts = SavedAccounts()
 
@@ -207,6 +211,7 @@ final class AppState: ObservableObject {
             boards = fetched.value
             boardsETag = fetched.etag
             boardsETagDate = now()
+            await checkDeckVersion(api)
             if selectedBoardId == nil, let first = activeBoards.first ?? archivedBoards.first {
                 // BoardDetailView's `.task(id: selectedBoardId)` loads the newly selected board's lists.
                 selectedBoardId = first.id
@@ -640,6 +645,21 @@ extension AppState {
         return fetched.timeIntervalSince(etagDate) >= 1.5
     }
 
+    /// Reads the server's Deck version the first time boards load for an account.
+    private func checkDeckVersion(_ api: DeckAPI) async {
+        guard !checkedDeckVersion else { return }
+        checkedDeckVersion = true
+        let version = try? await api.deckVersion()
+        if api === deckAPI {
+            serverDeckVersion = version
+        }
+    }
+
+    /// Whether cards have start dates: Deck 1.18 added them; older versions drop them silently.
+    var supportsStartDates: Bool {
+        serverDeckVersion.map { DeckAPI.version($0, isAtLeast: "1.18") } ?? false
+    }
+
     /// Lists in board order.
     nonisolated static func sorted(_ stacks: [Stack]) -> [Stack] {
         stacks.sorted { ($0.order, $0.id) < ($1.order, $1.id) }
@@ -789,9 +809,19 @@ extension AppState {
 struct CardEdits {
     var title: String
     var description: String
+    /// nil removes the start date.
+    var startDate: Date?
     /// nil removes the due date.
     var dueDate: Date?
     var isDone: Bool
+
+    /// Deck accepts a start date after the due date, so the app checks it.
+    var datesAreInOrder: Bool {
+        guard let startDate, let dueDate else { return true }
+        return startDate <= dueDate
+    }
+
+    static let datesOutOfOrderMessage = "The start date is after the due date."
 }
 
 @MainActor
@@ -800,7 +830,11 @@ extension AppState {
     /// Returns `true` if the card was saved, `false` otherwise (and sets `errorMessage`).
     func updateCard(boardId: Int, stackId: Int, card: Card, edits: CardEdits) async -> Bool {
         guard let api = deckAPI else { return false }
-        var updated = card.withSchedule(dueDate: edits.dueDate, isDone: edits.isDone)
+        guard edits.datesAreInOrder else {
+            errorMessage = CardEdits.datesOutOfOrderMessage
+            return false
+        }
+        var updated = card.withSchedule(startDate: edits.startDate, dueDate: edits.dueDate, isDone: edits.isDone)
         updated.title = edits.title
         updated.description = edits.description
         do {
@@ -882,7 +916,7 @@ extension AppState {
     func setCardDone(boardId: Int, card: Card, done: Bool) async {
         guard let api = deckAPI, card.isDone != done else { return }
         do {
-            let updated = card.withSchedule(dueDate: card.dueDate, isDone: done)
+            let updated = card.withSchedule(startDate: card.startDate, dueDate: card.dueDate, isDone: done)
             _ = try await api.updateCard(boardId: boardId, stackId: card.stackId, card: updated)
             await loadStacks(boardId: boardId)
         } catch {
@@ -1117,6 +1151,8 @@ extension AppState {
         selectedBoardId = nil
         boardsETag = nil
         boardsETagDate = nil
+        serverDeckVersion = nil
+        checkedDeckVersion = false
         clearStacks()
         cardFilter = CardFilter()
         actionError = nil
