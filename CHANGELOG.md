@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.18.0](https://github.com/unicornops/shuffleboard/compare/v0.17.4...v0.18.0) (2026-10-08)
+
+
+### Features
+
+* **boards:** rename a board and change its colour ([#143](https://github.com/unicornops/shuffleboard/issues/143)) ([148217a](https://github.com/unicornops/shuffleboard/commit/148217aca974db0188b1a46f83d3b16a32cb5154)), closes [#133](https://github.com/unicornops/shuffleboard/issues/133)
+* **boards:** restore deleted boards ([#146](https://github.com/unicornops/shuffleboard/issues/146)) ([e0df780](https://github.com/unicornops/shuffleboard/commit/e0df780dc0bf4bb5136c3c005c377bdfc59c1c25))
+* **labels:** edit and delete labels ([#145](https://github.com/unicornops/shuffleboard/issues/145)) ([5e95bfa](https://github.com/unicornops/shuffleboard/commit/5e95bfa96d68876bccac98f05b29b2fcdd56ef95))
+* **lists:** rename a list ([#144](https://github.com/unicornops/shuffleboard/issues/144)) ([90d5dab](https://github.com/unicornops/shuffleboard/commit/90d5dabbf4c1c950d976ecb5301dcdbfd48f86c9)), closes [#134](https://github.com/unicornops/shuffleboard/issues/134)
+
 ## [0.17.4](https://github.com/unicornops/shuffleboard/compare/v0.17.3...v0.17.4) (2026-10-07)
 
 
