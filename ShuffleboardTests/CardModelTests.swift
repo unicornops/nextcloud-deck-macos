@@ -149,6 +149,18 @@ final class CardModelTests: XCTestCase {
         XCTAssertTrue(cleared["done"] is NSNull)
     }
 
+    // MARK: - Restoring attachments (#139)
+
+    func testOnlyDeckFileAttachmentsCanBeRestored() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Attachment.self, from: Data(json.utf8)) }
+        let deleted = try decode(#"{"id": 1, "type": "deck_file", "deletedAt": 1791479969}"#)
+        XCTAssertTrue(deleted.isDeleted)
+        XCTAssertTrue(deleted.canBeRestored)
+        let file = try decode(#"{"id": 2, "type": "file", "deletedAt": 0}"#)
+        XCTAssertFalse(file.isDeleted)
+        XCTAssertFalse(file.canBeRestored, "Deck refuses to restore file attachments")
+    }
+
     // MARK: - Assignments (#74)
 
     func testAssignmentsDecodeFromParticipants() throws {

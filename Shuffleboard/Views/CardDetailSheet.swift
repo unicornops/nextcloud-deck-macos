@@ -22,7 +22,9 @@ struct CardDetailSheet: View {
     @State private var newLabelTitle = ""
     @State private var newLabelColor = "31CC7C"
     @State private var isCreatingLabel = false
-    @State private var attachments: [Attachment] = []
+    /// nil until loaded; then the card's attachments, including deleted ones Deck can still restore.
+    @State private var attachments: [Attachment]?
+    @State private var pendingAttachmentDelete: Attachment?
     @State private var isLoadingAttachments = false
     @State private var isUploadingAttachment = false
     @State private var showFileImporter = false
@@ -44,12 +46,10 @@ struct CardDetailSheet: View {
         (currentCard ?? card).labels ?? []
     }
 
-    /// Attachments to display: from API load, or from card (stacks may include attachments).
+    /// Attachments to display: from API load, or from card (stacks may include attachments). Deleted ones are
+    /// listed (to restore) only if Deck can restore them.
     private var displayedAttachments: [Attachment] {
-        if !attachments.isEmpty {
-            return attachments
-        }
-        return (currentCard ?? card).attachments ?? []
+        (attachments ?? (currentCard ?? card).attachments ?? []).filter { !$0.isDeleted || $0.canBeRestored }
     }
 
     private var availableBoardLabels: [DeckLabel] {
@@ -68,7 +68,7 @@ struct CardDetailSheet: View {
         _hasDueDate = State(initialValue: card.dueDate != nil)
         _dueDate = State(initialValue: card.dueDate ?? Self.defaultDueDate())
         _isDone = State(initialValue: card.isDone)
-        _attachments = State(initialValue: card.attachments ?? [])
+        _attachments = State(initialValue: card.attachments)
     }
 
     var body: some View {
@@ -187,6 +187,28 @@ struct CardDetailSheet: View {
             }
         } message: {
             Text(DeleteConfirmation.message("This card"))
+        }
+        .confirmationDialog("Remove attachment?", isPresented: Binding(
+            get: { pendingAttachmentDelete != nil },
+            set: {
+                if !$0 {
+                    pendingAttachmentDelete = nil
+                }
+            }
+        )) {
+            Button("Remove", role: .destructive) {
+                if let attachment = pendingAttachmentDelete {
+                    deleteAttachment(attachment)
+                }
+                pendingAttachmentDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingAttachmentDelete = nil
+            }
+        } message: {
+            if let attachment = pendingAttachmentDelete {
+                Text(Self.removalMessage(attachment))
+            }
         }
     }
 }
@@ -311,18 +333,8 @@ extension CardDetailSheet {
                     AttachmentRowView(
                         attachment: attachment,
                         onDownload: { downloadAttachment(attachment) },
-                        onDelete: {
-                            Task {
-                                await appState.deleteAttachment(
-                                    boardId: boardId,
-                                    stackId: card.stackId,
-                                    cardId: card.id,
-                                    attachmentId: attachment.id,
-                                    type: attachment.type
-                                )
-                                await loadAttachments()
-                            }
-                        }
+                        onDelete: { pendingAttachmentDelete = attachment },
+                        onRestore: { restoreAttachment(attachment) }
                     )
                 }
             }
@@ -338,6 +350,61 @@ extension CardDetailSheet {
                         .scaleEffect(0.7)
                 }
             }
+        }
+    }
+
+    /// What removing `attachment` does, which depends on how Deck stores it.
+    private static func removalMessage(_ attachment: Attachment) -> String {
+        let name = "\u{201c}\(attachment.displayName)\u{201d}"
+        if attachment.canBeRestored {
+            return "\(name) will be removed from this card. You can restore it here until the server clears "
+                + "deleted items."
+        }
+        return "\(name) will be removed from this card. This can't be undone, but the file stays in its owner's "
+            + "Files."
+    }
+
+    private func deleteAttachment(_ attachment: Attachment) {
+        Task {
+            let deleted = await appState.deleteAttachment(
+                boardId: boardId,
+                stackId: card.stackId,
+                cardId: card.id,
+                attachmentId: attachment.id,
+                type: attachment.type
+            )
+            guard deleted else { return }
+            await MainActor.run {
+                // Shown straight away: a restorable attachment stays, greyed out; another one goes.
+                var list = displayedAttachments
+                if attachment.canBeRestored, let idx = list.firstIndex(where: { $0.id == attachment.id }) {
+                    list[idx].deletedAt = Int(Date().timeIntervalSince1970)
+                } else {
+                    list.removeAll { $0.id == attachment.id && $0.type == attachment.type }
+                }
+                attachments = list
+            }
+            await loadAttachments()
+        }
+    }
+
+    private func restoreAttachment(_ attachment: Attachment) {
+        Task {
+            let restored = await appState.restoreAttachment(
+                attachment,
+                boardId: boardId,
+                stackId: card.stackId,
+                cardId: card.id
+            )
+            guard restored else { return }
+            await MainActor.run {
+                var list = displayedAttachments
+                if let idx = list.firstIndex(where: { $0.id == attachment.id && $0.type == attachment.type }) {
+                    list[idx].deletedAt = 0
+                }
+                attachments = list
+            }
+            await loadAttachments()
         }
     }
 
@@ -547,41 +614,56 @@ private struct AttachmentRowView: View {
     let attachment: Attachment
     var onDownload: () -> Void
     var onDelete: () -> Void
+    var onRestore: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "doc.fill")
+            Image(systemName: attachment.isDeleted ? "doc" : "doc.fill")
                 .foregroundStyle(.secondary)
                 .frame(width: 20, alignment: .center)
             VStack(alignment: .leading, spacing: 2) {
                 Text(attachment.displayName)
                     .font(.subheadline)
                     .lineLimit(1)
-                if let size = attachment.formattedSize {
+                    .foregroundStyle(attachment.isDeleted ? .secondary : .primary)
+                if attachment.isDeleted {
+                    Text("Removed")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else if let size = attachment.formattedSize {
                     Text(size)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button {
-                onDownload()
-            } label: {
-                Image(systemName: "arrow.down.circle")
+            if attachment.isDeleted {
+                Button("Restore", action: onRestore)
+                    .buttonStyle(.link)
+                    .help("Put the attachment back on the card")
+                    .accessibilityLabel("Restore \(attachment.displayName)")
+            } else {
+                Button {
+                    onDownload()
+                } label: {
+                    Image(systemName: "arrow.down.circle")
+                }
+                .buttonStyle(.plain)
+                .help("Download")
+                .accessibilityLabel("Download \(attachment.displayName)")
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.plain)
+                .help("Remove attachment")
+                .accessibilityLabel("Remove \(attachment.displayName)")
             }
-            .buttonStyle(.plain)
-            .help("Download")
-            Button {
-                onDelete()
-            } label: {
-                Image(systemName: "trash")
-            }
-            .buttonStyle(.plain)
-            .help("Remove attachment")
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+        .background(Color(nsColor: .controlBackgroundColor).opacity(attachment.isDeleted ? 0.25 : 0.5))
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }

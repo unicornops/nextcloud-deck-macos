@@ -1013,9 +1013,17 @@ extension AppState {
         }
     }
 
-    /// Deletes an attachment from a card.
-    func deleteAttachment(boardId: Int, stackId: Int, cardId: Int, attachmentId: Int, type: String? = nil) async {
-        guard let api = deckAPI else { return }
+    /// Deletes an attachment from a card. Returns `true` if it was deleted (errors go to the banner).
+    @discardableResult
+    func deleteAttachment(
+        boardId: Int,
+        stackId: Int,
+        cardId: Int,
+        attachmentId: Int,
+        type: String? = nil
+    ) async
+        -> Bool {
+        guard let api = deckAPI else { return false }
         do {
             try await api.deleteAttachment(
                 boardId: boardId,
@@ -1025,8 +1033,29 @@ extension AppState {
                 type: type
             )
             await loadStacks(boardId: boardId)
+            return true
         } catch {
             report(error)
+            return false
+        }
+    }
+
+    /// Restores a deleted attachment (only `deck_file` ones can be). Returns `true` if it was restored.
+    func restoreAttachment(_ attachment: Attachment, boardId: Int, stackId: Int, cardId: Int) async -> Bool {
+        guard let api = deckAPI else { return false }
+        do {
+            try await api.restoreAttachment(
+                boardId: boardId,
+                stackId: stackId,
+                cardId: cardId,
+                attachmentId: attachment.id,
+                type: attachment.type
+            )
+            await loadStacks(boardId: boardId)
+            return true
+        } catch {
+            report(error)
+            return false
         }
     }
 }
