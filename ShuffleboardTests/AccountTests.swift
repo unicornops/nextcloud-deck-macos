@@ -177,3 +177,126 @@ final class AccountTests: XCTestCase {
         XCTAssertEqual(app.boards.map(\.id), [7])
     }
 }
+
+// MARK: - Keychain
+
+/// Which keychain the credentials go to (#92): the data protection keychain when the build has the entitlement,
+/// else the login keychain, and moving them from the login keychain without losing them.
+final class KeychainStorageTests: XCTestCase {
+    private var items: FakeKeychainItems!
+    private var storage: KeychainStorage!
+
+    override func setUp() {
+        items = FakeKeychainItems()
+        storage = KeychainStorage(items: items)
+    }
+
+    private func accounts(_ usernames: String...) -> SavedAccounts {
+        var saved = SavedAccounts()
+        for username in usernames {
+            saved.add(Credentials(serverURL: testServer, username: username, appPassword: "\(username)-pw"))
+        }
+        return saved
+    }
+
+    private func data(_ accounts: SavedAccounts) throws -> Data {
+        try JSONEncoder().encode(accounts)
+    }
+
+    func testSavesToTheDataProtectionKeychain() throws {
+        try storage.save(accounts("rob", "alice"))
+        XCTAssertEqual(storage.load(), accounts("rob", "alice"))
+        XCTAssertNotNil(items.stored[.dataProtection])
+        XCTAssertNil(items.stored[.file])
+    }
+
+    func testWithoutTheEntitlementUsesTheLoginKeychain() throws {
+        items.hasEntitlement = false
+        try storage.save(accounts("rob"))
+        XCTAssertEqual(storage.load(), accounts("rob"))
+        XCTAssertNotNil(items.stored[.file])
+        XCTAssertNil(items.stored[.dataProtection])
+    }
+
+    func testMovesCredentialsFromTheLoginKeychain() throws {
+        items.stored[.file] = try data(accounts("rob", "alice"))
+        XCTAssertEqual(storage.load(), accounts("rob", "alice"), "Signed out by the upgrade")
+        let moved = try XCTUnwrap(items.stored[.dataProtection], "Not moved to the data protection keychain")
+        XCTAssertEqual(try JSONDecoder().decode(SavedAccounts.self, from: moved), accounts("rob", "alice"))
+        XCTAssertNil(items.stored[.file], "Old copy left in the login keychain")
+        XCTAssertEqual(storage.load(), accounts("rob", "alice"))
+    }
+
+    func testKeepsTheLoginKeychainItemWhenTheMoveFails() throws {
+        items.stored[.file] = try data(accounts("rob"))
+        items.writeStatus = errSecInteractionNotAllowed
+        XCTAssertEqual(storage.load(), accounts("rob"))
+        XCTAssertNotNil(items.stored[.file], "Deleted before the new copy was written")
+
+        items.writeStatus = nil
+        XCTAssertEqual(storage.load(), accounts("rob"))
+        XCTAssertNotNil(items.stored[.dataProtection], "Not moved on the next launch")
+        XCTAssertNil(items.stored[.file])
+    }
+
+    func testTheDataProtectionItemWinsOverAnOldCopy() throws {
+        items.stored[.dataProtection] = try data(accounts("alice"))
+        items.stored[.file] = try data(accounts("rob"))
+        XCTAssertEqual(storage.load(), accounts("alice"))
+
+        try storage.save(accounts("alice", "bob"))
+        XCTAssertNil(items.stored[.file], "Old copy kept after saving")
+    }
+
+    func testSavingNoAccountsRemovesBothItems() throws {
+        items.stored[.dataProtection] = try data(accounts("alice"))
+        items.stored[.file] = try data(accounts("rob"))
+        try storage.save(SavedAccounts())
+        XCTAssertTrue(items.stored.isEmpty)
+        XCTAssertEqual(storage.load(), SavedAccounts())
+
+        items.hasEntitlement = false
+        items.stored[.file] = try data(accounts("rob"))
+        XCTAssertNoThrow(try storage.save(SavedAccounts()))
+        XCTAssertTrue(items.stored.isEmpty)
+    }
+
+    func testAFailedSaveThrows() {
+        items.writeStatus = errSecInteractionNotAllowed
+        XCTAssertThrowsError(try storage.save(accounts("rob")))
+    }
+}
+
+/// Both keychains' credentials item in memory. Without the entitlement, the data protection keychain answers
+/// `errSecMissingEntitlement`, as it does for builds without a provisioning profile.
+private final class FakeKeychainItems: KeychainItems {
+    var stored: [Keychain: Data] = [:]
+    var hasEntitlement = true
+    /// Makes writes to the data protection keychain fail with this status.
+    var writeStatus: OSStatus?
+
+    func read(from keychain: Keychain) -> (OSStatus, Data?) {
+        if keychain == .dataProtection, !hasEntitlement {
+            return (errSecMissingEntitlement, nil)
+        }
+        return stored[keychain].map { (errSecSuccess, $0) } ?? (errSecItemNotFound, nil)
+    }
+
+    func write(_ data: Data, to keychain: Keychain) -> OSStatus {
+        if keychain == .dataProtection {
+            guard hasEntitlement else { return errSecMissingEntitlement }
+            if let writeStatus {
+                return writeStatus
+            }
+        }
+        stored[keychain] = data
+        return errSecSuccess
+    }
+
+    func delete(from keychain: Keychain) -> OSStatus {
+        if keychain == .dataProtection, !hasEntitlement {
+            return errSecMissingEntitlement
+        }
+        return stored.removeValue(forKey: keychain) == nil ? errSecItemNotFound : errSecSuccess
+    }
+}

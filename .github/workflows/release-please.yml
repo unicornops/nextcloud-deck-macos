@@ -217,9 +217,46 @@ jobs:
           fi
           echo "✓ App bundle verification successful"
 
+      # The data protection keychain (#92) needs the keychain-access-groups entitlement, which outside the App Store
+      # only a provisioning profile allows. Only the release build gets it: the project's entitlements file leaves
+      # it out, because macOS refuses to launch an app with that entitlement and no profile (Debug, CI, ad-hoc).
+      # The app's final signature (next step) uses these entitlements.
+      - name: Embed the provisioning profile
+        env:
+          PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PROFILE_BASE64" ]; then
+            echo "::error::The APPLE_PROVISIONING_PROFILE_BASE64 secret isn't set"
+            exit 1
+          fi
+          APP_PATH="${{ steps.find-app.outputs.app_path }}"
+          PROFILE="$APP_PATH/Contents/embedded.provisionprofile"
+          echo "$PROFILE_BASE64" | base64 --decode > "$PROFILE"
+          security cms -D -i "$PROFILE" > "$RUNNER_TEMP/profile.plist"
+          entitlement() { /usr/libexec/PlistBuddy -c "Print :Entitlements:$1" "$RUNNER_TEMP/profile.plist"; }
+          APP_ID=$(entitlement com.apple.application-identifier)
+          TEAM=$(entitlement com.apple.developer.team-identifier)
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Contents/Info.plist")
+          if [ "$APP_ID" != "$TEAM.$BUNDLE_ID" ] || [ "$TEAM" != "$CERT_TEAM_ID" ]; then
+            echo "::error::The profile is for $APP_ID, but the app is $CERT_TEAM_ID.$BUNDLE_ID"
+            exit 1
+          fi
+          EXPIRES=$(/usr/libexec/PlistBuddy -c "Print :ExpirationDate" "$RUNNER_TEMP/profile.plist")
+          echo "Profile for $APP_ID, expires $EXPIRES"
+
+          ENTITLEMENTS="$RUNNER_TEMP/app.entitlements"
+          codesign -d --entitlements - --xml "$APP_PATH" > "$ENTITLEMENTS"
+          plutil -insert com.apple.application-identifier -string "$APP_ID" "$ENTITLEMENTS"
+          plutil -insert com.apple.developer.team-identifier -string "$TEAM" "$ENTITLEMENTS"
+          plutil -insert keychain-access-groups -array "$ENTITLEMENTS"
+          plutil -insert keychain-access-groups.0 -string "$APP_ID" "$ENTITLEMENTS"
+          plutil -p "$ENTITLEMENTS"
+          echo "APP_ENTITLEMENTS=$ENTITLEMENTS" >> "$GITHUB_ENV"
+
       # Sparkle's helpers (XPC services, Autoupdate, Updater.app) must carry our Developer ID signature with the
       # hardened runtime and a timestamp for notarization. Sign inside-out, then re-sign the framework and the app,
-      # keeping the app's entitlements. See https://sparkle-project.org/documentation/sandboxing/
+      # with the app's entitlements plus the keychain ones from the previous step. See https://sparkle-project.org/documentation/sandboxing/
       - name: Sign Sparkle for notarization
         run: |
           set -euo pipefail
@@ -232,7 +269,7 @@ jobs:
           sign "$FW/Versions/B/Autoupdate"
           sign "$FW/Versions/B/Updater.app"
           sign "$FW"
-          sign --preserve-metadata=entitlements,requirements,flags "$APP_PATH"
+          sign --entitlements "$APP_ENTITLEMENTS" --preserve-metadata=requirements,flags "$APP_PATH"
           echo "✅ Sparkle signed"
 
       - name: Verify code signature
@@ -240,6 +277,8 @@ jobs:
           APP_PATH="${{ steps.find-app.outputs.app_path }}"
           codesign -vvv --deep --strict "$APP_PATH"
           codesign -dvvv "$APP_PATH"
+          codesign -d --entitlements - --xml "$APP_PATH" | plutil -extract keychain-access-groups.0 raw - ||
+            { echo "::error::The app is signed without keychain-access-groups"; exit 1; }
           echo "✅ Code signature verification successful"
 
       - name: Notarize app
@@ -307,6 +346,25 @@ jobs:
 
           rm NotarizeApp.zip submission.json result.json
           echo "✅ App successfully notarized and stapled"
+
+      # macOS kills an app at launch whose entitlements its profile doesn't allow, or whose profile doesn't match
+      # its certificate; nothing else would notice before users did.
+      - name: Check the signed app launches
+        run: |
+          set -euo pipefail
+          APP_PATH="${{ steps.find-app.outputs.app_path }}"
+          "$APP_PATH/Contents/MacOS/${{ env.APP_NAME }}" > "$RUNNER_TEMP/launch.log" 2>&1 &
+          PID=$!
+          sleep 10
+          if ! kill -0 "$PID" 2>/dev/null; then
+            echo "::error::The signed app quit or was killed at launch"
+            cat "$RUNNER_TEMP/launch.log"
+            log show --last 2m --style compact --predicate 'process == "amfid" OR process == "kernel"' 2>/dev/null |
+              grep -iE "${{ env.APP_NAME }}|provision|entitlement" | tail -40 || true
+            exit 1
+          fi
+          kill "$PID"
+          echo "✅ The signed app launches"
 
       - name: Get app info
         id: app-info
