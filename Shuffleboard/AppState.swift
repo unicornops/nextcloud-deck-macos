@@ -36,6 +36,11 @@ final class AppState: ObservableObject {
     /// ETags of the last board list and of the lists of the board in `stacksBoardId`, for `refreshIfChanged()`.
     private var boardsETag: String?
     private var stacksETag: String?
+    /// When `boardsETag` arrived, and when the lists on screen were requested, for `refreshIfChanged()`.
+    private var boardsETagDate: Date?
+    private var stacksFetchDate: Date?
+    /// The clock; tests move it forward.
+    var now: () -> Date = Date.init
     private var credentials: Credentials?
     /// What `credentialStore` holds: every account and which one is active.
     private var savedAccounts = SavedAccounts()
@@ -199,6 +204,7 @@ final class AppState: ObservableObject {
             guard api === deckAPI, let fetched else { return }
             boards = fetched.value
             boardsETag = fetched.etag
+            boardsETagDate = now()
             if selectedBoardId == nil, let first = activeBoards.first ?? archivedBoards.first {
                 // BoardDetailView's `.task(id: selectedBoardId)` loads the newly selected board's lists.
                 selectedBoardId = first.id
@@ -233,10 +239,12 @@ final class AppState: ObservableObject {
         if stacksBoardId != boardId {
             stacks = []
             stacksBoardId = boardId
+            stacksFetchDate = nil
         }
         stacksError = nil
         isLoadingStacks = true
 
+        let started = now()
         let result: Result<Tagged<[Stack]>, Error>
         do {
             guard let loaded = try await api.fetchStacks(boardId: boardId, ifNoneMatch: nil) else {
@@ -253,8 +261,10 @@ final class AppState: ObservableObject {
         case let .success(loaded):
             stacks = Self.sorted(loaded.value)
             stacksETag = loaded.etag
+            stacksFetchDate = started
 
         case let .failure(error):
+            stacksFetchDate = nil
             guard !endSessionIfUnauthorized(error) else { return }
             // A cancelled load (the board view went away) is not an error worth showing.
             if !(error is CancellationError), (error as? URLError)?.code != .cancelled {
@@ -269,6 +279,7 @@ final class AppState: ObservableObject {
         stacks = []
         stacksBoardId = nil
         stacksETag = nil
+        stacksFetchDate = nil
         stacksError = nil
         isLoadingStacks = false
     }
@@ -533,17 +544,24 @@ extension AppState {
 extension AppState {
     /// Picks up changes made elsewhere (the web UI, other devices) without spinners or error messages.
     ///
-    /// Uses ETags, so when nothing has changed each request is a 304 with no body. Skipped while boards are
+    /// Uses ETags, so when nothing has changed the board list is a 304 with no body. Deck's lists have no ETag, but
+    /// the board list's ETag changes whenever anything on any board does, so an unchanged board list means the lists
+    /// are unchanged too and aren't downloaded (#141). Deck's ETags change at most once a second, though: lists fetched
+    /// in the same second as the board list's ETag could have missed a change made in that second, so they are only
+    /// trusted once fetched comfortably after it. Skipped while boards are
     /// loading, a list reorder is saving or a list is being dragged. A 401 still signs out; other failures are
     /// ignored until the next refresh. A full `loadStacks` that starts meanwhile wins.
     func refreshIfChanged() async {
         guard let api = deckAPI, !isLoading, !isReorderingStacks, !isDraggingStack else { return }
+        let boardsChanged: Bool
         do {
             let fetched = try await api.fetchBoards(ifNoneMatch: boardsETag)
             guard api === deckAPI else { return }
+            boardsChanged = fetched != nil
             if let fetched {
                 boards = fetched.value
                 boardsETag = fetched.etag
+                boardsETagDate = now()
                 if let selected = selectedBoardId, !boards.contains(where: { $0.id == selected && !$0.isDeleted }) {
                     // The selected board was deleted elsewhere; `.task(id: selectedBoardId)` loads the next one.
                     selectedBoardId = activeBoards.first?.id
@@ -557,19 +575,31 @@ extension AppState {
         }
 
         guard let boardId = selectedBoardId, stacksBoardId == boardId, !isLoadingStacks else { return }
+        if !boardsChanged, stacksETag == nil, listsAreSettled {
+            return
+        }
         let generation = stacksGeneration
+        let started = now()
         do {
             guard let fetched = try await api.fetchStacks(boardId: boardId, ifNoneMatch: stacksETag) else { return }
             guard generation == stacksGeneration, selectedBoardId == boardId,
                   !isReorderingStacks, !isDraggingStack else { return }
             stacks = Self.sorted(fetched.value)
             stacksETag = fetched.etag
+            stacksFetchDate = started
             stacksError = nil
         } catch {
             if api === deckAPI {
                 endSessionIfUnauthorized(error)
             }
         }
+    }
+
+    /// Whether the lists on screen were requested well after the board list's ETag arrived, so an unchanged board
+    /// list means they are current. The margin covers Deck's whole-second ETags.
+    private var listsAreSettled: Bool {
+        guard let fetched = stacksFetchDate, let etagDate = boardsETagDate else { return false }
+        return fetched.timeIntervalSince(etagDate) >= 1.5
     }
 
     /// Lists in board order.
@@ -1019,6 +1049,7 @@ extension AppState {
         boards = []
         selectedBoardId = nil
         boardsETag = nil
+        boardsETagDate = nil
         clearStacks()
         cardFilter = CardFilter()
         actionError = nil

@@ -219,6 +219,15 @@ final class ServerAppStateTests: XCTestCase {
             let stack = try await other.createStack(boardId: board.id, title: "Added elsewhere")
             await app.refreshIfChanged()
             XCTAssertEqual(app.stacks.map(\.id), [stack.id])
+
+            // Once the lists are settled, an unchanged board list skips them (#141); a card added elsewhere
+            // changes the board list's ETag, so the lists are downloaded again. Deck's ETags have 1-second steps.
+            await sleep(seconds: 1.6)
+            await app.refreshIfChanged()
+            await sleep(seconds: 1.1)
+            let card = try await other.createCard(boardId: board.id, stackId: stack.id, title: "Card from elsewhere")
+            await app.refreshIfChanged()
+            XCTAssertEqual(app.stacks.first?.activeCards.map(\.id), [card.id], "Card added elsewhere not picked up")
         }
     }
 

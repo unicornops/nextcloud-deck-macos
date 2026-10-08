@@ -261,6 +261,8 @@ final class AppStateTests: XCTestCase {
             var stackIds = [10, 20]
             var version = 1
             var stacksStatus = 200
+            /// Real Deck sends none for the lists (#141).
+            var stacksHaveETag = true
         }
 
         let state = Locked(State())
@@ -277,6 +279,9 @@ final class AppStateTests: XCTestCase {
             }
             if current.stacksStatus != 200 {
                 return .status(current.stacksStatus)
+            }
+            guard current.stacksHaveETag else {
+                return .json(AppStateTests.stacksJSON(current.stackIds, board: 1))
             }
             if request.header("If-None-Match") == etag {
                 return .status(304)
@@ -317,6 +322,68 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(refreshRequests.count, 2, "one conditional request for boards, one for lists")
         XCTAssertTrue(refreshRequests.allSatisfy { $0.header("If-None-Match") == "\"v1\"" })
         XCTAssertEqual(app.stacks.map(\.id), [10, 20])
+    }
+
+    /// An app whose clock the test moves: `clock` starts when the boards and lists were loaded.
+    private func makeFakeDeckAppWithClock() async -> (AppState, FakeDeck, Locked<Date>) {
+        let clock = Locked(Date(timeIntervalSince1970: 1_800_000_000))
+        let deck = FakeDeck()
+        deck.state.withLock { $0.stacksHaveETag = false }
+        StubURLProtocol.handler = { deck.handle($0) }
+        let app = AppState(credentialStore: store, session: StubURLProtocol.session(), openURL: { _ in })
+        app.now = { clock.withLock { $0 } }
+        await waitUntil { app.selectedBoardId == 1 && !app.isLoading }
+        await app.loadStacks(boardId: 1)
+        return (app, deck, clock)
+    }
+
+    private func requests(during action: () async -> Void) async -> [String] {
+        let before = StubURLProtocol.requests.count
+        await action()
+        return StubURLProtocol.requests.dropFirst(before).map(\.line)
+    }
+
+    /// #141: Deck's lists have no ETag, so they are only downloaded when the board list changed.
+    func testUnchangedBoardListSkipsDownloadingTheLists() async {
+        let (app, _, clock) = await makeFakeDeckAppWithClock()
+        // The lists on screen came in the same second as the board list's ETag, so they are fetched once more.
+        clock.withLock { $0 += 60 }
+        let first = await requests { await app.refreshIfChanged() }
+        XCTAssertEqual(first.count, 2, "lists fetched in the ETag's second are fetched again")
+
+        clock.withLock { $0 += 60 }
+        let second = await requests { await app.refreshIfChanged() }
+        XCTAssertEqual(
+            second,
+            ["GET /index.php/apps/deck/api/v1.0/boards?details=true"],
+            "unchanged board list: no lists download"
+        )
+        XCTAssertEqual(app.stacks.map(\.id), [10, 20])
+    }
+
+    func testChangedBoardListDownloadsTheLists() async {
+        let (app, deck, clock) = await makeFakeDeckAppWithClock()
+        clock.withLock { $0 += 60 }
+        await app.refreshIfChanged()
+
+        deck.state.withLock { $0.stackIds = [10, 20, 30]
+            $0.version = 2
+        }
+        clock.withLock { $0 += 60 }
+        await app.refreshIfChanged()
+
+        XCTAssertEqual(app.stacks.map(\.id), [10, 20, 30])
+    }
+
+    /// A change in the same second as the board list's ETag doesn't change it; the lists still pick it up.
+    func testChangeInTheETagsSecondIsNotMissed() async {
+        let (app, deck, clock) = await makeFakeDeckAppWithClock()
+        deck.state.withLock { $0.stackIds = [10, 20, 30] } // Same ETag.
+
+        clock.withLock { $0 += 0.5 }
+        await app.refreshIfChanged()
+
+        XCTAssertEqual(app.stacks.map(\.id), [10, 20, 30])
     }
 
     func testRefreshErrorsAreSilent() async {
