@@ -37,6 +37,7 @@ struct StackColumnView: View {
     @State private var isRenaming = false
     @State private var renameTitle = ""
     @FocusState private var isRenameFocused: Bool
+    @FocusState private var isNewCardFocused: Bool
 
     private var isDropTargeted: Bool {
         guard !appState.isDraggingStack else { return false }
@@ -274,13 +275,16 @@ struct StackColumnView: View {
                 HStack(spacing: 8) {
                     TextField("Card title", text: $newCardTitle)
                         .textFieldStyle(.plain)
+                        .focused($isNewCardFocused)
+                        .onAppear {
+                            // Focusing in the same update as the field appears is sometimes ignored.
+                            Task { @MainActor in isNewCardFocused = true }
+                        }
                         .onSubmit { submitNewCard() }
+                        .onExitCommand { cancelNewCard() }
                     Button("Add") { submitNewCard() }
                         .buttonStyle(.borderedProminent)
-                    Button("Cancel") {
-                        isAddingCard = false
-                        newCardTitle = ""
-                    }
+                    Button("Cancel") { cancelNewCard() }
                 }
                 .padding(10)
             } else {
@@ -299,6 +303,11 @@ struct StackColumnView: View {
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .padding(10)
+    }
+
+    private func cancelNewCard() {
+        isAddingCard = false
+        newCardTitle = ""
     }
 
     private func submitNewCard() {
