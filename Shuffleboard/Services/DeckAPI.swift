@@ -854,6 +854,21 @@ extension DeckAPI {
         }
         _ = try await performRequest(url: url, method: "DELETE")
     }
+
+    /// Restores a deleted attachment. Only `deck_file` attachments can be restored; Deck refuses (403) for `file`
+    /// ones, whose deletion only unshares the file from the card.
+    func restoreAttachment(boardId: Int, stackId: Int, cardId: Int, attachmentId: Int, type: String?) async throws {
+        guard let url = attachmentURL(
+            boardId: boardId,
+            stackId: stackId,
+            cardId: cardId,
+            id: attachmentId,
+            type: type
+        )?.appendingPathComponent("restore") else {
+            throw DeckAPIError.invalidURL
+        }
+        _ = try await performRequest(url: url, method: "PUT")
+    }
 }
 
 // MARK: - Tagged

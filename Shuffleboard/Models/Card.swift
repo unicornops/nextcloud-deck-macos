@@ -121,6 +121,17 @@ struct Attachment: Codable, Identifiable {
         extendedData?.info?.basename ?? extendedData?.info?.filename ?? data ?? "Attachment \(id)"
     }
 
+    /// Deleted but still listed: Deck keeps deleted `deck_file` attachments until it cleans up.
+    var isDeleted: Bool {
+        (deletedAt ?? 0) > 0
+    }
+
+    /// Whether deleting it can be undone. Deck restores only `deck_file` attachments (stored by Deck itself);
+    /// deleting a `file` attachment unshares the file from the card, leaving it in its owner's Files.
+    var canBeRestored: Bool {
+        type == "deck_file"
+    }
+
     /// Human-readable file size.
     var formattedSize: String? {
         guard let bytes = extendedData?.filesize else { return nil }

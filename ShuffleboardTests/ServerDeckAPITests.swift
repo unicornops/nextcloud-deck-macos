@@ -318,7 +318,83 @@ final class ServerDeckAPITests: XCTestCase {
             )
             let remaining = try await api.getAttachments(boardId: board.id, stackId: stack.id, cardId: card.id)
             XCTAssertTrue(remaining.allSatisfy { ($0.deletedAt ?? 0) > 0 }, "Deleted attachment still listed")
+
+            // Deleting a `file` attachment only unshares it: it can't be restored (#139).
+            do {
+                try await api.restoreAttachment(
+                    boardId: board.id,
+                    stackId: stack.id,
+                    cardId: card.id,
+                    attachmentId: attachment.id,
+                    type: attachment.type
+                )
+                XCTFail("Deck \(server.deckVersion) restored a file attachment: offer Restore for those too")
+            } catch DeckAPIError.permissionDenied {
+                // Expected.
+            }
         }
+    }
+
+    /// `deck_file` attachments (stored by Deck itself, as older clients uploaded them) stay listed when deleted, with
+    /// `deletedAt`, and can be restored (#139).
+    func testRestoringADeckFileAttachment() async throws {
+        try await withTemporaryBoard(api) { board in
+            let stack = try await api.createStack(boardId: board.id, title: "To do")
+            let card = try await api.createCard(boardId: board.id, stackId: stack.id, title: "With an old file")
+            let id = try await uploadDeckFile(board: board.id, stack: stack.id, card: card.id)
+
+            try await api.deleteAttachment(
+                boardId: board.id,
+                stackId: stack.id,
+                cardId: card.id,
+                attachmentId: id,
+                type: "deck_file"
+            )
+            var listed = try await api.getAttachments(boardId: board.id, stackId: stack.id, cardId: card.id)
+            let deleted = try XCTUnwrap(listed.first { $0.id == id }, "Deleted deck_file attachment not listed")
+            XCTAssertTrue(deleted.isDeleted)
+            XCTAssertTrue(deleted.canBeRestored)
+
+            try await api.restoreAttachment(
+                boardId: board.id,
+                stackId: stack.id,
+                cardId: card.id,
+                attachmentId: id,
+                type: "deck_file"
+            )
+            listed = try await api.getAttachments(boardId: board.id, stackId: stack.id, cardId: card.id)
+            XCTAssertEqual(listed.first { $0.id == id }?.isDeleted, false, "Attachment not restored")
+        }
+    }
+
+    /// Uploads a `deck_file` attachment, which the app itself no longer creates; returns its id.
+    private func uploadDeckFile(board: Int, stack: Int, card: Int) async throws -> Int {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("e2e-\(UUID().uuidString).txt")
+        try Data("An old-style attachment\n".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        let body = try DeckAPI.writeMultipartBody(
+            fileURL: file,
+            filename: file.lastPathComponent,
+            fields: ["type": "deck_file", "data": file.lastPathComponent],
+            boundary: boundary
+        )
+        defer { try? FileManager.default.removeItem(at: body) }
+        let url = server.url.appendingPathComponent(
+            "index.php/apps/deck/api/v1.1/boards/\(board)/stacks/\(stack)/cards/\(card)/attachments"
+        )
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        let appPassword = try await server.appPassword(for: TestServer.alice)
+        request.setValue(TestServer.basicAuth(TestServer.alice, appPassword), forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession(configuration: .ephemeral).upload(for: request, fromFile: body)
+        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, String(decoding: data, as: UTF8.self))
+        let attachment = try JSONDecoder().decode(Attachment.self, from: data)
+        XCTAssertEqual(attachment.type, "deck_file")
+        return attachment.id
     }
 
     // MARK: - Comments

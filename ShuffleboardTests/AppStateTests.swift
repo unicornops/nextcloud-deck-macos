@@ -968,3 +968,42 @@ extension AppStateTests {
         )
     }
 }
+
+// MARK: - Restoring attachments (#139)
+
+extension AppStateTests {
+    func testRestoringAnAttachmentReloadsTheLists() async throws {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/restore") {
+                return request.path.contains("/file/") ? .json(#"{"status": 403, "message": "x"}"#, status: 403)
+                    : .json(#"{"id": 4, "type": "deck_file", "deletedAt": 0}"#)
+            }
+            return request.path.hasSuffix("/boards") ? .json(Self.boardsJSON) : .json(Self.stacksJSON([10], board: 1))
+        }
+        let app = await makeSignedInApp()
+        let decode = { (json: String) in try JSONDecoder().decode(Attachment.self, from: Data(json.utf8)) }
+        let before = StubURLProtocol.requests.count
+
+        let restored = try await app.restoreAttachment(
+            decode(#"{"id": 4, "type": "deck_file", "deletedAt": 5}"#),
+            boardId: 1,
+            stackId: 10,
+            cardId: 5
+        )
+
+        XCTAssertTrue(restored)
+        XCTAssertEqual(StubURLProtocol.requests.dropFirst(before).map(\.line), [
+            "PUT /index.php/apps/deck/api/v1.1/boards/1/stacks/10/cards/5/attachments/deck_file/4/restore",
+            "GET /index.php/apps/deck/api/v1.0/boards/1/stacks",
+        ])
+
+        let refused = try await app.restoreAttachment(
+            decode(#"{"id": 6, "type": "file", "deletedAt": 5}"#),
+            boardId: 1,
+            stackId: 10,
+            cardId: 5
+        )
+        XCTAssertFalse(refused)
+        XCTAssertEqual(app.actionError, DeckAPIError.permissionDenied.localizedDescription)
+    }
+}

@@ -334,6 +334,32 @@ final class MainFlowUITests: XCTestCase {
         app.find(.button, "Done").click()
     }
 
+    /// Removing an attachment asks first; a `deck_file` one stays listed and can be restored (#139).
+    func testRemovingAndRestoringAnAttachment() async throws {
+        let board = try await makeBoard()
+        let stack = try await alice.createStack(board: board.id, "To do", order: 0)
+        let card = try await alice.createCard(board: board.id, stack: stack, "With a file")
+        let attachment = try await alice.attachDeckFile(board: board.id, stack: stack, card: card, name: "notes.txt")
+        let deletedAt = {
+            try await alice.attachments(board: board.id, stack: stack, card: card)
+                .first { $0["id"] as? Int == attachment }?["deletedAt"] as? Int ?? 0
+        }
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+
+        app.card("With a file").waitToAppear().click()
+        app.find(.button, "Remove notes.txt").waitToAppear("Attachment not shown on the card").click()
+        // The dialog's button, not its Touch Bar copy, which can't be clicked.
+        app.windows.descendants(matching: .button).matching(NSPredicate(format: "label == %@", "Remove")).firstMatch
+            .waitToAppear("No confirmation before removing an attachment").click()
+        try await eventually("Attachment not removed on the server") { try await deletedAt() > 0 }
+
+        app.find(.button, "Restore notes.txt").waitToAppear("Removed attachment can't be restored").click()
+        try await eventually("Attachment not restored on the server") { try await deletedAt() == 0 }
+        app.find(.button, "Remove notes.txt").waitToAppear("Restored attachment not shown as attached")
+        app.find(.button, "Cancel").click()
+    }
+
     // MARK: - Sharing
 
     func testSharingABoard() async throws {

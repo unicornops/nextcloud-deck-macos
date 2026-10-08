@@ -102,6 +102,12 @@ final class DeckAPITests: XCTestCase {
         ])
     }
 
+    func testRestoreAttachment() async throws {
+        StubURLProtocol.handler = { _ in .json(#"{"id": 4, "type": "deck_file", "deletedAt": 0}"#) }
+        try await api.restoreAttachment(boardId: 1, stackId: 2, cardId: 3, attachmentId: 4, type: "deck_file")
+        XCTAssertEqual(lines, ["PUT \(attachments)/deck_file/4/restore"])
+    }
+
     func testUploadIsASinglePost() async throws {
         StubURLProtocol.handler = { _ in .json(#"{"id": 11, "type": "file", "data": "a.txt"}"#) }
         let attachment = try await api.uploadAttachment(

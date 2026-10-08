@@ -149,6 +149,43 @@ struct DeckClient: Sendable {
         return boards.first { $0["title"] as? String == title && $0["deletedAt"] as? Int ?? 0 == 0 }?["id"] as? Int
     }
 
+    /// Attaches a small text file as a `deck_file` attachment (stored by Deck, as older clients did); returns its id.
+    func attachDeckFile(board: Int, stack: Int, card: Int, name: String) async throws -> Int {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = ""
+        for (field, value) in [("data", name), ("type", "deck_file")] {
+            body += "--\(boundary)\r\nContent-Disposition: form-data; name=\"\(field)\"\r\n\r\n\(value)\r\n"
+        }
+        body += "--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(name)\"\r\n"
+            + "Content-Type: text/plain\r\n\r\nA UI test attachment\r\n--\(boundary)--\r\n"
+        var request = URLRequest(url: server.url.appendingPathComponent(attachmentsPath(board, stack, card)))
+        request.httpMethod = "POST"
+        request.setValue("true", forHTTPHeaderField: "OCS-APIRequest")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue(
+            "Basic " + Data("\(user):\(appPassword)".utf8).base64EncodedString(),
+            forHTTPHeaderField: "Authorization"
+        )
+        request.httpBody = Data(body.utf8)
+        let (data, _) = try await URLSession(configuration: .ephemeral).data(for: request)
+        return try Self.id(JSONSerialization.jsonObject(with: data))
+    }
+
+    /// The card's attachments (API v1.1), deleted `deck_file` ones included.
+    func attachments(board: Int, stack: Int, card: Int) async throws -> [[String: Any]] {
+        try await server.request(
+            "GET",
+            attachmentsPath(board, stack, card),
+            user: user,
+            secret: appPassword
+        ) as? [[String: Any]] ?? []
+    }
+
+    private func attachmentsPath(_ board: Int, _ stack: Int, _ card: Int) -> String {
+        "index.php/apps/deck/api/v1.1/boards/\(board)/stacks/\(stack)/cards/\(card)/attachments"
+    }
+
     func deleteBoard(_ id: Int) async {
         _ = try? await call("DELETE", "boards/\(id)")
     }
