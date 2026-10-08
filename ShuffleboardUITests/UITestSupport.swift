@@ -34,9 +34,11 @@ struct UITestServer: Sendable {
         return !have.lexicographicallyPrecedes(want)
     }
 
-    /// The account id the app shows, e.g. `alice@localhost:8443`.
+    /// The account id the app shows, e.g. `alice@localhost:8443`, or `alice@localhost:8443/nextcloud` for a server
+    /// at a sub-path.
     func accountId(_ user: String) -> String {
-        "\(user)@\(url.host ?? "")" + (url.port.map { ":\($0)" } ?? "")
+        let path = url.path.hasSuffix("/") ? String(url.path.dropLast()) : url.path
+        return "\(user)@\(url.host ?? "")" + (url.port.map { ":\($0)" } ?? "") + path
     }
 
     /// A new app password for `user`, as a client gets one after signing in.

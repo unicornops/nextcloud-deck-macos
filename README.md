@@ -150,11 +150,15 @@ scripts/e2e/test.sh api       # or: test.sh ui, test.sh screenshots
 scripts/e2e/stop-server.sh
 ```
 
+Real servers differ from that one in many ways, so there's a second, **realistic** profile (`E2E_PROFILE=realistic`): nginx and php-fpm with Nextcloud's recommended config and pretty URLs, MariaDB, APCu and Redis for caching and file locking, background jobs, Nextcloud installed at `https://localhost:8443/nextcloud`, and app store apps many servers have (Talk, Calendar, Contacts, Tasks, Notes, Group folders, Forms, Polls, Collectives, two-factor TOTP). Its seed adds a board with 300 cards. It also needs `brew install nginx mariadb redis` and the PHP extensions `pdo_mysql`, `apcu` and `redis`; use a separate `E2E_DIR` for it.
+
+When a request has a parameter in both the URL and the body, servers differ in which value wins (#131). The minimal profile installs the `e2e_early_params` test app, so the URL's value wins; `E2E_EARLY_PARAMS=0` leaves it out, so the body's value wins. The realistic profile leaves it out by default, so its apps decide. The tests have to pass all three ways.
+
 When you're done, remove the CA again in Keychain Access ("Caddy Local Authority" in the System keychain) and delete `build/e2e`. Without a server, the end-to-end tests skip themselves, so the normal test run above doesn't need one.
 
 To sign in, the UI tests pass app passwords to the app in its launch environment. Only Debug builds read them (`UITestLaunch`) and keep them in memory, so UI tests never read or write the Keychain. Release builds always use the Keychain and the browser sign-in.
 
-The **End-to-end tests** workflow runs on every pull request against the newest Nextcloud that Deck supports. Every day it also runs against every Nextcloud major that still gets releases, each with its newest Deck, and opens an issue if a run fails. Failed runs upload `nextcloud.log` and the test results. Run it by hand (Actions → End-to-end tests → Run workflow) to pick versions, or tick **screenshots** to retake the README screenshots from the demo data in light and dark mode. That run opens a pull request with the new screenshots in `docs/screenshots/`.
+The **End-to-end tests** workflow runs on every pull request against the newest Nextcloud that Deck supports, on the minimal server. Every day it also runs both profiles against every Nextcloud major that still gets releases, each with its newest Deck, plus the minimal server without the test app on the newest major, and opens an issue if a run fails. Failed runs upload `nextcloud.log` and the test results. Run it by hand (Actions → End-to-end tests → Run workflow) to pick versions and profiles, or tick **screenshots** to retake the README screenshots from the demo data in light and dark mode. That run opens a pull request with the new screenshots in `docs/screenshots/`.
 
 ### Building a signed DMG for distribution
 
