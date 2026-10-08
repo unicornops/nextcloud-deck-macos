@@ -892,3 +892,79 @@ extension AppStateTests {
         XCTAssertEqual(app.selectedBoardId, 2)
     }
 }
+
+// MARK: - Duplicating boards (#137)
+
+extension AppStateTests {
+    /// Board 1 has a list with a card; the copy is board 9, which Deck gives a default label. `failLists` makes
+    /// creating the copy's lists fail.
+    private func makeCopyingApp(failLists: Bool = false) async -> AppState {
+        let copied = Locked(false)
+        StubURLProtocol.handler = { request in
+            let path = request.path.replacingOccurrences(of: "/index.php/apps/deck/api/v1.0", with: "")
+            switch (request.method, path) {
+            case ("GET", "/boards"):
+                let copy = copied.withLock { $0 } ? #", {"id": 9, "title": "One (copy)"}"# : ""
+                return .json(#"[{"id": 1, "title": "One", "color": "9C59B6"}, {"id": 2, "title": "Two"}"# + copy + "]")
+            case ("GET", "/boards/1/stacks"):
+                return .json(
+                    #"[{"id": 10, "title": "To do", "boardId": 1, "order": 0, "cards": [{"id": 5, "title": "Card", "stackId": 10, "order": 0}]}]"#
+                )
+            case ("GET", "/boards/1"):
+                return .json(#"{"id": 1, "title": "One", "labels": []}"#)
+            case ("POST", "/boards"):
+                return .json(#"{"id": 9, "title": "One (copy)", "color": "9C59B6"}"#)
+            case ("GET", "/boards/9"):
+                return .json(#"{"id": 9, "title": "One (copy)", "labels": [{"id": 70, "title": "Finished"}]}"#)
+            case ("POST", "/boards/9/stacks"):
+                return failLists ? .status(500) : .json(#"{"id": 90, "title": "To do", "boardId": 9, "order": 0}"#)
+            case ("POST", "/boards/9/stacks/90/cards"):
+                copied.withLock { $0 = true }
+                return .json(#"{"id": 95, "title": "Card", "stackId": 90, "order": 0}"#)
+            case ("DELETE", _):
+                return .json("{}")
+            default:
+                return .json(Self.stacksJSON([], board: 9))
+            }
+        }
+        return await makeSignedInApp()
+    }
+
+    func testDuplicatingABoardOpensTheCopy() async {
+        let app = await makeCopyingApp()
+        let before = StubURLProtocol.requests.count
+
+        let duplicated = await app.duplicateBoard(
+            id: 1,
+            options: BoardCopyOptions(title: " One (copy) ", withCards: true)
+        )
+
+        XCTAssertTrue(duplicated, app.errorMessage ?? "")
+        XCTAssertEqual(app.selectedBoardId, 9)
+        XCTAssertNil(app.boardCopyProgress, "progress cleared when done")
+        let sent = StubURLProtocol.requests.dropFirst(before)
+        let create = sent.first { $0.method == "POST" && $0.path.hasSuffix("/boards") }
+        XCTAssertEqual(create?.json?["title"] as? String, "One (copy)", "title is trimmed")
+        XCTAssertEqual(create?.json?["color"] as? String, "9C59B6", "the source's colour")
+        let lines = sent.map(\.line)
+        XCTAssertTrue(lines.contains("DELETE /index.php/apps/deck/api/v1.0/boards/9/labels/70"), "default label kept")
+        XCTAssertTrue(lines.contains("POST /index.php/apps/deck/api/v1.0/boards/9/stacks/90/cards"), "card not copied")
+        XCTAssertFalse(lines.contains("DELETE /index.php/apps/deck/api/v1.0/boards/9"))
+    }
+
+    func testFailedDuplicateIsDeletedAndExplained() async {
+        let app = await makeCopyingApp(failLists: true)
+
+        let duplicated = await app.duplicateBoard(id: 1, options: BoardCopyOptions(title: "Copy", withCards: true))
+
+        XCTAssertFalse(duplicated)
+        XCTAssertNotNil(app.errorMessage, "shown in the sheet")
+        XCTAssertEqual(app.selectedBoardId, 1)
+        XCTAssertNil(app.boardCopyProgress)
+        XCTAssertEqual(
+            StubURLProtocol.requests.last?.line,
+            "DELETE /index.php/apps/deck/api/v1.0/boards/9",
+            "the half-made copy is deleted"
+        )
+    }
+}

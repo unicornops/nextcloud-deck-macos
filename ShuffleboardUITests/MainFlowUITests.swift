@@ -101,6 +101,33 @@ final class MainFlowUITests: XCTestCase {
         }
     }
 
+    /// Duplicating a board copies its lists and cards and opens the copy (#137).
+    func testDuplicatingABoard() async throws {
+        let board = try await makeBoard()
+        let todo = try await alice.createStack(board: board.id, "To do", order: 0)
+        _ = try await alice.createStack(board: board.id, "Done", order: 1)
+        _ = try await alice.createCard(board: board.id, stack: todo, "Copy me")
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+
+        app.element("board: \(board.title)").rightClick()
+        app.menuItems["Duplicate\u{2026}"].waitToAppear("No Duplicate item in the board's context menu").click()
+        let copyTitle = board.title + " (copy)"
+        let field = app.find(.textField, "Enter board name").waitToAppear("Duplicate sheet did not open")
+        XCTAssertEqual(field.value as? String, copyTitle)
+        app.find(.button, "Duplicate").click()
+
+        app.element("board: \(copyTitle)").waitToAppear("Copy not in the sidebar", timeout: 30)
+        let found = try await alice.boardId(titled: copyTitle)
+        let copy = try XCTUnwrap(found, "Copy not on the server")
+        boards.append(copy)
+        let titles = try await alice.stacks(board: copy).compactMap { $0["title"] as? String }.sorted()
+        XCTAssertEqual(titles, ["Done", "To do"])
+        let copiedList = try await alice.list(holding: "Copy me", board: copy)
+        XCTAssertEqual(copiedList, "To do", "Card not copied")
+        app.list("To do").descendants(matching: .any)["card: Copy me"].waitToAppear("The copy isn't the open board")
+    }
+
     func testCreatingListsAndACardThenDraggingItToAnotherList() async throws {
         let board = try await makeBoard()
         try await app.launch(on: server, as: [UITestServer.alice])

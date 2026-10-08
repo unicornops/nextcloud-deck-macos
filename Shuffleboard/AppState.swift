@@ -21,6 +21,8 @@ final class AppState: ObservableObject {
     @Published var isDraggingStack = false
     /// Which cards the open board shows; reset when switching boards.
     @Published var cardFilter = CardFilter()
+    /// Set while a board is being duplicated.
+    @Published private(set) var boardCopyProgress: BoardCopyProgress?
 
     private var deckAPI: DeckAPI?
     /// Where credentials are kept: the Keychain in the app, an in-memory store in tests.
@@ -536,6 +538,42 @@ extension AppState {
             report(error)
         }
     }
+}
+
+// MARK: - Duplicating boards
+
+@MainActor
+extension AppState {
+    /// Copies a board (see `DeckAPI.copyBoard`) and opens the copy, with `boardCopyProgress` counting the lists and
+    /// cards done. Returns `false` for a blank title or a failure, which sets `errorMessage` for the sheet; a failed
+    /// copy is deleted again.
+    func duplicateBoard(id: Int, options: BoardCopyOptions) async -> Bool {
+        var options = options
+        options.title = options.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let api = deckAPI, !options.title.isEmpty,
+              let source = boards.first(where: { $0.id == id }) else { return false }
+        boardCopyProgress = nil
+        defer { boardCopyProgress = nil }
+        do {
+            let copy = try await api.copyBoard(source, options: options) { [weak self] done, total in
+                self?.boardCopyProgress = BoardCopyProgress(done: done, total: total)
+            }
+            guard api === deckAPI else { return false }
+            await loadBoards()
+            selectedBoardId = copy.id
+            return true
+        } catch {
+            guard !endSessionIfUnauthorized(error) else { return false }
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+}
+
+/// How far `AppState.duplicateBoard` has got: lists and cards copied out of all of them.
+struct BoardCopyProgress: Equatable {
+    let done: Int
+    let total: Int
 }
 
 // MARK: - Background refresh
