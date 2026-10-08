@@ -341,7 +341,7 @@ final class MainFlowUITests: XCTestCase {
         let card = try await alice.createCard(board: board.id, stack: stack, "With a file")
         let attachment = try await alice.attachDeckFile(board: board.id, stack: stack, card: card, name: "notes.txt")
         let deletedAt = {
-            try await alice.attachments(board: board.id, stack: stack, card: card)
+            try await self.alice.attachments(board: board.id, stack: stack, card: card)
                 .first { $0["id"] as? Int == attachment }?["deletedAt"] as? Int ?? 0
         }
         try await app.launch(on: server, as: [UITestServer.alice])
