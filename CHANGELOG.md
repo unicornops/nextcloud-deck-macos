@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/unicornops/shuffleboard/compare/v0.19.0...v0.20.0) (2026-10-08)
+
+
+### Features
+
+* **keychain:** keep credentials in the data protection keychain ([#166](https://github.com/unicornops/shuffleboard/issues/166)) ([719c96c](https://github.com/unicornops/shuffleboard/commit/719c96c868465dc33e9fe7fc6ecf841e185a3a95))
+
 ## [0.19.0](https://github.com/unicornops/shuffleboard/compare/v0.18.0...v0.19.0) (2026-10-08)
 
 
