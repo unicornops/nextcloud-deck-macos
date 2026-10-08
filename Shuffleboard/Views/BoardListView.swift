@@ -5,6 +5,8 @@ struct BoardListView: View {
     @State private var showingNewBoard = false
     @State private var pendingBoardDelete: Int?
     @State private var editingBoard: Board?
+    /// "Recently Deleted" starts collapsed.
+    @State private var showingDeleted = false
 
     var body: some View {
         List(selection: Binding(
@@ -89,6 +91,9 @@ struct BoardListView: View {
                     }
                 }
             }
+            if !appState.deletedBoards.isEmpty {
+                recentlyDeleted
+            }
         }
         .listStyle(.sidebar)
         .navigationTitle("Boards")
@@ -153,7 +158,10 @@ struct BoardListView: View {
             if let boardId = pendingBoardDelete,
                let board = appState.boards.first(where: { $0.id == boardId }) {
                 Text(
-                    DeleteConfirmation.message("\u{201c}\(board.title)\u{201d} and all its lists and cards")
+                    DeleteConfirmation.message(
+                        "\u{201c}\(board.title)\u{201d} and all its lists and cards",
+                        restoreNote: DeleteConfirmation.boardRestoreNote
+                    )
                 )
             }
         }
@@ -166,6 +174,55 @@ struct BoardListView: View {
             Button("Edit Board\u{2026}") {
                 editingBoard = board
             }
+        }
+    }
+
+    /// Deleted boards Deck can still restore, until the server clears deleted items. Not selectable: a deleted
+    /// board's lists can't be opened.
+    private var recentlyDeleted: some View {
+        Section {
+            if showingDeleted {
+                ForEach(appState.deletedBoards) { board in
+                    HStack {
+                        BoardRowView(board: board)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if board.canManage {
+                            Button {
+                                Task { await appState.restoreBoard(id: board.id) }
+                            } label: {
+                                Image(systemName: "arrow.uturn.backward")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Restore this board")
+                            .accessibilityLabel("Restore \(board.title)")
+                        }
+                    }
+                    .foregroundStyle(.secondary)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("deleted board: \(board.title)")
+                    .contextMenu {
+                        if board.canManage {
+                            Button("Restore") {
+                                Task { await appState.restoreBoard(id: board.id) }
+                            }
+                        }
+                    }
+                }
+            }
+        } header: {
+            Button {
+                showingDeleted.toggle()
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Recently Deleted")
+                    Image(systemName: showingDeleted ? "chevron.down" : "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                }
+            }
+            .buttonStyle(.plain)
+            .help(showingDeleted ? "Hide recently deleted boards" : "Show recently deleted boards")
+            .accessibilityLabel("Recently Deleted")
+            .accessibilityValue(showingDeleted ? "Shown" : "Hidden")
         }
     }
 }

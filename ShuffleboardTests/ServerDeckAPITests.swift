@@ -56,6 +56,12 @@ final class ServerDeckAPITests: XCTestCase {
         try await api.deleteBoard(id: created.id)
     }
 
+    /// The app reads Deck's version to explain a refused restore on Deck 1.16 (#136).
+    func testDeckVersion() async throws {
+        let version = try await api.deckVersion()
+        XCTAssertEqual(version, server.deckVersion)
+    }
+
     // MARK: - Stacks and cards
 
     func testStacksAndCardEditing() async throws {

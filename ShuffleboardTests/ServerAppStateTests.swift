@@ -121,7 +121,38 @@ final class ServerAppStateTests: XCTestCase {
         XCTAssertNil(app.actionError)
 
         await app.deleteBoard(id: board.id)
-        XCTAssertFalse(app.boards.contains { $0.id == board.id })
+        XCTAssertFalse(app.activeBoards.contains { $0.id == board.id })
+        XCTAssertEqual(app.deletedBoards.first?.id, board.id, "Deleted board not under Recently Deleted")
+    }
+
+    /// Deleting moves a board to Recently Deleted; restoring brings it back, except on Deck 1.16, which can't (#136).
+    func testDeletingAndRestoringABoard() async throws {
+        let app = try await signedInApp()
+        let title = uniqueTitle("E2E restore")
+        let created = await app.createBoard(title: title, color: "31CC7C")
+        XCTAssertTrue(created, app.errorMessage ?? "")
+        let board = try XCTUnwrap(app.boards.first { $0.title == title })
+
+        await app.deleteBoard(id: board.id)
+        XCTAssertNil(app.actionError)
+        XCTAssertFalse(app.activeBoards.contains { $0.id == board.id })
+        await app.refresh()
+        let deleted = try XCTUnwrap(app.deletedBoards.first { $0.id == board.id }, "Not under Recently Deleted")
+        XCTAssertTrue(deleted.canManage, "The owner can restore it")
+
+        await app.restoreBoard(id: board.id)
+
+        guard server.deck(atLeast: "1.17") else {
+            XCTAssertEqual(app.actionError, AppState.restoreUnsupportedMessage(deckVersion: server.deckVersion))
+            XCTAssertTrue(app.deletedBoards.contains { $0.id == board.id })
+            return
+        }
+        XCTAssertNil(app.actionError)
+        XCTAssertTrue(app.activeBoards.contains { $0.id == board.id }, "Restored board not back with the others")
+        XCTAssertEqual(app.selectedBoardId, board.id)
+        let onServer = try await server.api(for: TestServer.alice).getBoard(id: board.id)
+        XCTAssertFalse(onServer.isDeleted)
+        await app.deleteBoard(id: board.id)
     }
 
     func testEditingABoard() async throws {

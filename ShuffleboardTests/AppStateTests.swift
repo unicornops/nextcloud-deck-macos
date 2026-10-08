@@ -714,3 +714,114 @@ extension AppStateTests {
         XCTAssertEqual(StubURLProtocol.requests.count, before)
     }
 }
+
+// MARK: - Restoring boards (#136)
+
+extension AppStateTests {
+    /// Boards 1 and 2, and board 3 deleted, unless `restored`; restoring answers `restoreStatus`, and the
+    /// capabilities say Deck `deckVersion`.
+    private func makeAppWithDeletedBoard(restoreStatus: Int = 200, deckVersion: String = "1.18.5") async -> AppState {
+        let restored = Locked(false)
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/undo_delete") {
+                if restoreStatus == 200 {
+                    restored.withLock { $0 = true }
+                }
+                return .status(restoreStatus)
+            }
+            if request.method == "DELETE" {
+                return .json("{}")
+            }
+            if request.path.hasSuffix("/cloud/capabilities") {
+                return .json(#"{"ocs": {"data": {"capabilities": {"deck": {"version": "\#(deckVersion)"}}}}}"#)
+            }
+            if request.path.hasSuffix("/boards") {
+                let deletedAt = restored.withLock { $0 } ? 0 : 1_700_000_000
+                return .json(#"[{"id": 1, "title": "One"}, {"id": 2, "title": "Two"}, "#
+                    + #"{"id": 3, "title": "Old", "deletedAt": \#(deletedAt)}]"#)
+            }
+            guard let board = Self.boardId(fromStacksPath: request.path) else { return .status(404) }
+            return .json(Self.stacksJSON([board * 10], board: board))
+        }
+        return await makeSignedInApp()
+    }
+
+    func testDeletedBoardMovesToRecentlyDeleted() async {
+        let app = await makeAppWithDeletedBoard()
+        XCTAssertEqual(app.deletedBoards.map(\.id), [3])
+
+        await app.deleteBoard(id: 1)
+
+        XCTAssertEqual(app.activeBoards.map(\.id), [2])
+        XCTAssertEqual(app.deletedBoards.map(\.id), [1, 3], "most recently deleted first")
+        XCTAssertEqual(app.selectedBoardId, 2, "moves to a board that isn't deleted")
+        XCTAssertNil(app.actionError)
+    }
+
+    func testRestoringABoardOpensIt() async {
+        let app = await makeAppWithDeletedBoard()
+
+        await app.restoreBoard(id: 3)
+
+        XCTAssertTrue(StubURLProtocol.requests.map(\.line).contains(
+            "POST /index.php/apps/deck/api/v1.0/boards/3/undo_delete"
+        ))
+        XCTAssertEqual(app.activeBoards.map(\.id), [1, 2, 3])
+        XCTAssertTrue(app.deletedBoards.isEmpty)
+        XCTAssertEqual(app.selectedBoardId, 3)
+        XCTAssertNil(app.actionError)
+    }
+
+    func testRestoreOnDeckBefore117ExplainsWhy() async {
+        let app = await makeAppWithDeletedBoard(restoreStatus: 403, deckVersion: "1.16.8")
+
+        await app.restoreBoard(id: 3)
+
+        XCTAssertEqual(app.actionError, AppState.restoreUnsupportedMessage(deckVersion: "1.16.8"))
+        XCTAssertEqual(app.deletedBoards.map(\.id), [3])
+        XCTAssertEqual(app.selectedBoardId, 1)
+    }
+
+    func testRestoreRefusedOnNewerDeckIsPermissionDenied() async {
+        let app = await makeAppWithDeletedBoard(restoreStatus: 403, deckVersion: "1.18.5")
+
+        await app.restoreBoard(id: 3)
+
+        XCTAssertEqual(app.actionError, DeckAPIError.permissionDenied.localizedDescription)
+    }
+
+    func testRefreshMovesOffABoardDeletedInTheBrowser() async {
+        let deleted = Locked(false)
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                // Deck keeps listing a deleted board, with the time it was deleted.
+                return .json(deleted.withLock { $0 }
+                    ? #"[{"id": 1, "title": "One", "deletedAt": 1700000000}, {"id": 2, "title": "Two"}]"#
+                    : Self.boardsJSON)
+            }
+            guard let board = Self.boardId(fromStacksPath: request.path) else { return .status(404) }
+            return .json(Self.stacksJSON([board * 10], board: board))
+        }
+        let app = await makeSignedInApp()
+        deleted.withLock { $0 = true }
+
+        await app.refreshIfChanged()
+
+        XCTAssertEqual(app.selectedBoardId, 2)
+        XCTAssertEqual(app.deletedBoards.map(\.id), [1])
+    }
+
+    func testLaunchingDoesNotOpenADeletedBoard() async {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(#"[{"id": 1, "title": "Gone", "deletedAt": 1700000000}, {"id": 2, "title": "Two"}]"#)
+            }
+            return .json(Self.stacksJSON([20], board: 2))
+        }
+        let app = AppState(credentialStore: store, session: StubURLProtocol.session(), openURL: { _ in })
+
+        await waitUntil { !app.boards.isEmpty && !app.isLoading }
+
+        XCTAssertEqual(app.selectedBoardId, 2)
+    }
+}

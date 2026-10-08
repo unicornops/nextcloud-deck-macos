@@ -145,6 +145,12 @@ struct DeckUser: Codable, Hashable {
 }
 
 extension Board {
+    /// Deleted, but restorable until the server clears deleted items. Deck still lists such boards, with the time
+    /// they were deleted in `deletedAt`.
+    var isDeleted: Bool {
+        (deletedAt ?? 0) > 0
+    }
+
     /// Users who can be assigned to cards on this board: its members, owner and users it is shared with.
     var assignableUsers: [DeckUser] {
         let shared = acl.filter { $0.type == CardAssignment.userType }.compactMap(\.participant)
