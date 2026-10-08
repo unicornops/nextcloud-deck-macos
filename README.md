@@ -16,6 +16,8 @@ brew install --cask unicornops/tap/shuffleboard
 
 Or download the DMG from the [latest release](https://github.com/unicornops/shuffleboard/releases/latest). Shuffleboard needs macOS 14 or later and is signed and notarized. From version 0.16.0 it keeps itself up to date (**Shuffleboard → Check for Updates…**); with Homebrew, earlier versions upgrade with `brew upgrade --cask shuffleboard`.
 
+> **Releases and pre-releases.** Since version 0.17.2, each new version is first published as a [pre-release](https://github.com/unicornops/shuffleboard/releases). Pre-releases are work in development: they pass the automated tests but haven't been tested by hand yet, and installed copies and Homebrew never update to them. A version becomes a full release only after it has been manually verified, starting with 0.17.4. Releases before 0.17.2 were published straight away, without that manual check.
+
 ### Why "Shuffleboard"?
 
 It's a board where you shuffle cards around, and shuffleboard is the game played on a ship's deck. The name nods to Deck without borrowing it: [Nextcloud's trademark guidelines](https://nextcloud.com/trademarks/) ask third-party clients not to use "Nextcloud" in their name, and we'd rather respect the project that makes this app possible. Until October 2026 this app was called "Nextcloud Deck for macOS", which used Nextcloud's trademark in a way it shouldn't have.
