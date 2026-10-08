@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.19.0](https://github.com/unicornops/shuffleboard/compare/v0.18.0...v0.19.0) (2026-10-08)
+
+
+### Features
+
+* **attachments:** restore a deleted attachment ([#152](https://github.com/unicornops/shuffleboard/issues/152)) ([34ff29e](https://github.com/unicornops/shuffleboard/commit/34ff29ebe0544204d01afd2cb90b6cab8a0c3e7d))
+* **boards:** duplicate a board ([#153](https://github.com/unicornops/shuffleboard/issues/153)) ([7ba3e69](https://github.com/unicornops/shuffleboard/commit/7ba3e69802bf6ba35fd8887d030c3406fdb11810)), closes [#137](https://github.com/unicornops/shuffleboard/issues/137)
+* **cards:** show and edit the card start date ([#150](https://github.com/unicornops/shuffleboard/issues/150)) ([ae986d2](https://github.com/unicornops/shuffleboard/commit/ae986d279c1a61e1b4808314d7be34beba6efb7e))
+
+
+### Bug Fixes
+
+* **cards:** focus the new card's title field after Add card ([#148](https://github.com/unicornops/shuffleboard/issues/148)) ([269b9c5](https://github.com/unicornops/shuffleboard/commit/269b9c5eeeeb2acfefb2b2ce1dd87a5af36a5a6d)), closes [#140](https://github.com/unicornops/shuffleboard/issues/140)
+
+
+### Performance Improvements
+
+* **refresh:** skip downloading lists when the board list is unchanged ([#149](https://github.com/unicornops/shuffleboard/issues/149)) ([5c22755](https://github.com/unicornops/shuffleboard/commit/5c227556f569cf36286c05e6cf05aa34aecccb0b)), closes [#141](https://github.com/unicornops/shuffleboard/issues/141)
+
 ## [0.18.0](https://github.com/unicornops/shuffleboard/compare/v0.17.4...v0.18.0) (2026-10-08)
 
 
