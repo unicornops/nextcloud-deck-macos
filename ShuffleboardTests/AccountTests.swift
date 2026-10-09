@@ -261,6 +261,19 @@ final class KeychainStorageTests: XCTestCase {
         XCTAssertTrue(items.stored.isEmpty)
     }
 
+    func testStaysSignedInWhenDeletingTheOldCopyReachesBothKeychains() throws {
+        items.fileDeleteReachesBoth = true
+        items.stored[.file] = try data(accounts("rob"))
+        XCTAssertEqual(storage.load(), accounts("rob"))
+        XCTAssertNil(items.stored[.file])
+        XCTAssertEqual(storage.load(), accounts("rob"), "Signed out at the next launch after the move")
+
+        items.stored[.file] = try data(accounts("rob"))
+        try storage.save(accounts("rob", "alice"))
+        XCTAssertNil(items.stored[.file])
+        XCTAssertEqual(storage.load(), accounts("rob", "alice"), "Signed out at the next launch after saving")
+    }
+
     func testAFailedSaveThrows() {
         items.writeStatus = errSecInteractionNotAllowed
         XCTAssertThrowsError(try storage.save(accounts("rob")))
@@ -274,6 +287,8 @@ private final class FakeKeychainItems: KeychainItems {
     var hasEntitlement = true
     /// Makes writes to the data protection keychain fail with this status.
     var writeStatus: OSStatus?
+    /// Makes deleting the login keychain item also delete the data protection one, as macOS can.
+    var fileDeleteReachesBoth = false
 
     func read(from keychain: Keychain) -> (OSStatus, Data?) {
         if keychain == .dataProtection, !hasEntitlement {
@@ -297,6 +312,10 @@ private final class FakeKeychainItems: KeychainItems {
         if keychain == .dataProtection, !hasEntitlement {
             return errSecMissingEntitlement
         }
-        return stored.removeValue(forKey: keychain) == nil ? errSecItemNotFound : errSecSuccess
+        var removed = stored.removeValue(forKey: keychain) != nil
+        if keychain == .file, fileDeleteReachesBoth {
+            removed = stored.removeValue(forKey: .dataProtection) != nil || removed
+        }
+        return removed ? errSecSuccess : errSecItemNotFound
     }
 }

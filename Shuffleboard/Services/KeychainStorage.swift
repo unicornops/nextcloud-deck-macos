@@ -1,5 +1,8 @@
 import Foundation
+import os
 import Security
+
+private let keychainLogger = Logger(subsystem: "ie.unicornops.shuffleboard", category: "Keychain")
 
 /// Where `AppState` keeps the credentials of every signed-in account.
 protocol CredentialStore {
@@ -63,8 +66,9 @@ struct KeychainStorage {
             status = items.write(data, to: .file)
         } else if status == errSecSuccess {
             // An older copy left in the login keychain would come back if this one were lost.
-            _ = items.delete(from: .file)
+            removeLoginKeychainCopy(keeping: data)
         }
+        keychainLogger.notice("Saved \(accounts.all.count) account(s): \(status)")
         guard status == errSecSuccess else { throw KeychainError.saveFailed(status) }
     }
 
@@ -75,13 +79,30 @@ struct KeychainStorage {
         if status == errSecSuccess, let accounts = Self.decode(data) {
             return accounts
         }
-        let (_, fileData) = items.read(from: .file)
+        let (fileStatus, fileData) = items.read(from: .file)
+        keychainLogger.notice("Data protection keychain: \(status); login keychain: \(fileStatus)")
         guard let accounts = Self.decode(fileData), let fileData else { return SavedAccounts() }
         // Only delete the old item once the new one is written; if the move fails, try again next launch.
-        if status != errSecMissingEntitlement, items.write(fileData, to: .dataProtection) == errSecSuccess {
-            _ = items.delete(from: .file)
+        if status != errSecMissingEntitlement {
+            let moved = items.write(fileData, to: .dataProtection)
+            keychainLogger.notice("Moved to the data protection keychain: \(moved)")
+            if moved == errSecSuccess {
+                removeLoginKeychainCopy(keeping: fileData)
+            }
         }
         return accounts
+    }
+
+    /// Deletes the item in the login keychain, then checks that `data`'s item in the data protection keychain
+    /// is still there, writing it again if not. On macOS, a delete without `kSecUseDataProtectionKeychain` can
+    /// also remove the matching item in the data protection keychain, which signed people out at the next
+    /// launch (0.20.0).
+    private func removeLoginKeychainCopy(keeping data: Data) {
+        guard items.delete(from: .file) == errSecSuccess else { return }
+        let (status, _) = items.read(from: .dataProtection)
+        guard status != errSecSuccess else { return }
+        let rewritten = items.write(data, to: .dataProtection)
+        keychainLogger.notice("Deleting the old copy removed the new one too (\(status)); wrote it again: \(rewritten)")
     }
 
     private static func decode(_ data: Data?) -> SavedAccounts? {
