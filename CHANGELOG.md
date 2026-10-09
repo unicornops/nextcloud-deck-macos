@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/unicornops/shuffleboard/compare/v0.20.0...v0.20.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **keychain:** stay signed in after quitting ([#169](https://github.com/unicornops/shuffleboard/issues/169)) ([1151639](https://github.com/unicornops/shuffleboard/commit/1151639f2c5d0a9f2b5ce88aeada7b4ad7c017a8))
+
 ## [0.20.0](https://github.com/unicornops/shuffleboard/compare/v0.19.0...v0.20.0) (2026-10-08)
 
 
