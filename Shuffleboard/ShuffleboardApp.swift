@@ -5,6 +5,11 @@ struct ShuffleboardApp: App {
     @StateObject private var appState = AppState.atLaunch()
     @StateObject private var updater = SoftwareUpdater()
 
+    init() {
+        // Before the app finishes launching, so a click on a notification that launches it isn't missed.
+        CardReminderClicks.shared.start()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -30,6 +35,10 @@ struct ShuffleboardApp: App {
                     }
                 }
             }
+        }
+        Settings {
+            SettingsView()
+                .environmentObject(appState)
         }
     }
 }

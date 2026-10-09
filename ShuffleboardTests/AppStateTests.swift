@@ -1302,3 +1302,29 @@ extension AppStateTests {
         XCTAssertTrue(app.showingArchivedCards, "an archived card shows in the board's archived cards")
     }
 }
+
+// MARK: - Notifications (#157)
+
+extension AppStateTests {
+    func testClickingANotificationOpensItsBoardAndCard() async throws {
+        let app = await makeKeyboardApp()
+        let account = try XCTUnwrap(app.activeAccount)
+        app.selectedBoardId = 2
+
+        await app.openCard(id: 4, boardId: 1, accountId: account.id)
+
+        XCTAssertEqual(app.selectedBoardId, 1)
+        XCTAssertEqual(app.selectedCardId, 4)
+        XCTAssertEqual(app.openedCard?.title, "Four")
+    }
+
+    func testANotificationForACardThatHasGoneOpensNothing() async throws {
+        let app = await makeKeyboardApp()
+        let account = try XCTUnwrap(app.activeAccount)
+
+        await app.openCard(id: 99, boardId: 1, accountId: account.id)
+        XCTAssertNil(app.openedCard)
+        await app.openCard(id: 4, boardId: 1, accountId: "someone@else.example")
+        XCTAssertNil(app.openedCard, "an account that isn't signed in")
+    }
+}
