@@ -7,7 +7,14 @@ final class AppState: ObservableObject {
     /// Every signed-in account, in the order they were added; `activeAccount` is the one in use.
     @Published private(set) var accounts: [Account] = []
     @Published var boards: [Board] = []
-    @Published var selectedBoardId: Int?
+    @Published var selectedBoardId: Int? {
+        didSet {
+            if selectedBoardId != oldValue {
+                selectedCardId = nil
+                newCardListId = nil
+            }
+        }
+    }
     @Published var stacks: [Stack] = []
     @Published var isLoading = false
     @Published var isLoadingStacks = false
@@ -25,6 +32,18 @@ final class AppState: ObservableObject {
     @Published private(set) var serverDeckVersion: String?
     /// Set while a board is being duplicated.
     @Published private(set) var boardCopyProgress: BoardCopyProgress?
+    /// The card on the open board that the Card menu acts on, outlined on the board (#159).
+    @Published var selectedCardId: Int?
+    /// The card whose sheet is open, on the open board.
+    @Published var openedCard: Card?
+    /// The list showing its "new card" field.
+    @Published var newCardListId: Int?
+    /// The card waiting for the user to confirm deleting it.
+    @Published var cardPendingDelete: Card?
+    @Published var showingNewStack = false
+    @Published var showingNewBoard = false
+    /// Incremented by Edit > Filter Cards, to put the cursor in the filter field.
+    @Published var filterFocusRequest = 0
 
     private var deckAPI: DeckAPI?
     /// Where credentials are kept: the Keychain in the app, an in-memory store in tests.
@@ -300,11 +319,15 @@ final class AppState: ObservableObject {
         await loadBoards()
     }
 
+    /// Creates a card at the end of the list and selects it.
     func createCard(boardId: Int, stackId: Int, title: String) async {
         guard let api = deckAPI else { return }
         do {
-            _ = try await api.createCard(boardId: boardId, stackId: stackId, title: title)
+            let card = try await api.createCard(boardId: boardId, stackId: stackId, title: title)
             await loadStacks(boardId: boardId)
+            if selectedBoardId == boardId {
+                selectedCardId = card.id
+            }
         } catch {
             report(error)
         }

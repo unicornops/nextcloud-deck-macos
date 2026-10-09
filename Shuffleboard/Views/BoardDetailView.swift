@@ -24,14 +24,14 @@ private struct DraggedStack {
 
 struct BoardDetailView: View {
     @EnvironmentObject private var appState: AppState
-    @State private var selectedCard: Card?
-    @State private var newStackTitle = ""
-    @State private var showingNewStack = false
     @State private var showingArchivedCards = false
     @State private var showingSharing = false
     @State private var showingEditBoard = false
     @State private var showingLabels = false
     @State private var stackDragInsertIndex: Int?
+    /// The board has keyboard focus, so the arrow keys move the selected card.
+    @FocusState private var isBoardFocused: Bool
+    @FocusState private var isFilterFocused: Bool
 
     var body: some View {
         Group {
@@ -55,6 +55,10 @@ struct BoardDetailView: View {
         }
         .navigationTitle(appState.selectedBoard?.title ?? "Deck")
         .searchable(text: $appState.cardFilter.text, placement: .toolbar, prompt: "Filter cards")
+        .searchFocusedIfAvailable($isFilterFocused)
+        .onChange(of: appState.filterFocusRequest) {
+            isFilterFocused = true
+        }
         .sheet(isPresented: $showingSharing) {
             if let board = appState.selectedBoard {
                 BoardSharingSheet(boardId: board.id)
@@ -81,22 +85,40 @@ struct BoardDetailView: View {
                     .environmentObject(appState)
             }
         }
-        .sheet(item: $selectedCard) { card in
+        .sheet(item: $appState.openedCard) { card in
             if let board = appState.selectedBoard {
                 // Card actions reload the lists themselves; closing the sheet doesn't need to.
                 CardDetailSheet(card: card, boardId: board.id, onDismiss: {
-                    selectedCard = nil
+                    appState.openedCard = nil
                 })
                 .environmentObject(appState)
             }
         }
-        .sheet(isPresented: $showingNewStack) {
+        .sheet(isPresented: $appState.showingNewStack) {
             if let board = appState.selectedBoard {
                 NewStackSheet(boardId: board.id, onDismiss: {
-                    showingNewStack = false
-                    newStackTitle = ""
+                    appState.showingNewStack = false
                 })
                 .environmentObject(appState)
+            }
+        }
+        .confirmationDialog("Delete card?", isPresented: Binding(
+            get: { appState.cardPendingDelete != nil },
+            set: {
+                if !$0 {
+                    appState.cardPendingDelete = nil
+                }
+            }
+        )) {
+            Button("Delete", role: .destructive) {
+                Task { await appState.deletePendingCard() }
+            }
+            Button("Cancel", role: .cancel) {
+                appState.cardPendingDelete = nil
+            }
+        } message: {
+            if let card = appState.cardPendingDelete {
+                Text(DeleteConfirmation.message("\u{201c}\(card.title)\u{201d}"))
             }
         }
         // The single place lists are loaded on board selection; changing board cancels the previous load.
@@ -167,7 +189,7 @@ struct BoardDetailView: View {
             .accessibilityLabel("Refresh lists")
             .disabled(appState.isLoadingStacks)
             Button {
-                showingNewStack = true
+                appState.showingNewStack = true
             } label: {
                 SwiftUI.Label("Add list", systemImage: "plus.rectangle.on.rectangle")
             }
@@ -296,7 +318,10 @@ struct BoardDetailView: View {
                         StackColumnView(
                             board: board,
                             stack: stack,
-                            onSelectCard: { selectedCard = $0 }
+                            onSelectCard: { card in
+                                appState.selectedCardId = card.id
+                                appState.openedCard = card
+                            }
                         )
                         .environmentObject(appState)
                         .onDrag {
@@ -314,6 +339,24 @@ struct BoardDetailView: View {
                 .padding(20)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .focusable()
+            .focused($isBoardFocused)
+            .focusEffectDisabled()
+            .onKeyPress(keys: [.upArrow, .downArrow, .leftArrow, .rightArrow, .return]) { press in
+                handleKey(press.key)
+            }
+            .onChange(of: appState.selectedCardId) { _, id in
+                // A card selected from the menus or by creating it: the arrow keys carry on from there.
+                if id != nil, appState.openedCard == nil, appState.newCardListId == nil {
+                    isBoardFocused = true
+                }
+            }
+            .onChange(of: appState.openedCard?.id) { _, id in
+                // Back from the card's sheet: carry on with the keyboard.
+                if id == nil, appState.selectedCardId != nil {
+                    isBoardFocused = true
+                }
+            }
             .onDrop(of: stackDropTypes, isTargeted: nil) { _ in
                 // Catch-all: reset stack-dragging state for drops that miss a gap
                 dragLogger.notice("Drop outside the lists ignored")
@@ -366,6 +409,21 @@ struct BoardDetailView: View {
         )
     }
 
+    /// The arrow keys move the selection between cards; Return opens the selected card.
+    private func handleKey(_ key: KeyEquivalent) -> KeyPress.Result {
+        switch key {
+        case .upArrow: appState.selectCard(.up)
+        case .downArrow: appState.selectCard(.down)
+        case .leftArrow: appState.selectCard(.left)
+        case .rightArrow: appState.selectCard(.right)
+        case .return:
+            guard appState.selectedCard != nil else { return .ignored }
+            appState.openSelectedCard()
+        default: return .ignored
+        }
+        return .handled
+    }
+
     private func handleStackDrop(providers: [NSItemProvider], insertIndex: Int, boardId: Int) -> Bool {
         providers.loadDroppedText { text in
             Task { @MainActor in
@@ -384,4 +442,16 @@ struct BoardDetailView: View {
 #Preview {
     BoardDetailView()
         .environmentObject(AppState())
+}
+
+private extension View {
+    /// Lets ⌘F (Edit > Filter Cards) put the cursor in the filter field; macOS 14 has no way to.
+    @ViewBuilder
+    func searchFocusedIfAvailable(_ isFocused: FocusState<Bool>.Binding) -> some View {
+        if #available(macOS 15.0, *) {
+            searchFocused(isFocused)
+        } else {
+            self
+        }
+    }
 }
