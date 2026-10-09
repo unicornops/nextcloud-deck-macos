@@ -62,6 +62,12 @@ final class ServerDeckAPITests: XCTestCase {
         XCTAssertEqual(version, server.deckVersion)
     }
 
+    /// Reminders match assignments against the user id the server reports (#157).
+    func testCurrentUserId() async throws {
+        let userId = try await api.currentUserId()
+        XCTAssertEqual(userId, TestServer.alice)
+    }
+
     // MARK: - Duplicating boards (#137)
 
     /// The copy matches the source: colour, labels (Deck's defaults replaced), lists in order, and active cards with

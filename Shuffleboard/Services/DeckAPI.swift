@@ -534,6 +534,18 @@ extension DeckAPI {
         return try decoder.decode(OCSResponse<Capabilities>.self, from: data).ocs.data.capabilities.deck?.version
     }
 
+    /// The signed-in user's id, which Deck's assignments use. It can differ from the name they signed in with (an
+    /// email address, or different capitals). From Nextcloud's user API (`GET /ocs/v2.php/cloud/user`).
+    func currentUserId() async throws -> String {
+        let url = capabilitiesURL.deletingLastPathComponent().appendingPathComponent("user")
+        let (data, _) = try await performRequest(url: url, method: "GET")
+        return try decoder.decode(OCSResponse<CurrentUser>.self, from: data).ocs.data.id
+    }
+
+    private struct CurrentUser: Decodable {
+        let id: String
+    }
+
     /// Whether `version` ("1.16.8") is `minimum` ("1.17") or newer; missing parts count as 0.
     static func version(_ version: String, isAtLeast minimum: String) -> Bool {
         let have = version.split(separator: ".").map { Int($0) ?? 0 }

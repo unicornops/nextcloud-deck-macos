@@ -1314,10 +1314,15 @@ extension AppState {
 
     /// Fetches the boards that changed and updates the active account's reminders; with reminders off, does nothing.
     func updateReminders() async {
-        guard let reminders, let account = activeAccount else { return }
+        guard let reminders, let api = deckAPI, let account = activeAccount else { return }
+        if reminders.userId(for: account.id) == nil, let userId = try? await api.currentUserId() {
+            reminders.setUserId(userId, for: account.id)
+        }
         await loadAllCards()
         guard activeAccount?.id == account.id else { return }
-        await reminders.update(cards: remindableCards, userId: account.username, accountId: account.id, now: now())
+        // Until the server says, the name the user signed in with, which is usually their user id.
+        let userId = reminders.userId(for: account.id) ?? account.username
+        await reminders.update(cards: remindableCards, userId: userId, accountId: account.id, now: now())
     }
 
     /// Opens a card from a clicked notification: switches to its account if need be, then opens its board and the

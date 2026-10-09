@@ -1,11 +1,13 @@
 import Foundation
 
-/// A notification about a card (#157): it's due soon, it's overdue, or it was just assigned to you.
+/// A notification about a card (#157): it's due soon, it's overdue, or it was just assigned to you; or, at startup,
+/// the cards that are already overdue.
 struct CardReminder: Equatable, Sendable {
     enum Kind: String, Sendable {
         case dueSoon
         case overdue
         case assigned
+        case overdueSummary
     }
 
     let kind: Kind
@@ -85,6 +87,37 @@ enum CardReminders {
             body: place(item),
             date: now,
             dueDate: nil
+        )
+    }
+
+    /// One notification for every undone card assigned to `userId` that is already overdue, shown when the app
+    /// starts instead of one per card; nil if none is. It opens the card that has been overdue longest.
+    static func overdueSummary(for cards: [RemindableCard], userId: String, accountId: String, now: Date)
+        -> CardReminder? {
+        let overdue = cards
+            .filter { isAssigned($0.card, to: userId) && $0.card.isOverdue(at: now) }
+            .sorted { ($0.card.dueDate ?? now) < ($1.card.dueDate ?? now) }
+        guard let first = overdue.first else { return nil }
+        let title: String
+        let body: String
+        if overdue.count == 1 {
+            title = "Overdue: \(first.card.title)"
+            body = place(first)
+        } else {
+            title = "\(overdue.count) cards are overdue"
+            let named = overdue.prefix(3).map(\.card.title).joined(separator: ", ")
+            body = overdue.count > 3 ? "\(named) and \(overdue.count - 3) more" : named
+        }
+        return CardReminder(
+            kind: .overdueSummary,
+            accountId: accountId,
+            boardId: first.board.id,
+            cardId: first.card.id,
+            title: title,
+            body: body,
+            date: now,
+            // Unique per startup, so it's never mistaken for one already shown.
+            dueDate: now
         )
     }
 

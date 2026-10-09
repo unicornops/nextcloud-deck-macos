@@ -125,12 +125,52 @@ final class CardReminderTests: XCTestCase {
 
     // MARK: - Scheduling and showing
 
-    func testTheFirstLookShowsNothingOldAndSchedulesWhatsAhead() async throws {
+    func testTheFirstLookSumsUpOverdueCardsAndSchedulesWhatsAhead() async throws {
         try await update([card(1, dueIn: -hour), card(2, dueIn: 72 * hour)])
 
-        XCTAssertTrue(notifications.shown.isEmpty, "nothing old on the first look")
+        XCTAssertEqual(notifications.shown.map(\.kind), [.overdueSummary], "one summary, nothing else old")
+        XCTAssertEqual(notifications.shown.first?.title, "Overdue: Card 1")
         XCTAssertEqual(notifications.pending.values.map(\.cardId).sorted(), [2, 2])
         XCTAssertEqual(notifications.permissionRequests, 1)
+    }
+
+    func testOverdueCardsAreSummedUpOnceEachTimeTheAppStarts() async throws {
+        let cards = try [
+            card(1, dueIn: -2 * hour),
+            card(2, dueIn: -5 * hour),
+            card(3, dueIn: -1 * hour),
+            card(4, dueIn: -3 * hour),
+            card(5, dueIn: -3 * hour, done: true),
+        ]
+        // A first launch that already knew these cards.
+        await update(cards)
+        notifications.clearShown()
+
+        // The next launch: a new sync with what the last one saved.
+        sync = CardReminderSync(notifications: notifications, defaults: defaults)
+        await update(cards)
+        XCTAssertEqual(notifications.shown.count, 1)
+        let summary = try XCTUnwrap(notifications.shown.first)
+        XCTAssertEqual(summary.kind, .overdueSummary)
+        XCTAssertEqual(summary.title, "4 cards are overdue")
+        XCTAssertEqual(summary.body, "Card 2, Card 4, Card 1 and 1 more", "longest overdue first")
+        XCTAssertEqual(summary.cardId, 2, "opens the card overdue longest")
+
+        await update(cards)
+        XCTAssertEqual(notifications.shown.count, 1, "once per launch")
+    }
+
+    func testNoSummaryWithDueDateRemindersOff() async throws {
+        defaults.set(false, forKey: CardReminderSync.dueRemindersKey)
+        try await update([card(1, dueIn: -hour)])
+        XCTAssertTrue(notifications.shown.isEmpty)
+    }
+
+    func testTheUserIdIsRememberedPerAccount() {
+        XCTAssertNil(sync.userId(for: "a"))
+        sync.setUserId("rob", for: "a")
+        XCTAssertEqual(sync.userId(for: "a"), "rob")
+        XCTAssertNil(sync.userId(for: "b"))
     }
 
     func testRemindersAreNotShownTwice() async throws {
@@ -254,5 +294,9 @@ final class FakeReminderNotifications: ReminderNotifications {
         for id in ids {
             scheduled[id] = nil
         }
+    }
+
+    func clearShown() {
+        shown = []
     }
 }

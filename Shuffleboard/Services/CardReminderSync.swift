@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let reminderLogger = Logger(subsystem: "ie.unicornops.shuffleboard", category: "Reminders")
 
 /// The system's notifications, as `CardReminderSync` uses them, so it can be tested without them.
 @MainActor
@@ -22,8 +25,9 @@ struct ReminderState: Codable, Equatable {
 
 /// Keeps macOS's notifications in step with the cards (#157): schedules reminders for due dates, shows the ones
 /// whose time has come, cancels those no longer needed (done, archived, unassigned, due date changed) and says when
-/// a card is newly assigned to the user. Nothing old is shown the first time an account is seen, and nothing is
-/// shown twice. Each kind can be turned off in Settings.
+/// a card is newly assigned to the user. When the app starts, one notification sums up the cards already overdue;
+/// otherwise nothing old is shown the first time an account is seen, and nothing is shown twice. Each kind can be
+/// turned off in Settings.
 @MainActor
 final class CardReminderSync {
     /// UserDefaults keys for the two settings; both default to on.
@@ -36,6 +40,10 @@ final class CardReminderSync {
     private let defaults: UserDefaults
     /// Cards the user assigned to themselves in the app, which don't need a notification.
     private var selfAssigned: Set<Int> = []
+    /// Accounts whose overdue cards have been summed up since the app started.
+    private var summarized: Set<String> = []
+    /// Each account's user id on its server, once known (see `DeckAPI.currentUserId`).
+    private var userIds: [String: String] = [:]
 
     init(notifications: ReminderNotifications, defaults: UserDefaults = .standard) {
         self.notifications = notifications
@@ -50,7 +58,7 @@ final class CardReminderSync {
     /// have one; reminders for other accounts are cancelled.
     func update(cards: [RemindableCard], userId: String, accountId: String, now: Date) async {
         let previous = state(for: accountId)
-        var state = previous ?? ReminderState()
+        let state = previous ?? ReminderState()
         let isFirstLook = previous == nil
 
         let due = CardReminders.dueReminders(for: cards, userId: userId, accountId: accountId, now: now)
@@ -69,12 +77,29 @@ final class CardReminderSync {
         if isFirstLook {
             immediate = []
         }
+        // The first time since the app started: one notification for everything already overdue, instead of one
+        // per card.
+        if showDue, !summarized.contains(accountId) {
+            summarized.insert(accountId)
+            immediate.removeAll { $0.kind == .overdue }
+            if let summary = CardReminders.overdueSummary(for: cards, userId: userId, accountId: accountId, now: now) {
+                immediate.append(summary)
+            }
+        }
 
         let pending = await notifications.pendingIds()
         let wanted = Set(scheduled.map(\.id))
         notifications.remove(ids: pending.subtracting(wanted))
         let toAdd = scheduled.filter { !pending.contains($0.id) }
-        if !toAdd.isEmpty || !immediate.isEmpty, await notifications.requestPermission() {
+        reminderLogger.notice(
+            "\(cards.count) cards, \(assignedNow.count) assigned to \(userId, privacy: .private): \(toAdd.count) to schedule, \(immediate.count) to show"
+        )
+        var allowed = false
+        if !toAdd.isEmpty || !immediate.isEmpty {
+            allowed = await notifications.requestPermission()
+            reminderLogger.notice("Notifications allowed: \(allowed)")
+        }
+        if allowed {
             for reminder in toAdd {
                 await notifications.add(reminder, at: reminder.date)
             }
@@ -82,7 +107,19 @@ final class CardReminderSync {
                 await notifications.add(reminder, at: nil)
             }
         }
+        finish(state, accountId: accountId, due: due, wanted: wanted, assignedNow: assignedNow, now: now)
+    }
 
+    /// Saves what this update handled.
+    private func finish(
+        _ state: ReminderState,
+        accountId: String,
+        due: [CardReminder],
+        wanted: Set<String>,
+        assignedNow: Set<Int>,
+        now: Date
+    ) {
+        var state = state
         // Past reminders count as handled whether shown or not (turned off, first look, no permission), so turning
         // reminders on later doesn't bring old ones back. Only reminders that still apply are kept.
         let past = due.filter { $0.date <= now }.map(\.id)
@@ -90,6 +127,15 @@ final class CardReminderSync {
         state.assigned = assignedNow
         selfAssigned.subtract(assignedNow)
         save(state, for: accountId)
+    }
+
+    /// The user id Deck's assignments use for `accountId`, once `setUserId` has recorded it.
+    func userId(for accountId: String) -> String? {
+        userIds[accountId]
+    }
+
+    func setUserId(_ userId: String, for accountId: String) {
+        userIds[accountId] = userId
     }
 
     /// The user assigned themselves to `cardId` in the app; no need to tell them.
