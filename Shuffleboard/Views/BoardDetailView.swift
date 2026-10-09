@@ -24,7 +24,6 @@ private struct DraggedStack {
 
 struct BoardDetailView: View {
     @EnvironmentObject private var appState: AppState
-    @State private var showingArchivedCards = false
     @State private var showingSharing = false
     @State private var showingEditBoard = false
     @State private var showingLabels = false
@@ -79,7 +78,7 @@ struct BoardDetailView: View {
                     .environmentObject(appState)
             }
         }
-        .sheet(isPresented: $showingArchivedCards) {
+        .sheet(isPresented: $appState.showingArchivedCards) {
             if let board = appState.selectedBoard {
                 ArchivedCardsSheet(board: board)
                     .environmentObject(appState)
@@ -169,7 +168,7 @@ struct BoardDetailView: View {
                 .accessibilityLabel("Labels")
             }
             Button {
-                showingArchivedCards = true
+                appState.showingArchivedCards = true
             } label: {
                 Image(systemName: "archivebox")
             }

@@ -45,6 +45,14 @@ final class AppState: ObservableObject {
     @Published var showingNewBoard = false
     /// Incremented by Edit > Filter Cards, to put the cursor in the filter field.
     @Published var filterFocusRequest = 0
+    @Published var showingArchivedCards = false
+    /// Every board's cards, by board id, for searching all boards (#158); see `loadAllCards`.
+    @Published private(set) var allCards: [Int: BoardCards] = [:]
+    @Published private(set) var isLoadingAllCards = false
+    /// What the sidebar's search field is searching every board for.
+    @Published var cardSearchText = ""
+    /// Incremented by Edit > Search All Boards, to put the cursor in the sidebar's search field.
+    @Published var cardSearchFocusRequest = 0
 
     private var deckAPI: DeckAPI?
     /// Where credentials are kept: the Keychain in the app, an in-memory store in tests.
@@ -1181,5 +1189,104 @@ extension AppState {
         cardFilter = CardFilter()
         actionError = nil
         errorMessage = nil
+    }
+}
+
+// MARK: - Searching all boards (#158)
+
+@MainActor
+extension AppState {
+    /// Boards fetched at once by `loadAllCards`.
+    private static let allCardsConcurrency = 4
+
+    /// Fetches the cards of every board in the sidebar into `allCards`, skipping boards that haven't changed since
+    /// they were last fetched (see `BoardCards.isCurrent`). With `includingArchived`, fetches archived cards too.
+    /// A board that fails to load keeps what it had and is tried again next time; boards no longer listed are
+    /// dropped.
+    func loadAllCards(includingArchived: Bool = false) async {
+        guard let api = deckAPI else { return }
+        let boards = boardsInSidebarOrder
+        let started = now()
+        let listedAt = boardsETagDate ?? started
+        let cached = allCards
+        let stale = boards.filter { board in
+            guard let cards = cached[board.id], cards.isCurrent(for: board) else { return true }
+            return includingArchived && cards.archivedStacks == nil
+        }
+        isLoadingAllCards = true
+        defer { isLoadingAllCards = false }
+        var fetched: [Int: (stacks: [Stack], archived: [Stack]?)] = [:]
+        for start in stride(from: 0, to: stale.count, by: Self.allCardsConcurrency) {
+            let batch = stale[start ..< min(start + Self.allCardsConcurrency, stale.count)]
+            await withTaskGroup(of: (Int, [Stack], [Stack]?)?.self) { group in
+                for id in batch.map(\.id) {
+                    group.addTask {
+                        await Self.fetchCards(ofBoard: id, api: api, includingArchived: includingArchived)
+                    }
+                }
+                for await result in group {
+                    if let (id, stacks, archived) = result {
+                        fetched[id] = (stacks, archived)
+                    }
+                }
+            }
+        }
+        guard api === deckAPI else { return }
+        var updated = cached.filter { id, _ in boards.contains { $0.id == id } }
+        for board in boards {
+            guard let (stacks, archived) = fetched[board.id] else { continue }
+            let previous = updated[board.id]
+            updated[board.id] = BoardCards(
+                stacks: stacks,
+                archivedStacks: archived,
+                lastModified: board.lastModified,
+                lastModifiedSeen: previous?.lastModified == board.lastModified
+                    ? previous?.lastModifiedSeen ?? listedAt
+                    : listedAt,
+                fetched: started
+            )
+        }
+        allCards = updated
+    }
+
+    /// One board's lists, and with `includingArchived` its archived cards; nil if the lists fail to load.
+    private nonisolated static func fetchCards(
+        ofBoard id: Int,
+        api: DeckAPI,
+        includingArchived: Bool
+    ) async
+        -> (Int, [Stack], [Stack]?)? {
+        guard let stacks = try? await api.fetchStacks(boardId: id, ifNoneMatch: nil) else { return nil }
+        let archived = includingArchived ? try? await api.getArchivedStacks(boardId: id) : nil
+        return (id, stacks.value, archived)
+    }
+
+    /// Brings the board list and every board's cards up to date for the sidebar's search.
+    func loadCardsForSearch() async {
+        await refreshIfChanged()
+        await loadAllCards(includingArchived: true)
+    }
+
+    /// What searching finds on `board`: the open board's lists as shown, else the board's cards from `allCards`.
+    func searchableCards(of board: Board) -> SearchableCards {
+        let cards = allCards[board.id]
+        let stacks = board.id == stacksBoardId && board.id == selectedBoardId ? stacks : cards?.stacks ?? []
+        return SearchableCards(stacks: stacks, archivedStacks: cards?.archivedStacks ?? [])
+    }
+
+    /// The cards matching the sidebar's search, grouped by board.
+    var cardSearchResults: [BoardSearchResults] {
+        CardSearch.results(for: cardSearchText, in: boardsInSidebarOrder, cards: searchableCards(of:))
+    }
+
+    /// Opens a search result's board and the card; an archived card shows in the board's archived cards.
+    func open(_ result: CardSearchResult) {
+        selectedBoardId = result.boardId
+        if result.card.archived {
+            showingArchivedCards = true
+        } else {
+            selectedCardId = result.card.id
+            openedCard = result.card
+        }
     }
 }

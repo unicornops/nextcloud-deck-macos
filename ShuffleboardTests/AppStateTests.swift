@@ -1198,3 +1198,107 @@ extension AppStateTests {
         XCTAssertEqual(app.selectedCardId, 9)
     }
 }
+
+// MARK: - Searching all boards (#158)
+
+extension AppStateTests {
+    private nonisolated static let searchBoardsJSON = """
+    [{"id": 1, "title": "One", "archived": false, "lastModified": 100},
+     {"id": 2, "title": "Two", "archived": false, "lastModified": 200}]
+    """
+
+    private nonisolated static func searchStacksJSON(board: Int, cards: String) -> String {
+        #"[{"id": \#(board * 10), "title": "List \#(board)", "boardId": \#(board), "order": 0, "cards": [\#(cards)]}]"#
+    }
+
+    /// Board 1 has "Paint door"; board 2 has "Paint office" and, archived, "Paint shed".
+    private func makeSearchApp() async -> AppState {
+        StubURLProtocol.handler = { request in
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.searchBoardsJSON)
+            }
+            let board = request.path.contains("/boards/2/") ? 2 : 1
+            if request.path.hasSuffix("/stacks/archived") {
+                return .json(Self.searchStacksJSON(
+                    board: board,
+                    cards: board == 2 ?
+                        #"{"id": 23, "title": "Paint shed", "stackId": 20, "order": 0, "archived": true}"# : ""
+                ))
+            }
+            return .json(Self.searchStacksJSON(
+                board: board,
+                cards: board == 2 ? #"{"id": 22, "title": "Paint office", "stackId": 20, "order": 0}"#
+                    : #"{"id": 11, "title": "Paint door", "stackId": 10, "order": 0}"#
+            ))
+        }
+        return await makeSignedInApp()
+    }
+
+    /// Requests for paths ending in `suffix` after the first `skipping` requests.
+    private func requestCount(_ suffix: String, skipping skipped: Int) -> Int {
+        StubURLProtocol.requests.dropFirst(skipped).count { $0.path.hasSuffix(suffix) }
+    }
+
+    func testLoadingAllCardsSkipsBoardsThatHaventChanged() async {
+        let app = await makeSearchApp()
+        let before = StubURLProtocol.requests.count
+        func requestCount(_ suffix: String) -> Int {
+            self.requestCount(suffix, skipping: before)
+        }
+        var clock = Date()
+        app.now = { clock }
+
+        await app.loadAllCards()
+        XCTAssertEqual(requestCount("/boards/1/stacks") + requestCount("/boards/2/stacks"), 2)
+        XCTAssertEqual(app.allCards[2]?.stacks.first?.cards?.first?.title, "Paint office")
+
+        clock += 60
+        await app.loadAllCards()
+        XCTAssertEqual(
+            requestCount("/boards/1/stacks") + requestCount("/boards/2/stacks"), 4,
+            "fetched in the second the change was reported: fetched again to be sure"
+        )
+
+        clock += 60
+        await app.loadAllCards()
+        XCTAssertEqual(requestCount("/boards/1/stacks") + requestCount("/boards/2/stacks"), 4, "unchanged: skipped")
+
+        app.boards[1].lastModified = 300
+        clock += 60
+        await app.loadAllCards()
+        XCTAssertEqual(requestCount("/boards/1/stacks"), 2, "board 1 unchanged")
+        XCTAssertEqual(requestCount("/boards/2/stacks"), 3, "board 2 changed")
+        XCTAssertEqual(requestCount("/stacks/archived"), 0, "archived cards only when asked")
+    }
+
+    func testSearchingFindsCardsOnEveryBoardIncludingArchivedOnes() async {
+        let app = await makeSearchApp()
+        let before = StubURLProtocol.requests.count
+
+        app.cardSearchText = "paint"
+        await app.loadCardsForSearch()
+
+        let groups = app.cardSearchResults
+        XCTAssertEqual(groups.map(\.board.title), ["One", "Two"])
+        XCTAssertEqual(groups.flatMap(\.results).map(\.card.title), ["Paint door", "Paint office", "Paint shed"])
+        XCTAssertEqual(requestCount("/stacks/archived", skipping: before), 2)
+    }
+
+    func testOpeningASearchResultOpensItsBoardAndCard() async throws {
+        let app = await makeSearchApp()
+        app.cardSearchText = "paint"
+        await app.loadCardsForSearch()
+        let results = app.cardSearchResults.flatMap(\.results)
+
+        try app.open(XCTUnwrap(results.first { $0.card.title == "Paint office" }))
+        XCTAssertEqual(app.selectedBoardId, 2)
+        XCTAssertEqual(app.selectedCardId, 22)
+        XCTAssertEqual(app.openedCard?.id, 22)
+        XCTAssertFalse(app.showingArchivedCards)
+
+        app.openedCard = nil
+        try app.open(XCTUnwrap(results.first { $0.card.title == "Paint shed" }))
+        XCTAssertNil(app.openedCard)
+        XCTAssertTrue(app.showingArchivedCards, "an archived card shows in the board's archived cards")
+    }
+}

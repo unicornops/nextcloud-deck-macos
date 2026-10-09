@@ -253,6 +253,43 @@ final class ServerAppStateTests: XCTestCase {
         }
     }
 
+    /// Searching all boards finds cards on every board, archived ones too, and picks up cards added since (#158).
+    func testSearchingAllBoards() async throws {
+        let app = try await signedInApp()
+        let other = try await server.api(for: TestServer.alice)
+        let word = uniqueTitle("Needle").replacingOccurrences(of: " ", with: "")
+        try await withTemporaryBoard(other) { first in
+            try await withTemporaryBoard(other) { second in
+                let firstList = try await other.createStack(boardId: first.id, title: "To do")
+                let secondList = try await other.createStack(boardId: second.id, title: "Doing")
+                _ = try await other.createCard(boardId: first.id, stackId: firstList.id, title: "\(word) one")
+                let archived = try await other.createCard(
+                    boardId: second.id,
+                    stackId: secondList.id,
+                    title: "\(word) two"
+                )
+                try await other.archiveCard(boardId: second.id, stackId: secondList.id, cardId: archived.id)
+                _ = try await other.createCard(boardId: second.id, stackId: secondList.id, title: "Haystack")
+                await app.loadBoards()
+
+                app.cardSearchText = word
+                await app.loadCardsForSearch()
+                let found = app.cardSearchResults.filter { [first.id, second.id].contains($0.board.id) }
+                XCTAssertEqual(Set(found.map(\.board.id)), [first.id, second.id])
+                let titles = found.flatMap(\.results).map { "\($0.card.title) in \($0.listTitle)" }
+                XCTAssertEqual(Set(titles), ["\(word) one in To do", "\(word) two in Doing"])
+                XCTAssertEqual(found.flatMap(\.results).first { $0.card.id == archived.id }?.card.archived, true)
+
+                // A card added elsewhere: the board list reports the change, so the board is fetched again.
+                await sleep(seconds: 1.6)
+                _ = try await other.createCard(boardId: first.id, stackId: firstList.id, title: "\(word) three")
+                await app.loadCardsForSearch()
+                let again = app.cardSearchResults.flatMap(\.results).map(\.card.title)
+                XCTAssertTrue(again.contains("\(word) three"), "New card not found: \(again)")
+            }
+        }
+    }
+
     // MARK: - Accounts
 
     func testSwitchingBetweenTwoAccounts() async throws {
