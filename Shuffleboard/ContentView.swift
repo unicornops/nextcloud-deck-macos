@@ -29,16 +29,26 @@ struct ContentView: View {
         .actionErrorBanner(appState)
         .task {
             await appState.loadBoardsIfNeeded()
+            await appState.updateReminders()
         }
         // Pick up changes made elsewhere: when the app comes back to the front, and every minute while open.
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            Task { await appState.refreshIfChanged() }
+            Task {
+                await appState.refreshIfChanged()
+                await appState.updateReminders()
+            }
         }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(Self.refreshInterval))
                 await appState.refreshIfChanged()
+                await appState.updateReminders()
             }
+        }
+        .onReceive(CardReminderClicks.shared.$clicked) { clicked in
+            guard let clicked else { return }
+            CardReminderClicks.shared.clicked = nil
+            Task { await appState.openCard(id: clicked.cardId, boardId: clicked.boardId, accountId: clicked.accountId) }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

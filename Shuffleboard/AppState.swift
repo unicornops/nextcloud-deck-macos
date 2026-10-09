@@ -61,6 +61,8 @@ final class AppState: ObservableObject {
     private let session: URLSession
     /// Opens the browser for sign-in.
     private let openURL: @MainActor @Sendable (URL) -> Void
+    /// Notifications about due and newly assigned cards (#157); nil in tests and UI tests.
+    let reminders: CardReminderSync?
     /// The board `stacks` currently belongs to.
     private var stacksBoardId: Int?
     /// Incremented by every `loadStacks` call; a response is only applied if no newer load has started.
@@ -107,11 +109,13 @@ final class AppState: ObservableObject {
     init(
         credentialStore: CredentialStore = KeychainCredentialStore(),
         session: URLSession = .shared,
-        openURL: @escaping @MainActor @Sendable (URL) -> Void = { url in _ = NSWorkspace.shared.open(url) }
+        openURL: @escaping @MainActor @Sendable (URL) -> Void = { url in _ = NSWorkspace.shared.open(url) },
+        reminders: CardReminderSync? = nil
     ) {
         self.credentialStore = credentialStore
         self.session = session
         self.openURL = openURL
+        self.reminders = reminders
         self.savedAccounts = credentialStore.load()
         self.accounts = savedAccounts.accounts
         if let creds = savedAccounts.active {
@@ -211,6 +215,7 @@ final class AppState: ObservableObject {
     /// in, switches to it; otherwise returns to the login screen. Does not contact the server; see `signOut()`.
     func logout() {
         if let account = activeAccount {
+            Task { [reminders] in await reminders?.forget(accountId: account.id) }
             savedAccounts.remove(account.id)
             try? credentialStore.save(savedAccounts)
         }
@@ -919,6 +924,9 @@ extension AppState {
     /// Assigns `user` to the card (errors go to the banner).
     func assignUser(_ user: DeckUser, boardId: Int, card: Card) async {
         guard let api = deckAPI else { return }
+        if user.uid == currentUserId {
+            reminders?.noteSelfAssigned(cardId: card.id)
+        }
         do {
             try await api.assignUser(boardId: boardId, stackId: card.stackId, cardId: card.id, userId: user.uid)
             await loadStacks(boardId: boardId)
@@ -1288,5 +1296,42 @@ extension AppState {
             selectedCardId = result.card.id
             openedCard = result.card
         }
+    }
+}
+
+// MARK: - Notifications (#157)
+
+@MainActor
+extension AppState {
+    /// Every active card on the boards that aren't archived, for reminders.
+    var remindableCards: [RemindableCard] {
+        activeBoards.flatMap { board in
+            searchableCards(of: board).stacks.flatMap { stack in
+                stack.activeCards.map { RemindableCard(card: $0, board: board, listTitle: stack.title) }
+            }
+        }
+    }
+
+    /// Fetches the boards that changed and updates the active account's reminders; with reminders off, does nothing.
+    func updateReminders() async {
+        guard let reminders, let account = activeAccount else { return }
+        await loadAllCards()
+        guard activeAccount?.id == account.id else { return }
+        await reminders.update(cards: remindableCards, userId: account.username, accountId: account.id, now: now())
+    }
+
+    /// Opens a card from a clicked notification: switches to its account if need be, then opens its board and the
+    /// card. Does nothing if the account has signed out or the card has gone.
+    func openCard(id cardId: Int, boardId: Int, accountId: Account.ID) async {
+        if activeAccount?.id != accountId, let account = accounts.first(where: { $0.id == accountId }) {
+            await switchAccount(to: account)
+        }
+        guard activeAccount?.id == accountId, boards.contains(where: { $0.id == boardId }) else { return }
+        selectedBoardId = boardId
+        await loadStacks(boardId: boardId)
+        guard selectedBoardId == boardId,
+              let card = stacks.lazy.flatMap(\.activeCards).first(where: { $0.id == cardId }) else { return }
+        selectedCardId = card.id
+        openedCard = card
     }
 }

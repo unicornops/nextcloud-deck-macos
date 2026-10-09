@@ -1,0 +1,94 @@
+import Foundation
+
+/// A notification about a card (#157): it's due soon, it's overdue, or it was just assigned to you.
+struct CardReminder: Equatable, Sendable {
+    enum Kind: String, Sendable {
+        case dueSoon
+        case overdue
+        case assigned
+    }
+
+    let kind: Kind
+    let accountId: String
+    let boardId: Int
+    let cardId: Int
+    let title: String
+    let body: String
+    /// When it's due to be shown; on or before now means straight away.
+    let date: Date
+    /// For a due-date reminder, the due date it's for: a new due date makes a new reminder.
+    let dueDate: Date?
+
+    /// Stable for a card, kind and due date, so a reminder isn't shown twice and a changed due date replaces it.
+    var id: String {
+        let due = dueDate.map { String(Int($0.timeIntervalSince1970)) } ?? "-"
+        return "card-reminder|\(kind.rawValue)|\(accountId)|\(cardId)|\(due)"
+    }
+}
+
+/// A card that could have reminders: an active card on a board that isn't archived, with where it is.
+struct RemindableCard {
+    let card: Card
+    let board: Board
+    let listTitle: String
+}
+
+/// Which reminders the cards need (#157). Only cards assigned to the signed-in user get them, and only while they're
+/// not done; archived cards and cards on archived boards aren't passed in.
+enum CardReminders {
+    /// How long before a card's due date the "due soon" reminder is shown.
+    static let dueSoonLead: TimeInterval = 24 * 60 * 60
+
+    static func isAssigned(_ card: Card, to userId: String) -> Bool {
+        card.assignments.contains { $0.type == CardAssignment.userType && $0.participant.uid == userId }
+    }
+
+    /// For each undone card assigned to `userId` with a due date: a reminder a day before it's due (or straight away
+    /// if that has passed but the card isn't due yet) and one when it's due.
+    static func dueReminders(for cards: [RemindableCard], userId: String, accountId: String, now: Date)
+        -> [CardReminder] {
+        cards.flatMap { item -> [CardReminder] in
+            guard let due = item.card.dueDate, !item.card.isDone, isAssigned(item.card, to: userId) else { return [] }
+            let soon = CardReminder(
+                kind: .dueSoon,
+                accountId: accountId,
+                boardId: item.board.id,
+                cardId: item.card.id,
+                title: "Due soon: \(item.card.title)",
+                body: "\(place(item)) \u{00b7} due \(due.formatted(date: .abbreviated, time: .shortened))",
+                date: max(due.addingTimeInterval(-dueSoonLead), min(now, due)),
+                dueDate: due
+            )
+            let overdue = CardReminder(
+                kind: .overdue,
+                accountId: accountId,
+                boardId: item.board.id,
+                cardId: item.card.id,
+                title: "Overdue: \(item.card.title)",
+                body: "\(place(item)) \u{00b7} was due \(due.formatted(date: .abbreviated, time: .shortened))",
+                date: due,
+                dueDate: due
+            )
+            // Once it's overdue, "due soon" is old news.
+            return due > now ? [soon, overdue] : [overdue]
+        }
+    }
+
+    /// A reminder that `item` was just assigned to the user.
+    static func assignedReminder(for item: RemindableCard, accountId: String, now: Date) -> CardReminder {
+        CardReminder(
+            kind: .assigned,
+            accountId: accountId,
+            boardId: item.board.id,
+            cardId: item.card.id,
+            title: "Assigned to you: \(item.card.title)",
+            body: place(item),
+            date: now,
+            dueDate: nil
+        )
+    }
+
+    private static func place(_ item: RemindableCard) -> String {
+        "\(item.board.title) \u{203a} \(item.listTitle)"
+    }
+}
