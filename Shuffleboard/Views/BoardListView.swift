@@ -16,91 +16,85 @@ struct BoardListView: View {
     }
 
     var body: some View {
-        Group {
-            if isSearching {
-                CardSearchResultsView(highlighted: highlightedResult)
-            } else {
-                boardList
-            }
-        }
-        .listStyle(.sidebar)
-        .navigationTitle("Boards")
-        .frame(minWidth: 200)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await appState.refresh() }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
+        boardList
+            .listStyle(.sidebar)
+            .navigationTitle("Boards")
+            .frame(minWidth: 200)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        Task { await appState.refresh() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .help("Refresh boards")
+                    .accessibilityLabel("Refresh boards")
+                    .disabled(appState.isLoading)
                 }
-                .help("Refresh boards")
-                .accessibilityLabel("Refresh boards")
-                .disabled(appState.isLoading)
             }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            CardSearchField(highlighted: $highlightedResult)
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 0) {
-                Divider()
-                Button {
-                    appState.showingNewBoard = true
-                } label: {
-                    Label("New Board", systemImage: "plus")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .foregroundStyle(.primary)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                CardSearchField(highlighted: $highlightedResult)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 0) {
+                    Divider()
+                    Button {
+                        appState.showingNewBoard = true
+                    } label: {
+                        Label("New Board", systemImage: "plus")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("New board")
+                    .accessibilityLabel("New board")
                 }
-                .buttonStyle(.plain)
-                .help("New board")
-                .accessibilityLabel("New board")
+                .background(.background)
             }
-            .background(.background)
-        }
-        .sheet(isPresented: $appState.showingNewBoard) {
-            BoardSheet {
-                appState.showingNewBoard = false
+            .sheet(isPresented: $appState.showingNewBoard) {
+                BoardSheet {
+                    appState.showingNewBoard = false
+                }
             }
-        }
-        .sheet(item: $editingBoard) { board in
-            BoardSheet(board: board) {
-                editingBoard = nil
+            .sheet(item: $editingBoard) { board in
+                BoardSheet(board: board) {
+                    editingBoard = nil
+                }
             }
-        }
-        .sheet(item: $duplicatingBoard) { board in
-            DuplicateBoardSheet(board: board) {
-                duplicatingBoard = nil
+            .sheet(item: $duplicatingBoard) { board in
+                DuplicateBoardSheet(board: board) {
+                    duplicatingBoard = nil
+                }
             }
-        }
-        .confirmationDialog("Delete board?", isPresented: Binding(
-            get: { pendingBoardDelete != nil },
-            set: {
-                if !$0 {
+            .confirmationDialog("Delete board?", isPresented: Binding(
+                get: { pendingBoardDelete != nil },
+                set: {
+                    if !$0 {
+                        pendingBoardDelete = nil
+                    }
+                }
+            )) {
+                Button("Delete", role: .destructive) {
+                    guard let boardId = pendingBoardDelete else { return }
+                    pendingBoardDelete = nil
+                    Task { await appState.deleteBoard(id: boardId) }
+                }
+                Button("Cancel", role: .cancel) {
                     pendingBoardDelete = nil
                 }
-            }
-        )) {
-            Button("Delete", role: .destructive) {
-                guard let boardId = pendingBoardDelete else { return }
-                pendingBoardDelete = nil
-                Task { await appState.deleteBoard(id: boardId) }
-            }
-            Button("Cancel", role: .cancel) {
-                pendingBoardDelete = nil
-            }
-        } message: {
-            if let boardId = pendingBoardDelete,
-               let board = appState.boards.first(where: { $0.id == boardId }) {
-                Text(
-                    DeleteConfirmation.message(
-                        "\u{201c}\(board.title)\u{201d} and all its lists and cards",
-                        restoreNote: DeleteConfirmation.boardRestoreNote
+            } message: {
+                if let boardId = pendingBoardDelete,
+                   let board = appState.boards.first(where: { $0.id == boardId }) {
+                    Text(
+                        DeleteConfirmation.message(
+                            "\u{201c}\(board.title)\u{201d} and all its lists and cards",
+                            restoreNote: DeleteConfirmation.boardRestoreNote
+                        )
                     )
-                )
+                }
             }
-        }
     }
 
     private var boardList: some View {
@@ -113,82 +107,91 @@ struct BoardListView: View {
                 }
             }
         )) {
-            Section("Boards") {
-                if appState.isLoading && appState.boards.isEmpty {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Loading…")
+            if isSearching {
+                CardSearchResults(highlighted: highlightedResult)
+            } else {
+                boards
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var boards: some View {
+        Section("Boards") {
+            if appState.isLoading && appState.boards.isEmpty {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Loading…")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else if appState.activeBoards.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    if let err = appState.errorMessage {
+                        Text("Could not load boards")
+                            .font(.subheadline.weight(.medium))
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(4)
+                    } else {
+                        Text("No boards")
                             .foregroundStyle(.secondary)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                } else if appState.activeBoards.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        if let err = appState.errorMessage {
-                            Text("Could not load boards")
-                                .font(.subheadline.weight(.medium))
-                            Text(err)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(4)
-                        } else {
-                            Text("No boards")
-                                .foregroundStyle(.secondary)
-                        }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 4)
+            } else {
+                ForEach(appState.activeBoards) { board in
+                    Button {
+                        appState.selectBoard(board)
+                    } label: {
+                        BoardRowView(board: board)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 4)
-                } else {
-                    ForEach(appState.activeBoards) { board in
-                        Button {
-                            appState.selectBoard(board)
-                        } label: {
-                            BoardRowView(board: board)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("board: \(board.title)")
+                    .tag(board.id)
+                    .contextMenu {
+                        boardActions(board)
+                        Button("Archive") {
+                            Task { await appState.archiveBoard(id: board.id) }
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("board: \(board.title)")
-                        .tag(board.id)
-                        .contextMenu {
-                            boardActions(board)
-                            Button("Archive") {
-                                Task { await appState.archiveBoard(id: board.id) }
-                            }
-                            Divider()
-                            Button("Delete", role: .destructive) {
-                                pendingBoardDelete = board.id
-                            }
+                        Divider()
+                        Button("Delete", role: .destructive) {
+                            pendingBoardDelete = board.id
                         }
                     }
                 }
             }
-            if !appState.archivedBoards.isEmpty {
-                Section("Archived") {
-                    ForEach(appState.archivedBoards) { board in
-                        Button {
-                            appState.selectBoard(board)
-                        } label: {
-                            BoardRowView(board: board)
+        }
+        if !appState.archivedBoards.isEmpty {
+            Section("Archived") {
+                ForEach(appState.archivedBoards) { board in
+                    Button {
+                        appState.selectBoard(board)
+                    } label: {
+                        BoardRowView(board: board)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("board: \(board.title)")
+                    .tag(board.id)
+                    .contextMenu {
+                        boardActions(board)
+                        Button("Unarchive") {
+                            Task { await appState.unarchiveBoard(id: board.id) }
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("board: \(board.title)")
-                        .tag(board.id)
-                        .contextMenu {
-                            boardActions(board)
-                            Button("Unarchive") {
-                                Task { await appState.unarchiveBoard(id: board.id) }
-                            }
-                            Divider()
-                            Button("Delete", role: .destructive) {
-                                pendingBoardDelete = board.id
-                            }
+                        Divider()
+                        Button("Delete", role: .destructive) {
+                            pendingBoardDelete = board.id
                         }
                     }
                 }
             }
-            if !appState.deletedBoards.isEmpty {
-                recentlyDeleted
-            }
+        }
+        if !appState.deletedBoards.isEmpty {
+            recentlyDeleted
         }
     }
 

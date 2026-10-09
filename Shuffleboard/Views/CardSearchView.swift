@@ -73,41 +73,40 @@ struct CardSearchField: View {
     }
 }
 
-/// The cards matching the sidebar's search, grouped by board, in place of the board list. Clicking one opens it.
-struct CardSearchResultsView: View {
+/// The cards matching the sidebar's search, grouped by board, shown in the sidebar's list in place of the boards
+/// (the same list, so typing in the search field keeps its focus). Clicking one opens it.
+struct CardSearchResults: View {
     @EnvironmentObject private var appState: AppState
     let highlighted: CardSearchResult.ID?
 
     var body: some View {
         let groups = appState.cardSearchResults
-        List {
-            if groups.isEmpty {
-                if appState.isLoadingAllCards {
-                    HStack {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Searching\u{2026}")
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    Text("No cards found")
+        if groups.isEmpty {
+            if appState.isLoadingAllCards {
+                HStack {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Searching\u{2026}")
                         .foregroundStyle(.secondary)
                 }
+            } else {
+                Text("No cards found")
+                    .foregroundStyle(.secondary)
             }
-            ForEach(groups) { group in
-                Section(group.board.title) {
-                    ForEach(group.results) { result in
-                        Button {
-                            appState.open(result)
-                        } label: {
-                            CardSearchRow(result: result)
-                        }
-                        .buttonStyle(.plain)
-                        .listRowBackground(
-                            result.id == highlighted ? Color.accentColor.opacity(0.2) : Color.clear
-                        )
-                        .accessibilityIdentifier("search result: \(result.card.title)")
+        }
+        ForEach(groups) { group in
+            Section(group.board.title) {
+                ForEach(group.results) { result in
+                    Button {
+                        appState.open(result)
+                    } label: {
+                        CardSearchRow(result: result)
                     }
+                    .buttonStyle(.plain)
+                    .listRowBackground(
+                        result.id == highlighted ? Color.accentColor.opacity(0.2) : Color.clear
+                    )
+                    .accessibilityIdentifier("search result: \(result.card.title)")
                 }
             }
         }
