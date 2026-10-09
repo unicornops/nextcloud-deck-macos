@@ -411,16 +411,15 @@ struct BoardDetailView: View {
 
     /// The arrow keys move the selection between cards; Return opens the selected card.
     private func handleKey(_ key: KeyEquivalent) -> KeyPress.Result {
-        switch key {
-        case .upArrow: appState.selectCard(.up)
-        case .downArrow: appState.selectCard(.down)
-        case .leftArrow: appState.selectCard(.left)
-        case .rightArrow: appState.selectCard(.right)
-        case .return:
-            guard appState.selectedCard != nil else { return .ignored }
-            appState.openSelectedCard()
-        default: return .ignored
+        let directions: [KeyEquivalent: CardDirection] = [
+            .upArrow: .up, .downArrow: .down, .leftArrow: .left, .rightArrow: .right,
+        ]
+        if let direction = directions[key] {
+            appState.selectCard(direction)
+            return .handled
         }
+        guard key == .return, appState.selectedCard != nil else { return .ignored }
+        appState.openSelectedCard()
         return .handled
     }
 

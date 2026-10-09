@@ -1071,7 +1071,8 @@ extension AppStateTests {
         {"id": 4, "title": "Four", "stackId": 20, "order": 0}]}]
     """
 
-    private func makeKeyboardApp(handling handler: (@Sendable (RecordedRequest) -> StubResponse?)? = nil) async -> AppState {
+    private func makeKeyboardApp(handling handler: (@Sendable (RecordedRequest) -> StubResponse?)? = nil) async
+        -> AppState {
         StubURLProtocol.handler = { request in
             if let response = handler?(request) {
                 return response

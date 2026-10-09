@@ -23,8 +23,10 @@ extension [Stack] {
         switch direction {
         case .up:
             return row > 0 ? columns[column][row - 1].id : nil
+
         case .down:
             return row < columns[column].count - 1 ? columns[column][row + 1].id : nil
+
         case .left, .right:
             let step = direction == .left ? -1 : 1
             var next = column + step
@@ -48,8 +50,10 @@ extension [Stack] {
         switch direction {
         case .up:
             return row > 0 ? (self[column].id, row - 1) : nil
+
         case .down:
             return row < count - 1 ? (self[column].id, row + 1) : nil
+
         case .left, .right:
             let next = column + (direction == .left ? -1 : 1)
             guard indices.contains(next) else { return nil }

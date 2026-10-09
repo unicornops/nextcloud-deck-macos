@@ -322,7 +322,7 @@ final class MainFlowUITests: XCTestCase {
         try await eventually("The card selected with the arrow keys was not archived on the server") {
             try await alice.card(titled: "Existing", board: board.id) == nil
         }
-        XCTAssertNotNil(try await alice.card(titled: "Keyboard card", board: board.id), "Archived the wrong card")
+        await XCTAssertNotNil(try alice.card(titled: "Keyboard card", board: board.id), "Archived the wrong card")
     }
 
     func testEditingACardAndCommenting() async throws {

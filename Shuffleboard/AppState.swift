@@ -15,6 +15,7 @@ final class AppState: ObservableObject {
             }
         }
     }
+
     @Published var stacks: [Stack] = []
     @Published var isLoading = false
     @Published var isLoadingStacks = false
@@ -317,20 +318,6 @@ final class AppState: ObservableObject {
 
     func refresh() async {
         await loadBoards()
-    }
-
-    /// Creates a card at the end of the list and selects it.
-    func createCard(boardId: Int, stackId: Int, title: String) async {
-        guard let api = deckAPI else { return }
-        do {
-            let card = try await api.createCard(boardId: boardId, stackId: stackId, title: title)
-            await loadStacks(boardId: boardId)
-            if selectedBoardId == boardId {
-                selectedCardId = card.id
-            }
-        } catch {
-            report(error)
-        }
     }
 
     func archiveBoard(id: Int) async {
@@ -868,6 +855,20 @@ extension AppState {
             guard !endSessionIfUnauthorized(error) else { return false }
             errorMessage = error.localizedDescription
             return false
+        }
+    }
+
+    /// Creates a card at the end of the list and selects it.
+    func createCard(boardId: Int, stackId: Int, title: String) async {
+        guard let api = deckAPI else { return }
+        do {
+            let card = try await api.createCard(boardId: boardId, stackId: stackId, title: title)
+            await loadStacks(boardId: boardId)
+            if selectedBoardId == boardId {
+                selectedCardId = card.id
+            }
+        } catch {
+            report(error)
         }
     }
 
