@@ -2,7 +2,6 @@ import SwiftUI
 
 struct BoardListView: View {
     @EnvironmentObject private var appState: AppState
-    @State private var showingNewBoard = false
     @State private var pendingBoardDelete: Int?
     @State private var editingBoard: Board?
     @State private var duplicatingBoard: Board?
@@ -115,7 +114,7 @@ struct BoardListView: View {
             VStack(spacing: 0) {
                 Divider()
                 Button {
-                    showingNewBoard = true
+                    appState.showingNewBoard = true
                 } label: {
                     Label("New Board", systemImage: "plus")
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -129,9 +128,9 @@ struct BoardListView: View {
             }
             .background(.background)
         }
-        .sheet(isPresented: $showingNewBoard) {
+        .sheet(isPresented: $appState.showingNewBoard) {
             BoardSheet {
-                showingNewBoard = false
+                appState.showingNewBoard = false
             }
         }
         .sheet(item: $editingBoard) { board in

@@ -1057,3 +1057,144 @@ extension AppStateTests {
         XCTAssertEqual(asked.count, 1)
     }
 }
+
+// MARK: - Keyboard commands (#159)
+
+extension AppStateTests {
+    /// "To do" (10) has cards 1, 2 and 3; "Done" (20) has card 4.
+    private nonisolated static let keyboardListsJSON = """
+    [{"id": 10, "title": "To do", "boardId": 1, "order": 0, "cards": [
+        {"id": 1, "title": "One", "stackId": 10, "order": 0},
+        {"id": 2, "title": "Two", "stackId": 10, "order": 1},
+        {"id": 3, "title": "Three", "stackId": 10, "order": 2}]},
+     {"id": 20, "title": "Done", "boardId": 1, "order": 1, "cards": [
+        {"id": 4, "title": "Four", "stackId": 20, "order": 0}]}]
+    """
+
+    private func makeKeyboardApp(handling handler: (@Sendable (RecordedRequest) -> StubResponse?)? = nil) async
+        -> AppState {
+        StubURLProtocol.handler = { request in
+            if let response = handler?(request) {
+                return response
+            }
+            if request.path.hasSuffix("/boards") {
+                return .json(Self.boardsJSON)
+            }
+            return .json(Self.keyboardListsJSON)
+        }
+        return await makeSignedInApp()
+    }
+
+    func testTheArrowKeysMoveTheSelection() async {
+        let app = await makeKeyboardApp()
+
+        app.selectCard(.down)
+        XCTAssertEqual(app.selectedCardId, 1, "nothing selected: the first card")
+        app.selectCard(.down)
+        app.selectCard(.right)
+        XCTAssertEqual(app.selectedCardId, 4)
+        app.selectCard(.left)
+        XCTAssertEqual(app.selectedCardId, 1)
+
+        app.cardFilter.text = "Three"
+        XCTAssertNil(app.selectedCard, "hidden by the filter")
+        app.selectCard(.down)
+        XCTAssertEqual(app.selectedCardId, 3)
+    }
+
+    func testSwitchingBoardsClearsTheSelection() async {
+        let app = await makeKeyboardApp()
+        app.selectedCardId = 2
+        app.newCardListId = 10
+
+        app.selectBoard(offset: 1)
+
+        XCTAssertEqual(app.selectedBoardId, 2)
+        XCTAssertNil(app.selectedCardId)
+        XCTAssertNil(app.newCardListId)
+        app.selectBoard(offset: 1)
+        XCTAssertEqual(app.selectedBoardId, 2, "no board after the last")
+        app.selectBoard(offset: -1)
+        XCTAssertEqual(app.selectedBoardId, 1)
+    }
+
+    func testMovingTheSelectedCardToTheNextList() async {
+        let app = await makeKeyboardApp { request in
+            request.path.hasSuffix("/reorder") ? .json("[]") : nil
+        }
+        app.selectedCardId = 2
+
+        await app.moveSelectedCard(.right)
+
+        XCTAssertTrue(StubURLProtocol.requests.contains {
+            $0.line == "PUT /index.php/apps/deck/api/v1.0/boards/1/stacks/20/cards/2/reorder"
+        })
+        XCTAssertEqual(app.selectedCardId, 2, "still selected")
+    }
+
+    func testMovingIsOffWhileFiltering() async {
+        let app = await makeKeyboardApp()
+        app.selectedCardId = 2
+        app.cardFilter.text = "Two"
+
+        XCTAssertFalse(app.canMoveSelectedCard)
+        await app.moveSelectedCard(.right)
+
+        XCTAssertFalse(StubURLProtocol.requests.contains { $0.path.hasSuffix("/reorder") })
+    }
+
+    func testArchivingTheSelectedCardSelectsTheNextOne() async {
+        let archived = Locked(false)
+        let app = await makeKeyboardApp { request in
+            if request.path.hasSuffix("/archive") {
+                archived.withLock { $0 = true }
+                return .json("{}")
+            }
+            if request.path.hasSuffix("/stacks"), archived.withLock({ $0 }) {
+                return .json(Self.keyboardListsJSON.replacingOccurrences(
+                    of: #""title": "Two", "stackId": 10"#,
+                    with: #""title": "Two", "archived": true, "stackId": 10"#
+                ))
+            }
+            return nil
+        }
+        app.selectedCardId = 2
+
+        await app.archiveSelectedCard()
+
+        XCTAssertEqual(app.selectedCardId, 3)
+    }
+
+    func testDeletingTheSelectedCardAsksFirstThenSelectsTheOneBefore() async {
+        let app = await makeKeyboardApp { request in
+            request.method == "DELETE" ? .json("{}") : nil
+        }
+        app.selectedCardId = 3
+
+        app.requestDeletingSelectedCard()
+        XCTAssertEqual(app.cardPendingDelete?.id, 3)
+        XCTAssertFalse(StubURLProtocol.requests.contains { $0.method == "DELETE" }, "not before it's confirmed")
+        await app.deletePendingCard()
+
+        XCTAssertTrue(StubURLProtocol.requests.contains {
+            $0.line == "DELETE /index.php/apps/deck/api/v1.0/boards/1/stacks/10/cards/3"
+        })
+        XCTAssertNil(app.cardPendingDelete)
+        XCTAssertEqual(app.selectedCardId, 2, "the last card in the list: the one before it")
+    }
+
+    func testANewCardGoesInTheSelectedCardsListAndIsSelected() async {
+        let app = await makeKeyboardApp { request in
+            request.method == "POST" ? .json(#"{"id": 9, "title": "New", "stackId": 20, "order": 1}"#) : nil
+        }
+        app.startNewCard()
+        XCTAssertEqual(app.newCardListId, 10, "nothing selected: the first list")
+        app.selectedCardId = 4
+        app.startNewCard()
+        XCTAssertEqual(app.newCardListId, 20)
+
+        await app.createCard(boardId: 1, stackId: 20, title: "New")
+
+        XCTAssertEqual(app.selectedCardId, 9)
+    }
+}

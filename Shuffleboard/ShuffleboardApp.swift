@@ -16,12 +16,7 @@ struct ShuffleboardApp: App {
         .windowStyle(.automatic)
         .defaultSize(width: 1000, height: 700)
         .commands {
-            CommandGroup(after: .newItem) {
-                Button("Refresh") {
-                    Task { await appState.refresh() }
-                }
-                .keyboardShortcut("r", modifiers: .command)
-            }
+            BoardCommands(appState: appState)
             CommandGroup(replacing: .appInfo) {
                 Button("About Shuffleboard") {
                     appState.showingAbout = true

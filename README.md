@@ -58,6 +58,24 @@ The screenshots are taken by the end-to-end UI tests from demo data (see [End-to
 - **Boards** listed in the sidebar; switch between them to focus on one board at a time. Rename a board or change its color with **Edit Board…** in its context menu, or the pencil next to its title. **Duplicate…** copies a board's lists and labels, and optionally its cards. Deleted boards go to **Recently Deleted** at the bottom of the sidebar, where you can restore them until the server clears deleted items (Deck 1.17 or later).
 - **Kanban board view**: stacks as columns, cards in each column. Create lists (stacks) and cards, open cards to edit title, description, start and due dates (start dates need Deck 1.18 or later). Rename a list by double-clicking its title, or with **Rename list** in its menu.
 - **Labels:** add labels to cards from the card sheet; rename, recolor and delete a board's labels with the tag button in the board's header.
+- **Keyboard:** the arrow keys select a card on the board (outlined) and Return opens it; the **Card** menu acts on the selected card. Every command is in the menu bar, so VoiceOver and Full Keyboard Access reach them too:
+
+  | Command | Shortcut |
+  |---|---|
+  | File → New Card (in the selected card's list) | ⌘N |
+  | File → New List… / New Board… | ⇧⌘N / ⌥⌘N |
+  | File → Refresh | ⌘R |
+  | Edit → Filter Cards | ⌘F |
+  | Card → Open Card | ⌘O or Return |
+  | Card → Mark as Done / Not Done | ⇧⌘C |
+  | Card → Archive Card | ⌃⌘A |
+  | Card → Delete Card… | ⌘⌫ |
+  | Card → Move Up / Move Down | ⌥⌘↑ / ⌥⌘↓ |
+  | Card → Move to Previous List / Next List | ⌥⌘← / ⌥⌘→ |
+  | View → Previous Board / Next Board | ⌘[ / ⌘] |
+  | View → the first nine boards | ⌘1 … ⌘9 |
+
+  Moving cards is off while the board is filtered, as dragging is.
 - **Automatic updates** with [Sparkle](https://sparkle-project.org): Shuffleboard checks for new releases and installs them, or use **Shuffleboard → Check for Updates…**. Every update is verified against the app's EdDSA public key.
 - Built with **SwiftUI** and follows current macOS design (toolbars, sidebar, materials).
 

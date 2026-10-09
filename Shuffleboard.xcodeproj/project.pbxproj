@@ -8,8 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		A10000000000000000000001 /* ShuffleboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* ShuffleboardApp.swift */; };
+		A10000000000000000000047 /* BoardCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000047 /* BoardCommands.swift */; };
 		A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* ContentView.swift */; };
 		A10000000000000000000003 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* AppState.swift */; };
+		A10000000000000000000046 /* AppState+Keyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000046 /* AppState+Keyboard.swift */; };
 		A10000000000000000000004 /* Board.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* Board.swift */; };
 		A10000000000000000000005 /* Stack.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* Stack.swift */; };
 		A10000000000000000000006 /* Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* Card.swift */; };
@@ -45,7 +47,9 @@
 		A10000000000000000000035 /* MarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000035 /* MarkdownView.swift */; };
 		B10000000000000000000006 /* MarkdownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* MarkdownTests.swift */; };
 		A10000000000000000000036 /* CardFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036 /* CardFilter.swift */; };
+		A10000000000000000000045 /* CardNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000045 /* CardNavigation.swift */; };
 		B10000000000000000000007 /* CardFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* CardFilterTests.swift */; };
+		B1000000000000000000000D /* CardNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000000000000000000000D /* CardNavigationTests.swift */; };
 		A10000000000000000000037 /* ArchivedCardsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000037 /* ArchivedCardsSheet.swift */; };
 		A10000000000000000000038 /* Sharing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000038 /* Sharing.swift */; };
 		A10000000000000000000039 /* BoardSharingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000039 /* BoardSharingSheet.swift */; };
@@ -83,8 +87,10 @@
 /* Begin PBXFileReference section */
 		A20000000000000000000000 /* Shuffleboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shuffleboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000001 /* ShuffleboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuffleboardApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000047 /* BoardCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardCommands.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A20000000000000000000003 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		A20000000000000000000046 /* AppState+Keyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppState+Keyboard.swift"; sourceTree = "<group>"; };
 		A20000000000000000000004 /* Board.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Board.swift; sourceTree = "<group>"; };
 		A20000000000000000000005 /* Stack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stack.swift; sourceTree = "<group>"; };
 		A20000000000000000000006 /* Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Card.swift; sourceTree = "<group>"; };
@@ -122,7 +128,9 @@
 		A20000000000000000000035 /* MarkdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownView.swift; sourceTree = "<group>"; };
 		B20000000000000000000006 /* MarkdownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000036 /* CardFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardFilter.swift; sourceTree = "<group>"; };
+		A20000000000000000000045 /* CardNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardNavigation.swift; sourceTree = "<group>"; };
 		B20000000000000000000007 /* CardFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardFilterTests.swift; sourceTree = "<group>"; };
+		B2000000000000000000000D /* CardNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardNavigationTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000037 /* ArchivedCardsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchivedCardsSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000038 /* Sharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sharing.swift; sourceTree = "<group>"; };
 		A20000000000000000000039 /* BoardSharingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardSharingSheet.swift; sourceTree = "<group>"; };
@@ -181,8 +189,10 @@
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000001 /* ShuffleboardApp.swift */,
+				A20000000000000000000047 /* BoardCommands.swift */,
 				A20000000000000000000002 /* ContentView.swift */,
 				A20000000000000000000003 /* AppState.swift */,
+				A20000000000000000000046 /* AppState+Keyboard.swift */,
 				A40000000000000000000004 /* Models */,
 				A40000000000000000000005 /* Services */,
 				A40000000000000000000006 /* Views */,
@@ -214,6 +224,7 @@
 				A20000000000000000000032 /* Comment.swift */,
 				A20000000000000000000034 /* Markdown.swift */,
 				A20000000000000000000036 /* CardFilter.swift */,
+				A20000000000000000000045 /* CardNavigation.swift */,
 				A20000000000000000000038 /* Sharing.swift */,
 				A20000000000000000000040 /* Account.swift */,
 			);
@@ -276,6 +287,7 @@
 				B20000000000000000000005 /* LoginFlowTests.swift */,
 				B20000000000000000000006 /* MarkdownTests.swift */,
 				B20000000000000000000007 /* CardFilterTests.swift */,
+				B2000000000000000000000D /* CardNavigationTests.swift */,
 				B20000000000000000000008 /* SharingTests.swift */,
 				B20000000000000000000009 /* AccountTests.swift */,
 				B2000000000000000000000A /* ServerTestSupport.swift */,
@@ -449,8 +461,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000001 /* ShuffleboardApp.swift in Sources */,
+				A10000000000000000000047 /* BoardCommands.swift in Sources */,
 				A10000000000000000000002 /* ContentView.swift in Sources */,
 				A10000000000000000000003 /* AppState.swift in Sources */,
+				A10000000000000000000046 /* AppState+Keyboard.swift in Sources */,
 				A10000000000000000000004 /* Board.swift in Sources */,
 				A10000000000000000000005 /* Stack.swift in Sources */,
 				A10000000000000000000006 /* Card.swift in Sources */,
@@ -458,6 +472,7 @@
 				A10000000000000000000032 /* Comment.swift in Sources */,
 				A10000000000000000000034 /* Markdown.swift in Sources */,
 				A10000000000000000000036 /* CardFilter.swift in Sources */,
+				A10000000000000000000045 /* CardNavigation.swift in Sources */,
 				A10000000000000000000038 /* Sharing.swift in Sources */,
 				A10000000000000000000040 /* Account.swift in Sources */,
 				A10000000000000000000008 /* DeckAPI.swift in Sources */,
@@ -499,6 +514,7 @@
 				B10000000000000000000005 /* LoginFlowTests.swift in Sources */,
 				B10000000000000000000006 /* MarkdownTests.swift in Sources */,
 				B10000000000000000000007 /* CardFilterTests.swift in Sources */,
+				B1000000000000000000000D /* CardNavigationTests.swift in Sources */,
 				B10000000000000000000008 /* SharingTests.swift in Sources */,
 				B10000000000000000000009 /* AccountTests.swift in Sources */,
 				B1000000000000000000000A /* ServerTestSupport.swift in Sources */,

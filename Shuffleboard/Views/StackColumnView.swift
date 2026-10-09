@@ -28,9 +28,7 @@ struct StackColumnView: View {
     @EnvironmentObject private var appState: AppState
 
     @State private var newCardTitle = ""
-    @State private var isAddingCard = false
     @State private var pendingDelete = false
-    @State private var pendingCardDelete: Card?
     @State private var dragInsertIndex: Int?
     @State private var isColumnDropTargeted = false
     /// The list's title is being edited in place; `renameTitle` holds the edit.
@@ -52,7 +50,19 @@ struct StackColumnView: View {
 
     /// The stack's cards that match the board's filter, in order.
     private var cards: [Card] {
-        stack.activeCards.filter { appState.cardFilter.matches($0) }
+        appState.shownCards(in: stack)
+    }
+
+    /// Whether this list shows its "new card" field; File > New Card opens it too.
+    private var isAddingCard: Bool {
+        get { appState.newCardListId == stack.id }
+        nonmutating set {
+            if newValue {
+                appState.newCardListId = stack.id
+            } else if appState.newCardListId == stack.id {
+                appState.newCardListId = nil
+            }
+        }
     }
 
     /// Drag and drop places cards by position among all of a stack's cards, so it is off while some are hidden.
@@ -89,29 +99,6 @@ struct StackColumnView: View {
             }
         } message: {
             Text(DeleteConfirmation.message("\u{201c}\(stack.title)\u{201d} and all its cards"))
-        }
-        .confirmationDialog("Delete card?", isPresented: Binding(
-            get: { pendingCardDelete != nil },
-            set: {
-                if !$0 {
-                    pendingCardDelete = nil
-                }
-            }
-        )) {
-            Button("Delete", role: .destructive) {
-                guard let card = pendingCardDelete else { return }
-                pendingCardDelete = nil
-                Task {
-                    await appState.deleteCard(boardId: board.id, stackId: stack.id, cardId: card.id)
-                }
-            }
-            Button("Cancel", role: .cancel) {
-                pendingCardDelete = nil
-            }
-        } message: {
-            if let card = pendingCardDelete {
-                Text(DeleteConfirmation.message("\u{201c}\(card.title)\u{201d}"))
-            }
         }
     }
 
@@ -192,7 +179,19 @@ struct StackColumnView: View {
 
     private var cardList: some View {
         let currentCards = cards
-        return ScrollView(.vertical, showsIndicators: true) {
+        return ScrollViewReader { proxy in
+            cardScrollView(currentCards)
+                .onChange(of: appState.selectedCardId) { _, id in
+                    // Keep the card the arrow keys select in view.
+                    if let id, currentCards.contains(where: { $0.id == id }) {
+                        withAnimation(.easeInOut(duration: 0.15)) { proxy.scrollTo(id) }
+                    }
+                }
+        }
+    }
+
+    private func cardScrollView(_ currentCards: [Card]) -> some View {
+        ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(spacing: 0) {
                 insertionGap(at: 0)
                 if currentCards.isEmpty, isFiltering {
@@ -204,7 +203,8 @@ struct StackColumnView: View {
                 ForEach(0 ..< currentCards.count, id: \.self) { index in
                     CardRowView(
                         card: currentCards[index],
-                        onDelete: { pendingCardDelete = currentCards[index] },
+                        isSelected: appState.selectedCardId == currentCards[index].id,
+                        onDelete: { appState.cardPendingDelete = currentCards[index] },
                         onToggleDone: {
                             let card = currentCards[index]
                             Task { await appState.setCardDone(boardId: board.id, card: card, done: !card.isDone) }
@@ -219,6 +219,7 @@ struct StackColumnView: View {
                         action: { onSelectCard(currentCards[index]) }
                     )
                     .padding(.horizontal, 10)
+                    .id(currentCards[index].id)
                     insertionGap(at: index + 1)
                 }
             }
@@ -422,6 +423,8 @@ struct StackColumnView: View {
 
 struct CardRowView: View {
     let card: Card
+    /// Outlined as the card the Card menu acts on.
+    var isSelected = false
     var onDelete: (() -> Void)?
     var onToggleDone: (() -> Void)?
     var onArchive: (() -> Void)?
@@ -523,8 +526,8 @@ struct CardRowView: View {
         .overlay(
             cardShape
                 .strokeBorder(
-                    Color(nsColor: .separatorColor).opacity(isHovering ? 0.6 : 0.4),
-                    lineWidth: 1
+                    isSelected ? Color.accentColor : Color(nsColor: .separatorColor).opacity(isHovering ? 0.6 : 0.4),
+                    lineWidth: isSelected ? 2 : 1
                 )
         )
         .shadow(color: .black.opacity(isHovering ? 0.08 : 0.05), radius: isHovering ? 4 : 2, y: 2)
@@ -541,7 +544,7 @@ struct CardRowView: View {
         .accessibilityLabel(accessibilityDescription)
         .accessibilityIdentifier("card: \(card.title)")
         .accessibilityHint("Opens card details")
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .contextMenu {
             if let onToggleDone {
                 Button(card.isDone ? "Mark as Not Done" : "Mark as Done") {

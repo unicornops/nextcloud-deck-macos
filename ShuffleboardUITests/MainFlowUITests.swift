@@ -276,6 +276,56 @@ final class MainFlowUITests: XCTestCase {
         }
     }
 
+    /// Creating, moving, opening, finishing and archiving a card with only the keyboard (#159).
+    func testWorkingWithCardsFromTheKeyboard() async throws {
+        let board = try await makeBoard()
+        let todo = try await alice.createStack(board: board.id, "To do", order: 0)
+        _ = try await alice.createStack(board: board.id, "Done", order: 1)
+        _ = try await alice.createCard(board: board.id, stack: todo, "Existing")
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(board.title)
+        app.card("Existing").waitToAppear()
+
+        // File > New Card opens the field in the first list; the new card is then selected.
+        app.typeKey("n", modifierFlags: .command)
+        app.find(.textField, "Card title").waitToAppear("New Card did not open the card field")
+        app.typeText("Keyboard card\r")
+        app.card("Keyboard card").waitToAppear("New card not shown")
+        try await eventually("Card not created in To do on the server") {
+            try await alice.list(holding: "Keyboard card", board: board.id) == "To do"
+        }
+
+        // Card > Move to Next List.
+        app.typeKey(.rightArrow, modifierFlags: [.command, .option])
+        try await eventually("Card not moved to Done on the server") {
+            try await alice.list(holding: "Keyboard card", board: board.id) == "Done"
+        }
+
+        // Card > Open Card, then Escape closes it.
+        app.typeKey("o", modifierFlags: .command)
+        app.find(.textField, "card title").waitToAppear("Open Card did not open the card")
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(
+            app.find(.textField, "card title").waitForNonExistence(timeout: 10),
+            "Escape did not close the card"
+        )
+
+        // Card > Mark as Done.
+        app.typeKey("c", modifierFlags: [.command, .shift])
+        try await eventually("Card not marked done on the server") {
+            try await alice.card(titled: "Keyboard card", board: board.id)?["done"] is String
+        }
+
+        // The left arrow selects the card in To do; Card > Archive Card archives it.
+        app.typeKey(.leftArrow, modifierFlags: [])
+        app.typeKey("a", modifierFlags: [.command, .control])
+        try await eventually("The card selected with the arrow keys was not archived on the server") {
+            try await alice.card(titled: "Existing", board: board.id) == nil
+        }
+        let kept = try await alice.card(titled: "Keyboard card", board: board.id)
+        XCTAssertNotNil(kept, "Archived the wrong card")
+    }
+
     func testEditingACardAndCommenting() async throws {
         let board = try await makeBoard()
         let stack = try await alice.createStack(board: board.id, "To do", order: 0)
