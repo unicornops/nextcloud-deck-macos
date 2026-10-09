@@ -326,6 +326,30 @@ final class MainFlowUITests: XCTestCase {
         XCTAssertNotNil(kept, "Archived the wrong card")
     }
 
+    /// Edit > Search All Boards finds a card on another board; opening the result opens its board and the card (#158).
+    func testSearchingAllBoardsAndOpeningACard() async throws {
+        let open = try await makeBoard()
+        let other = try await makeBoard()
+        let list = try await alice.createStack(board: other.id, "Ideas", order: 0)
+        let title = uniqueTitle("Findable")
+        _ = try await alice.createCard(board: other.id, stack: list, title)
+        try await app.launch(on: server, as: [UITestServer.alice])
+        app.openBoard(open.title)
+
+        app.typeKey("f", modifierFlags: [.command, .shift])
+        let field = app.find(.textField, "Search all boards").waitToAppear("No search field in the sidebar")
+        app.typeText(title)
+        let result = app.element("search result: \(title)")
+            .waitToAppear("Card on another board not found", timeout: 30)
+        XCTAssertEqual(field.value as? String, title, "Search All Boards did not put the cursor in the field")
+
+        result.click()
+        let cardTitle = app.find(.textField, "card title").waitToAppear("The card did not open")
+        XCTAssertEqual(cardTitle.value as? String, title)
+        app.typeKey(.escape, modifierFlags: [])
+        app.list("Ideas").waitToAppear("The card's board is not the open board")
+    }
+
     func testEditingACardAndCommenting() async throws {
         let board = try await makeBoard()
         let stack = try await alice.createStack(board: board.id, "To do", order: 0)

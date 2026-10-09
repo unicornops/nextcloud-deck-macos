@@ -55,6 +55,11 @@ struct BoardCommands: Commands {
             }
             .keyboardShortcut("f")
             .disabled(!boardIsOpen)
+            Button("Search All Boards") {
+                appState.cardSearchFocusRequest += 1
+            }
+            .keyboardShortcut("f", modifiers: [.command, .shift])
+            .disabled(!isSignedIn)
         }
         CommandMenu("Card") {
             Button("Open Card") {

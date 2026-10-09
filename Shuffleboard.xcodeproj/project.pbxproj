@@ -22,6 +22,7 @@
 		A1000000000000000000000A /* KeychainStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* KeychainStorage.swift */; };
 		A1000000000000000000000B /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* LoginView.swift */; };
 		A1000000000000000000000C /* BoardListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000C /* BoardListView.swift */; };
+		A1000000000000000000004A /* CardSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000004A /* CardSearchView.swift */; };
 		A1000000000000000000000D /* BoardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* BoardDetailView.swift */; };
 		A1000000000000000000000E /* StackColumnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000E /* StackColumnView.swift */; };
 		A1000000000000000000000F /* CardDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000F /* CardDetailSheet.swift */; };
@@ -48,8 +49,11 @@
 		B10000000000000000000006 /* MarkdownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* MarkdownTests.swift */; };
 		A10000000000000000000036 /* CardFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036 /* CardFilter.swift */; };
 		A10000000000000000000045 /* CardNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000045 /* CardNavigation.swift */; };
+		A10000000000000000000049 /* BoardCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000049 /* BoardCards.swift */; };
+		A10000000000000000000048 /* CardSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000048 /* CardSearch.swift */; };
 		B10000000000000000000007 /* CardFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* CardFilterTests.swift */; };
 		B1000000000000000000000D /* CardNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000000000000000000000D /* CardNavigationTests.swift */; };
+		B1000000000000000000000E /* CardSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000000000000000000000E /* CardSearchTests.swift */; };
 		A10000000000000000000037 /* ArchivedCardsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000037 /* ArchivedCardsSheet.swift */; };
 		A10000000000000000000038 /* Sharing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000038 /* Sharing.swift */; };
 		A10000000000000000000039 /* BoardSharingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000039 /* BoardSharingSheet.swift */; };
@@ -101,6 +105,7 @@
 		A2000000000000000000000A /* KeychainStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStorage.swift; sourceTree = "<group>"; };
 		A2000000000000000000000B /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		A2000000000000000000000C /* BoardListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardListView.swift; sourceTree = "<group>"; };
+		A2000000000000000000004A /* CardSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardSearchView.swift; sourceTree = "<group>"; };
 		A2000000000000000000000D /* BoardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardDetailView.swift; sourceTree = "<group>"; };
 		A2000000000000000000000E /* StackColumnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackColumnView.swift; sourceTree = "<group>"; };
 		A2000000000000000000000F /* CardDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardDetailSheet.swift; sourceTree = "<group>"; };
@@ -129,8 +134,11 @@
 		B20000000000000000000006 /* MarkdownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000036 /* CardFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardFilter.swift; sourceTree = "<group>"; };
 		A20000000000000000000045 /* CardNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardNavigation.swift; sourceTree = "<group>"; };
+		A20000000000000000000049 /* BoardCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardCards.swift; sourceTree = "<group>"; };
+		A20000000000000000000048 /* CardSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardSearch.swift; sourceTree = "<group>"; };
 		B20000000000000000000007 /* CardFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardFilterTests.swift; sourceTree = "<group>"; };
 		B2000000000000000000000D /* CardNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardNavigationTests.swift; sourceTree = "<group>"; };
+		B2000000000000000000000E /* CardSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardSearchTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000037 /* ArchivedCardsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchivedCardsSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000038 /* Sharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sharing.swift; sourceTree = "<group>"; };
 		A20000000000000000000039 /* BoardSharingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardSharingSheet.swift; sourceTree = "<group>"; };
@@ -225,6 +233,8 @@
 				A20000000000000000000034 /* Markdown.swift */,
 				A20000000000000000000036 /* CardFilter.swift */,
 				A20000000000000000000045 /* CardNavigation.swift */,
+				A20000000000000000000049 /* BoardCards.swift */,
+				A20000000000000000000048 /* CardSearch.swift */,
 				A20000000000000000000038 /* Sharing.swift */,
 				A20000000000000000000040 /* Account.swift */,
 			);
@@ -247,6 +257,7 @@
 			children = (
 				A2000000000000000000000B /* LoginView.swift */,
 				A2000000000000000000000C /* BoardListView.swift */,
+				A2000000000000000000004A /* CardSearchView.swift */,
 				A2000000000000000000000D /* BoardDetailView.swift */,
 				A2000000000000000000000E /* StackColumnView.swift */,
 				A2000000000000000000000F /* CardDetailSheet.swift */,
@@ -288,6 +299,7 @@
 				B20000000000000000000006 /* MarkdownTests.swift */,
 				B20000000000000000000007 /* CardFilterTests.swift */,
 				B2000000000000000000000D /* CardNavigationTests.swift */,
+				B2000000000000000000000E /* CardSearchTests.swift */,
 				B20000000000000000000008 /* SharingTests.swift */,
 				B20000000000000000000009 /* AccountTests.swift */,
 				B2000000000000000000000A /* ServerTestSupport.swift */,
@@ -473,6 +485,8 @@
 				A10000000000000000000034 /* Markdown.swift in Sources */,
 				A10000000000000000000036 /* CardFilter.swift in Sources */,
 				A10000000000000000000045 /* CardNavigation.swift in Sources */,
+				A10000000000000000000049 /* BoardCards.swift in Sources */,
+				A10000000000000000000048 /* CardSearch.swift in Sources */,
 				A10000000000000000000038 /* Sharing.swift in Sources */,
 				A10000000000000000000040 /* Account.swift in Sources */,
 				A10000000000000000000008 /* DeckAPI.swift in Sources */,
@@ -481,6 +495,7 @@
 				A1000000000000000000000A /* KeychainStorage.swift in Sources */,
 				A1000000000000000000000B /* LoginView.swift in Sources */,
 				A1000000000000000000000C /* BoardListView.swift in Sources */,
+				A1000000000000000000004A /* CardSearchView.swift in Sources */,
 				A1000000000000000000000D /* BoardDetailView.swift in Sources */,
 				A1000000000000000000000E /* StackColumnView.swift in Sources */,
 				A1000000000000000000000F /* CardDetailSheet.swift in Sources */,
@@ -515,6 +530,7 @@
 				B10000000000000000000006 /* MarkdownTests.swift in Sources */,
 				B10000000000000000000007 /* CardFilterTests.swift in Sources */,
 				B1000000000000000000000D /* CardNavigationTests.swift in Sources */,
+				B1000000000000000000000E /* CardSearchTests.swift in Sources */,
 				B10000000000000000000008 /* SharingTests.swift in Sources */,
 				B10000000000000000000009 /* AccountTests.swift in Sources */,
 				B1000000000000000000000A /* ServerTestSupport.swift in Sources */,

@@ -58,6 +58,7 @@ The screenshots are taken by the end-to-end UI tests from demo data (see [End-to
 - **Boards** listed in the sidebar; switch between them to focus on one board at a time. Rename a board or change its color with **Edit Board…** in its context menu, or the pencil next to its title. **Duplicate…** copies a board's lists and labels, and optionally its cards. Deleted boards go to **Recently Deleted** at the bottom of the sidebar, where you can restore them until the server clears deleted items (Deck 1.17 or later).
 - **Kanban board view**: stacks as columns, cards in each column. Create lists (stacks) and cards, open cards to edit title, description, start and due dates (start dates need Deck 1.18 or later). Rename a list by double-clicking its title, or with **Rename list** in its menu.
 - **Labels:** add labels to cards from the card sheet; rename, recolor and delete a board's labels with the tag button in the board's header.
+- **Search all boards:** the search field at the top of the sidebar (⇧⌘F) finds cards on every board, archived ones too, by title, description, label or assignee, with results grouped by board. Click a result, or use the arrow keys and Return, to open its board and the card; an archived card opens the board's archived cards. Escape clears the search. The filter in the toolbar (⌘F) still filters the open board.
 - **Keyboard:** the arrow keys select a card on the board (outlined) and Return opens it; the **Card** menu acts on the selected card. Every command is in the menu bar, so VoiceOver and Full Keyboard Access reach them too:
 
   | Command | Shortcut |
@@ -66,6 +67,7 @@ The screenshots are taken by the end-to-end UI tests from demo data (see [End-to
   | File → New List… / New Board… | ⇧⌘N / ⌥⌘N |
   | File → Refresh | ⌘R |
   | Edit → Filter Cards | ⌘F |
+  | Edit → Search All Boards | ⇧⌘F |
   | Card → Open Card | ⌘O or Return |
   | Card → Mark as Done / Not Done | ⇧⌘C |
   | Card → Archive Card | ⌃⌘A |
