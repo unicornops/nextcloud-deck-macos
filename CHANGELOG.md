@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.21.0](https://github.com/unicornops/shuffleboard/compare/v0.20.1...v0.21.0) (2026-10-09)
+
+
+### Features
+
+* **keyboard:** menu commands and shortcuts for cards, lists and boards ([#171](https://github.com/unicornops/shuffleboard/issues/171)) ([3ca7720](https://github.com/unicornops/shuffleboard/commit/3ca7720a50c9a93d40e7ce85f649efe940353c04))
+* **notifications:** macOS notifications for due and newly assigned cards ([#173](https://github.com/unicornops/shuffleboard/issues/173)) ([c026f76](https://github.com/unicornops/shuffleboard/commit/c026f7687e0e700020444d7e7e382b5b15fe270f)), closes [#157](https://github.com/unicornops/shuffleboard/issues/157)
+* **search:** search cards across all boards ([#172](https://github.com/unicornops/shuffleboard/issues/172)) ([3dbd7d3](https://github.com/unicornops/shuffleboard/commit/3dbd7d35168b2094bc7e20d3a7079188efcf823c))
+
 ## [0.20.1](https://github.com/unicornops/shuffleboard/compare/v0.20.0...v0.20.1) (2026-10-09)
 
 
