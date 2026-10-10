@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/unicornops/shuffleboard/compare/v0.21.0...v0.21.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **notifications:** match your user id, and sum up overdue cards at startup ([#175](https://github.com/unicornops/shuffleboard/issues/175)) ([b911880](https://github.com/unicornops/shuffleboard/commit/b9118800c6165e566725d961db23562b2e527e06))
+
 ## [0.21.0](https://github.com/unicornops/shuffleboard/compare/v0.20.1...v0.21.0) (2026-10-09)
 
 
